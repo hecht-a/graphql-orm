@@ -1,0 +1,184 @@
+<?php
+
+declare(strict_types=1);
+
+namespace GraphqlOrm\Hydrator;
+
+use GraphqlOrm\Execution\GraphqlExecutionContext;
+use GraphqlOrm\Metadata\GraphqlEntityMetadata;
+use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Metadata\GraphqlFieldMetadata;
+
+/**
+ * @template T of object
+ */
+final readonly class EntityHydrator
+{
+    /**
+     * @param GraphqlEntityMetadataFactory<T> $metadataFactory
+     */
+    public function __construct(
+        private GraphqlEntityMetadataFactory $metadataFactory,
+    ) {
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    public function hydrate(
+        GraphqlEntityMetadata $metadata,
+        array $data,
+        GraphqlExecutionContext $context,
+        int $depth = 0,
+    ): object {
+        $context->trace->hydrationMaxDepth = max(
+            $context->trace->hydrationMaxDepth,
+            $depth
+        );
+
+        ++$context->trace->hydratedEntities;
+
+        $idField = $this->findUniqueField($metadata->fields)?->mappedFrom;
+        $uniqueField = $data[$idField] ?? null;
+
+        if ($uniqueField !== null) {
+            if (isset($context->identityMap[$metadata->class][$uniqueField])) {
+                return $context->identityMap[$metadata->class][$uniqueField];
+            }
+        }
+
+        $entity = new ($metadata->class)();
+
+        if ($uniqueField !== null) {
+            $context->identityMap[$metadata->class][$uniqueField] = $entity;
+        }
+
+        foreach ($metadata->fields as $field) {
+            if (!\array_key_exists($field->mappedFrom, $data)) {
+                continue;
+            }
+
+            $value = $data[$field->mappedFrom];
+
+            if ($field->relation !== null && \is_array($value)) {
+                $relationMetadata = $this
+                    ->metadataFactory
+                    ->getMetadata($field->relation);
+
+                if ($field->isCollection) {
+                    ++$context->trace->hydratedCollections;
+
+                    $value = array_map(
+                        fn ($row) => $this->hydrate(
+                            $relationMetadata,
+                            $row,
+                            $context,
+                            $depth + 1
+                        ),
+                        $value
+                    );
+                } elseif ($value) {
+                    ++$context->trace->hydratedRelations;
+
+                    $value = $this->hydrate(
+                        $relationMetadata,
+                        $value,
+                        $context,
+                        $depth + 1
+                    );
+                }
+            }
+
+            $property = new \ReflectionProperty(
+                $metadata->class,
+                $field->property
+            );
+
+            if (!$property->isPublic()) {
+                $property->setAccessible(true);
+            }
+
+            $value = $this->normalizeValue(
+                $value,
+                $property
+            );
+
+            $property->setValue($entity, $value);
+        }
+
+        return $entity;
+    }
+
+    /**
+     * @param GraphqlFieldMetadata[] $fields
+     */
+    private function findUniqueField(array $fields): ?GraphqlFieldMetadata
+    {
+        return array_filter($fields, fn ($field) => $field->isIdentifier)[0] ?? null;
+    }
+
+    private function normalizeValue(
+        mixed $value,
+        \ReflectionProperty $property,
+    ): mixed {
+        if ($value === null) {
+            return null;
+        }
+
+        $type = $property->getType();
+
+        if (!$type instanceof \ReflectionNamedType) {
+            return $value;
+        }
+
+        $typeName = $type->getName();
+
+        if ($type->isBuiltin()) {
+            return match ($typeName) {
+                'int' => \is_float($value)
+                    ? $value
+                    : (is_numeric($value)
+                        ? (int) $value
+                        : throw new \RuntimeException('Cannot cast value to int')
+                    ),
+                'float' => \is_float($value)
+                    ? $value
+                    : (is_numeric($value)
+                        ? (float) $value
+                        : throw new \RuntimeException('Cannot cast value to float')
+                    ),
+                'bool' => match (true) {
+                    \is_bool($value) => $value,
+                    $value === 1,
+                    $value === '1',
+                    $value === 'true' => true,
+                    $value === 0,
+                    $value === '0',
+                    $value === 'false' => false,
+                    default => throw new \RuntimeException('Cannot cast value to bool'),
+                },
+                'string' => \is_scalar($value)
+                    ? (string) $value
+                    : throw new \RuntimeException('Cannot cast value to string'),
+                'array' => (array) $value,
+                default => $value,
+            };
+        }
+
+        if ($typeName === \DateTimeImmutable::class) {
+            if (is_numeric($value)) {
+                return new \DateTimeImmutable(
+                    '@' . ((int) $value / 1000)
+                );
+            }
+
+            if (!\is_string($value)) {
+                throw new \RuntimeException('Invalid datetime value');
+            }
+
+            return new \DateTimeImmutable($value);
+        }
+
+        return $value;
+    }
+}

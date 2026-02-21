@@ -1,0 +1,5 @@
+vendor
+.castor.stub.php
+.castor
+.php-cs-fixer.cache
+cache

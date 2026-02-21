@@ -1,0 +1,28 @@
+{
+    "name": "hecht-a/graphql-orm",
+    "description": "GraphQL ORM for Symfony",
+    "type": "symfony-bundle",
+    "keywords": ["graphql"],
+    "homepage": "https://github.com/hecht-a/graphql-orm",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "GraphqlOrm\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "HECHT Axel",
+            "email": "axel.hct@gmail.com",
+            "homepage": "https://github.com/hecht-a"
+        }
+    ],
+    "require": {
+        "symfony/dependency-injection": "^7.4",
+        "symfony/http-foundation": "^7.4",
+        "symfony/stopwatch": "^7.4",
+        "symfony/http-kernel": "^7.4",
+        "symfony/config": "^7.4",
+        "symfony/http-client": "^7.4"
+    }
+}

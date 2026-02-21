@@ -1,0 +1,164 @@
+{% extends '@WebProfiler/Profiler/layout.html.twig' %}
+
+{# ================= TOOLBAR ================= #}
+
+{% block toolbar %}
+    {% set icon %}
+        {{ source('@GraphqlOrm/collector/icon.svg') }}
+        <span class="sf-toolbar-value">
+            {{ collector.queryCount }}
+        </span>
+    {% endset %}
+
+    {% set text %}
+        <div class="sf-toolbar-info-piece">
+            <b>Queries</b>
+            <span>{{ collector.queryCount }}</span>
+        </div>
+    {% endset %}
+
+    {{ include('@WebProfiler/Profiler/toolbar_item.html.twig', {
+        link: profiler_url,
+        icon: icon,
+        text: text
+    }) }}
+
+{% endblock %}
+
+{# ================= MENU ================= #}
+
+{% block menu %}
+<span class="label">
+    <span class="icon">
+        {{ source('@GraphqlOrm/collector/icon.svg') }}
+    </span>
+
+    <strong>GraphQL ORM</strong>
+    {% if collector.queryCount > 0 %}
+    <span class="count">
+        <span>{{ collector.queryCount }}</span>
+    </span>
+    {% endif %}
+</span>
+{% endblock %}
+
+{# ================= PANEL ================= #}
+
+{% block panel %}
+    <h2>GraphQL ORM Queries</h2>
+    {% if collector.queryCount == 0 %}
+        <div class="empty">
+            <p>No GraphQL queries were executed.</p>
+        </div>
+    {% else %}
+        {% for query in collector.queries %}
+            <div class="sf-profiler-block">
+                <h3>Query #{{ loop.index }}</h3>
+                <table>
+                    <tbody>
+                    <tr>
+                        <th style="width:150px">Endpoint</th>
+                        <td>{{ query.endpoint }}</td>
+                    </tr>
+                    <tr>
+                        <th>Response size</th>
+                        <td>{{ query.response_size }} bytes</td>
+                    </tr>
+                    <tr>
+                        <th>GraphQL Depth</th>
+                        <td>{{ query.depth_used }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <h4>Hydration</h4>
+                <table>
+                    <tbody>
+                    <tr>
+                        <th style="width:200px">Entities</th>
+                        <td>{{ query.hydrated_entities }}</td>
+                    </tr>
+                    <tr>
+                        <th>Relations</th>
+                        <td>{{ query.hydrated_relations }}</td>
+                    </tr>
+                    <tr>
+                        <th>Collections</th>
+                        <td>{{ query.hydrated_collections }}</td>
+                    </tr>
+                    <tr>
+                        <th>Root result count</th>
+                        <td>{{ query.hydrated_count }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <h4>GraphQL Query</h4>
+                <div style="position:relative">
+                    <button
+                            class="sf-toolbar-reset"
+                            style="
+position:absolute;
+right:8px;
+top:8px;
+cursor:pointer;
+font-size:12px;
+padding:4px 8px;
+border-radius:4px;
+border:1px solid #444;
+background:#2d2d2d;
+color:white;
+" onclick="copyGraphql(this)" data-graphql="{{ query.graphql|e('html_attr') }}">
+                        Copy
+                    </button>
+                    <pre style="
+white-space:pre-wrap;
+overflow:auto;
+max-height:300px;
+background:#18171b;
+color:#d7dae0;
+padding:10px;
+border-radius:6px;
+">
+{{ query.graphql }}
+</pre>
+                </div>
+                <h4>Variables</h4>
+                {% if query.variables %}
+                    <pre>{{ dump(query.variables) }}</pre>
+                {% else %}
+                    <p>—</p>
+                {% endif %}
+                <h4>Caller</h4>
+                {% if query.caller %}
+                    <p>
+                        <strong>
+                            {{ query.caller.file|split('/')|last }}:{{ query.caller.line }}
+                        </strong>
+                        <br>
+                        {{ query.caller.class }}::{{ query.caller.function }}()
+                        <br>
+                        <small style="color:#666">
+                            {{ query.caller.file }}
+                        </small>
+                    </p>
+                {% endif %}
+                <hr>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <script>
+        function copyGraphql(button){
+            const query = button.dataset.graphql;
+            navigator.clipboard.writeText(query)
+                .then(()=>{
+                    const original = button.innerText;
+                    button.innerText="Copied ✓";
+                    setTimeout(()=>{
+                        button.innerText=original;
+                    },1200);
+                });
+        }
+    </script>
+{% endblock %}
