@@ -41,5 +41,10 @@ final class GraphqlOrmExtension extends Extension
             'graphql_orm.max_depth',
             $config['max_depth']
         );
+
+        $container->setParameter('graphql_orm.mapping.entity.dir', $config['mapping']['entity']['dir']);
+        $container->setParameter('graphql_orm.mapping.entity.namespace', $config['mapping']['entity']['namespace']);
+        $container->setParameter('graphql_orm.mapping.repository.dir', $config['mapping']['repository']['dir']);
+        $container->setParameter('graphql_orm.mapping.repository.namespace', $config['mapping']['repository']['namespace']);
     }
 }

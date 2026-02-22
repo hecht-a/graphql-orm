@@ -15,7 +15,6 @@ final class Configuration implements ConfigurationInterface
 
         $treeBuilder->getRootNode()
             ->children()
-
             ->scalarNode('endpoint')
             ->isRequired()
             ->cannotBeEmpty()
@@ -31,7 +30,31 @@ final class Configuration implements ConfigurationInterface
             ->min(1)
             ->end()
 
-            ->end();
+            ->arrayNode('mapping')
+            ->addDefaultsIfNotSet()
+            ->children()
+
+            ->arrayNode('entity')
+            ->addDefaultsIfNotSet()
+            ->children()
+            ->scalarNode('dir')->defaultValue('%kernel.project_dir%/src/GraphQL/Entity')->end()
+            ->scalarNode('namespace')->defaultValue('App\\GraphQL\\Entity')->end()
+            ->end()
+            ->end()
+
+            ->arrayNode('repository')
+            ->addDefaultsIfNotSet()
+            ->children()
+            ->scalarNode('dir')->defaultValue('%kernel.project_dir%/src/GraphQL/Repository')->end()
+            ->scalarNode('namespace')->defaultValue('App\\GraphQL\\Repository')->end()
+            ->end()
+            ->end()
+
+            ->end()
+            ->end()
+
+            ->end()
+        ;
 
         return $treeBuilder;
     }
