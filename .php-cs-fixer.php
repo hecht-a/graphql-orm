@@ -4,8 +4,7 @@ $finder = (new PhpCsFixer\Finder())
     ->in(__DIR__ . '/src')
     ->in(__DIR__ . '/tests')
     ->append([__DIR__ . '/castor.php'])
-    ->exclude(['cache', 'Bundle/Resources/config'])
-    ->notName('FooTransformerStaticCallable.php')
+    ->exclude(['cache', 'Resources/stubs'])
 ;
 
 return (new PhpCsFixer\Config())

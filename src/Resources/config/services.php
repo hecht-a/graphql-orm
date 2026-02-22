@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Client\GraphqlClientInterface;
+use GraphqlOrm\Codegen\StubRenderer;
+use GraphqlOrm\Command\MakeGraphqlEntityCommand;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
@@ -34,4 +36,10 @@ return static function (ContainerConfigurator $config) {
             'template' => '@GraphqlOrm/collector/graphql_orm.html.twig',
         ])
         ->public();
+
+    $services->set(StubRenderer::class)
+        ->arg('$stubsDir', __DIR__ . '/../stubs');
+
+    $services->set(MakeGraphqlEntityCommand::class)
+        ->tag('console.command');
 };
