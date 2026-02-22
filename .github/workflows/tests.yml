@@ -1,0 +1,31 @@
+name: CI
+on:
+  push:
+    branches: [ "main" ]
+  pull_request: ~
+jobs:
+  cs-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@master
+      - name: setup
+        uses: castor-php/setup-castor@v1.0.0
+      - name: 'PHP-CS-Fixer check'
+        run: 'castor qa:cs:check'
+  phpstan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@master
+      - name: setup
+        uses: shivammathur/setup-php@2.36.0
+        with:
+          php-version: 8.4
+          coverage: none
+      - name: composer install
+        run: composer update --prefer-stable
+      - name: setup
+        uses: castor-php/setup-castor@v1.0.0
+      - name: 'PHPStan check'
+        run: 'castor qa:phpstan'
