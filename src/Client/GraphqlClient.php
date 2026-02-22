@@ -7,7 +7,7 @@ namespace GraphqlOrm\Client;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-final readonly class GraphqlClient implements GraphqlClientInterface
+readonly class GraphqlClient implements GraphqlClientInterface
 {
     /**
      * @param array<string, mixed> $headers

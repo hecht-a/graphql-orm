@@ -10,6 +10,11 @@
             "GraphqlOrm\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "GraphqlOrm\\Tests\\": "tests/"
+        }
+    },
     "authors": [
         {
             "name": "HECHT Axel",
@@ -24,5 +29,9 @@
         "symfony/http-kernel": "^7.4",
         "symfony/config": "^7.4",
         "symfony/http-client": "^7.4"
+    },
+    "require-dev": {
+        "symfony/phpunit-bridge": "^8.0",
+        "phpunit/phpunit": "^12.5"
     }
 }

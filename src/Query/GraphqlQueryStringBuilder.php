@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Query;
 
+use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
@@ -324,6 +325,6 @@ GRAPHQL;
             return (string) $value;
         }
 
-        throw new \InvalidArgumentException(\sprintf('Invalid GraphQL argument value of type "%s".', get_debug_type($value)));
+        throw new InvalidArgumentException(\sprintf('Invalid GraphQL argument value of type "%s".', get_debug_type($value)));
     }
 }

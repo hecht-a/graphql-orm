@@ -44,6 +44,7 @@ final class GraphqlQueryBuilder
      */
     public function addSelect(string $field): self
     {
+        $this->selectedFields ??= [];
         $this->selectedFields[] = $field;
 
         return $this;
@@ -92,8 +93,7 @@ final class GraphqlQueryBuilder
                 $metadata->fields
             );
 
-        $manualSelect =
-            $this->selectedFields !== null;
+        $manualSelect = $this->selectedFields !== null;
 
         $graphql = (new GraphqlQueryStringBuilder($this->manager))
             ->entity($this->entityClass)

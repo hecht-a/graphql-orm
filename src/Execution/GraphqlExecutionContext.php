@@ -6,7 +6,7 @@ namespace GraphqlOrm\Execution;
 
 use GraphqlOrm\Query\GraphqlQueryTrace;
 
-final class GraphqlExecutionContext
+class GraphqlExecutionContext
 {
     /**
      * @param array<string, array<string, object>> $identityMap
