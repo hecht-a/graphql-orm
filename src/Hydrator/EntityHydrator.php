@@ -13,7 +13,7 @@ use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 /**
  * @template T of object
  */
-final readonly class EntityHydrator
+readonly class EntityHydrator
 {
     /**
      * @param GraphqlEntityMetadataFactory<T> $metadataFactory

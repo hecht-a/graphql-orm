@@ -114,13 +114,12 @@ class GraphqlEntityMetadataFactory
             $fields[] = $field;
         }
 
-        return $this->cache[$class] =
-            new GraphqlEntityMetadata(
-                $class,
-                $entity->name,
-                $entity->repositoryClass,
-                $fields,
-                $identifier
-            );
+        return $this->cache[$class] = new GraphqlEntityMetadata(
+            $class,
+            $entity->name,
+            $entity->repositoryClass,
+            $fields,
+            $identifier
+        );
     }
 }

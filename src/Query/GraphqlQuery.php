@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Query;
 
+use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\GraphqlManager;
 
 /**
@@ -47,15 +48,14 @@ final readonly class GraphqlQuery
                 }
 
                 if (!\is_array($rows)) {
-                    throw new \RuntimeException('Invalid GraphQL response');
+                    throw InvalidGraphqlResponseException::expectedArray($rows);
                 }
 
                 if ($rows && array_is_list($rows) === false) {
                     $rows = [$rows];
                 }
 
-                return array_map(
-                    fn ($row) => $this->manager
+                return array_map(fn ($row) => $this->manager
                         ->hydrator
                         ->hydrate(
                             $metadata,

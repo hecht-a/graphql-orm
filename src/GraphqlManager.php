@@ -15,7 +15,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * @template T of object
  */
 #[AutoconfigureTag('graphql.manager')]
-final class GraphqlManager
+class GraphqlManager
 {
     /**
      * @param GraphqlEntityMetadataFactory<T> $metadataFactory

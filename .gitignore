@@ -3,3 +3,4 @@ vendor
 .castor
 .php-cs-fixer.cache
 cache
+.phpunit.result.cache

@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\DataCollector\DataCollector;
 
-final class GraphqlOrmDataCollector extends DataCollector
+class GraphqlOrmDataCollector extends DataCollector
 {
     public function addQuery(
         GraphqlQueryTrace $trace,
