@@ -324,6 +324,6 @@ GRAPHQL;
             return (string) $value;
         }
 
-        throw new \RuntimeException('Invalid GraphQL argument value');
+        throw new \InvalidArgumentException(\sprintf('Invalid GraphQL argument value of type "%s".', get_debug_type($value)));
     }
 }

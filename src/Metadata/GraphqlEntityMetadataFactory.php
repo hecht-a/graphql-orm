@@ -6,6 +6,8 @@ namespace GraphqlOrm\Metadata;
 
 use GraphqlOrm\Attribute\GraphqlEntity;
 use GraphqlOrm\Attribute\GraphqlField;
+use GraphqlOrm\Exception\NotAGraphqlEntityException;
+use GraphqlOrm\Exception\TooManyIdentifiersException;
 
 /**
  * @template T of object
@@ -33,7 +35,7 @@ class GraphqlEntityMetadataFactory
         $entityAttr = $reflection->getAttributes(GraphqlEntity::class)[0] ?? null;
 
         if (!$entityAttr) {
-            throw new \RuntimeException("$class is not a GraphQLEntity");
+            throw NotAGraphqlEntityException::forClass($class);
         }
 
         /** @var GraphqlEntity<T> $entity */
@@ -103,7 +105,7 @@ class GraphqlEntityMetadataFactory
 
             if ($field->isIdentifier) {
                 if ($identifier !== null) {
-                    throw new \LogicException(\sprintf('Entity "%s" has multiple identifiers.', $class));
+                    throw TooManyIdentifiersException::forClass($class);
                 }
 
                 $identifier = $field;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Repository;
 
+use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Query\GraphqlQueryBuilder;
@@ -69,7 +70,7 @@ class GraphqlEntityRepository
                 }
 
                 if (!\is_array($rows)) {
-                    throw new \RuntimeException('Invalid GraphQL response');
+                    throw InvalidGraphqlResponseException::expectedArray($rows);
                 }
 
                 if ($rows && array_is_list($rows) === false) {
