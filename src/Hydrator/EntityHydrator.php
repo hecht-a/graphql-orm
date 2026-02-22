@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Hydrator;
 
+use GraphqlOrm\Exception\CastException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
@@ -139,13 +140,13 @@ final readonly class EntityHydrator
                     ? $value
                     : (is_numeric($value)
                         ? (int) $value
-                        : throw new \RuntimeException('Cannot cast value to int')
+                        : throw CastException::cannotCast($value, 'int')
                     ),
                 'float' => \is_float($value)
                     ? $value
                     : (is_numeric($value)
                         ? (float) $value
-                        : throw new \RuntimeException('Cannot cast value to float')
+                        : CastException::cannotCast($value, 'float')
                     ),
                 'bool' => match (true) {
                     \is_bool($value) => $value,
@@ -155,11 +156,11 @@ final readonly class EntityHydrator
                     $value === 0,
                     $value === '0',
                     $value === 'false' => false,
-                    default => throw new \RuntimeException('Cannot cast value to bool'),
+                    default => CastException::cannotCast($value, 'bool'),
                 },
                 'string' => \is_scalar($value)
                     ? (string) $value
-                    : throw new \RuntimeException('Cannot cast value to string'),
+                    : CastException::cannotCast($value, 'string'),
                 'array' => (array) $value,
                 default => $value,
             };
@@ -173,7 +174,7 @@ final readonly class EntityHydrator
             }
 
             if (!\is_string($value)) {
-                throw new \RuntimeException('Invalid datetime value');
+                throw CastException::invalidDateTime($value);
             }
 
             return new \DateTimeImmutable($value);
