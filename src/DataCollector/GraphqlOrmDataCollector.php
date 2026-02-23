@@ -20,6 +20,7 @@ class GraphqlOrmDataCollector extends DataCollector
             'endpoint' => $trace->endpoint,
             'caller' => $trace->caller,
             'response_size' => $trace->responseSize,
+            'errors' => $trace->errors,
             'hydrated_count' => $trace->hydratedCount,
             'depth_used' => $trace->depthUsed,
             'hydrated_collections' => $trace->hydratedCollections,
@@ -42,7 +43,7 @@ class GraphqlOrmDataCollector extends DataCollector
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<int, array<string, array<string, mixed>>>
      */
     public function getQueries(): array
     {
@@ -62,6 +63,19 @@ class GraphqlOrmDataCollector extends DataCollector
                 'duration'
             )
         );
+    }
+
+    public function getErrorCount(): int
+    {
+        $count = 0;
+
+        foreach ($this->getQueries() as $query) {
+            if (!empty($query['errors'])) {
+                ++$count;
+            }
+        }
+
+        return $count;
     }
 
     public function getName(): string

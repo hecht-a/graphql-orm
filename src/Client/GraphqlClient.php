@@ -46,18 +46,15 @@ readonly class GraphqlClient implements GraphqlClientInterface
         );
 
         $context->trace->endpoint = $this->endpoint;
-        $content = $response->getContent();
+
+        $content = $response->getContent(false);
 
         $context->trace->responseSize = \strlen($content);
 
-        // TODO
-        //        $result = json_decode(
-        //            $content,
-        //            true,
-        //            flags: JSON_THROW_ON_ERROR
-        //        );
+        /** @var array{'errors': array<string|int, mixed>|null} $result */
+        $result = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
 
-        //        $context->trace->errors = $result['errors'] ?? null;
+        $context->trace->errors = $result['errors'] ?? null;
 
         return $response->toArray();
     }

@@ -18,9 +18,8 @@ final class GraphqlQueryTrace
     public ?array $caller = null;
     public ?string $endpoint = null;
     public int $responseSize = 0;
-    // TODO
-    //    /** @var array<string, mixed>|null  */
-    //    public ?array $errors = null;
+    /** @var array<string|int, mixed>|null */
+    public ?array $errors = null;
     public int $hydratedCount = 0;
     public int $depthUsed = 0;
     public int $hydratedEntities = 0;
