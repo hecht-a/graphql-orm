@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Query;
 
+use GraphqlOrm\Dialect\DefaultDialect;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
@@ -144,6 +145,10 @@ final class GraphqlQueryTest extends TestCase
         $manager
             ->method('execute')
             ->willReturnCallback(fn ($_, $hydration) => $hydration($response, new GraphqlExecutionContext(), []));
+
+        $manager
+            ->method('getDialect')
+            ->willReturn(new DefaultDialect());
 
         return $manager;
     }

@@ -105,6 +105,8 @@ final class GraphqlQueryStringBuilder
         }
 
         $args = $this->buildArguments();
+        $dialect = $this->manager->getDialect();
+        $selection = $dialect->wrapCollection($selection, 2);
 
         return <<<GRAPHQL
 query {
@@ -128,6 +130,7 @@ GRAPHQL;
 
         try {
             $metadata = $this->manager->metadataFactory->getMetadata($entityClass);
+            $dialect = $this->manager->getDialect();
             $lines = [];
 
             foreach ($metadata->fields as $field) {
@@ -141,7 +144,11 @@ GRAPHQL;
                         continue;
                     }
 
-                    $lines[] = $indent . $field->mappedFrom . " {\n" . $nested . "\n" . $indent . '}';
+                    if ($field->isCollection) {
+                        $lines[] = $indent . $field->mappedFrom . " {\n" . $dialect->wrapCollection($nested, $level) . "\n" . $indent . '}';
+                    } else {
+                        $lines[] = $indent . $field->mappedFrom . " {\n" . $nested . "\n" . $indent . '}';
+                    }
 
                     continue;
                 }
@@ -274,6 +281,7 @@ GRAPHQL;
         if ($field->relation === null) {
             return $field->mappedFrom;
         }
+        $dialect = $this->manager->getDialect();
 
         $relationMetadata = $this->manager->metadataFactory->getMetadata($field->relation);
 
@@ -282,6 +290,10 @@ GRAPHQL;
         $indent = str_repeat('  ', $level);
 
         $inner = str_repeat('  ', $level + 1);
+
+        if ($field->isCollection) {
+            return $field->mappedFrom . " {\n" . $inner . $dialect->wrapCollection($identifier, $level) . "\n" . $indent . '}';
+        }
 
         return $field->mappedFrom . " {\n" . $inner . $identifier . "\n" . $indent . '}';
     }

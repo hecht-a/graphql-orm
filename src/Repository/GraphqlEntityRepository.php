@@ -63,7 +63,25 @@ class GraphqlEntityRepository
         return $this
             ->manager
             ->execute($graphql, hydration: function (array $result, GraphqlExecutionContext $context) use ($metadata) {
-                $rows = $result['data'][$metadata->name] ?? null;
+                $dialect = $this->manager->getDialect();
+                $data = $result['data'] ?? [];
+
+                if (!\array_key_exists($metadata->name, $data)) {
+                    return [];
+                }
+
+                $root = $data[$metadata->name];
+
+                if ($root === null) {
+                    return [];
+                }
+
+                if (!\is_array($root)) {
+                    throw InvalidGraphqlResponseException::expectedArray($root);
+                }
+
+                $collection = $dialect->extractCollection($root);
+                $rows = !empty($collection) ? $collection : null;
 
                 if ($rows === null) {
                     return [];
@@ -73,7 +91,7 @@ class GraphqlEntityRepository
                     throw InvalidGraphqlResponseException::expectedArray($rows);
                 }
 
-                if ($rows && array_is_list($rows) === false) {
+                if (array_is_list($rows) === false) {
                     $rows = [$rows];
                 }
 
