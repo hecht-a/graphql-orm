@@ -7,6 +7,8 @@ namespace GraphqlOrm\Query;
 final class GraphqlQueryTrace
 {
     public string $graphql;
+    /** @var array<string|int, mixed> */
+    public ?array $ast = null;
     /** @var array<string, mixed> */
     public array $variables = [];
     /** @var array{

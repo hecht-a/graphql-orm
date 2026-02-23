@@ -16,6 +16,7 @@ class GraphqlOrmDataCollector extends DataCollector
     ): void {
         $this->data['queries'][] = [
             'graphql' => $trace->graphql,
+            'ast' => $trace->ast,
             'variables' => $trace->variables,
             'endpoint' => $trace->endpoint,
             'caller' => $trace->caller,

@@ -11,6 +11,8 @@ use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Query\Ast\QueryNode;
+use GraphqlOrm\Query\GraphqlQueryCompiler;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
@@ -30,6 +32,7 @@ class GraphqlManager
         public GraphqlOrmDataCollector $collector,
         public int $maxDepth,
         public GraphqlQueryDialect $dialect = new DefaultDialect(),
+        private ?GraphqlQueryCompiler $compiler = null,
     ) {
     }
 
@@ -38,19 +41,25 @@ class GraphqlManager
      *
      * @return T[]
      */
-    public function execute(
-        string $graphql,
-        callable $hydration,
-        array $variables = [],
-    ): array {
+    public function execute(QueryNode|string $graphql, callable $hydration, array $variables = [], ): array
+    {
         $context = new GraphqlExecutionContext();
 
-        $context->trace->graphql = $graphql;
+        if ($graphql instanceof QueryNode) {
+            $compiled = $this->getQueryCompiler()->compile($graphql);
+            /** @var array<string|int, mixed> $ast */
+            $ast = json_decode(json_encode($graphql, JSON_THROW_ON_ERROR), true);
+            $context->trace->ast = $ast;
+        } else {
+            $compiled = $graphql;
+        }
+
+        $context->trace->graphql = $compiled;
 
         try {
             $result = $this->client
                 ->query(
-                    $graphql,
+                    $compiled,
                     $context,
                     $variables
                 );
@@ -73,5 +82,18 @@ class GraphqlManager
     public function getDialect(): GraphqlQueryDialect
     {
         return $this->dialect;
+    }
+
+    public function getQueryCompiler(): GraphqlQueryCompiler
+    {
+        if ($this->compiler !== null) {
+            return $this->compiler;
+        }
+
+        $walker = $this->dialect->createWalker();
+
+        $this->compiler = new GraphqlQueryCompiler($walker);
+
+        return $this->compiler;
     }
 }

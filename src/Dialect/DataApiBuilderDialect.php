@@ -4,22 +4,11 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Dialect;
 
+use GraphqlOrm\Query\Walker\DABGraphqlWalker;
+use GraphqlOrm\Query\Walker\GraphqlWalkerInterface;
+
 final class DataApiBuilderDialect implements GraphqlQueryDialect
 {
-    public function wrapCollection(string $selection, int $indentLevel): string
-    {
-        $indent = str_repeat('  ', $indentLevel);
-        $innerIndent = str_repeat('  ', $indentLevel - 1);
-
-        $selection = $this->indent($selection, $innerIndent);
-
-        return <<<GQL
-{$indent}items {
-$selection
-{$indent}}
-GQL;
-    }
-
     public function extractCollection(array $data): array
     {
         /** @var array<string|int, mixed> $items */
@@ -28,14 +17,8 @@ GQL;
         return $items;
     }
 
-    private function indent(string $text, string $indent): string
+    public function createWalker(): GraphqlWalkerInterface
     {
-        return implode(
-            "\n",
-            array_map(
-                fn ($line) => $line !== '' ? $indent . $line : $line,
-                explode("\n", $text)
-            )
-        );
+        return new DABGraphqlWalker();
     }
 }
