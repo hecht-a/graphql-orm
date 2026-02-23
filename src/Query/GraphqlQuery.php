@@ -41,7 +41,25 @@ final readonly class GraphqlQuery
         return $this
             ->manager
             ->execute($this->graphql, hydration: function ($result, $context) use ($metadata) {
-                $rows = $result['data'][$metadata->name] ?? null;
+                $dialect = $this->manager->getDialect();
+                $data = $result['data'] ?? [];
+
+                if (!\array_key_exists($metadata->name, $data)) {
+                    return [];
+                }
+
+                $root = $data[$metadata->name];
+
+                if ($root === null) {
+                    return [];
+                }
+
+                if (!\is_array($root)) {
+                    throw InvalidGraphqlResponseException::expectedArray($root);
+                }
+
+                $collection = $dialect->extractCollection($root);
+                $rows = !empty($collection) ? $collection : null;
 
                 if ($rows === null) {
                     return [];
@@ -51,7 +69,7 @@ final readonly class GraphqlQuery
                     throw InvalidGraphqlResponseException::expectedArray($rows);
                 }
 
-                if ($rows && array_is_list($rows) === false) {
+                if (array_is_list($rows) === false) {
                     $rows = [$rows];
                 }
 

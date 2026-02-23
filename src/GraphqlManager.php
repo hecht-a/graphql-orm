@@ -6,6 +6,8 @@ namespace GraphqlOrm;
 
 use GraphqlOrm\Client\GraphqlClientInterface;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
+use GraphqlOrm\Dialect\DefaultDialect;
+use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
@@ -27,6 +29,7 @@ class GraphqlManager
         public EntityHydrator $hydrator,
         public GraphqlOrmDataCollector $collector,
         public int $maxDepth,
+        public GraphqlQueryDialect $dialect = new DefaultDialect(),
     ) {
     }
 
@@ -61,5 +64,10 @@ class GraphqlManager
         );
 
         return $entities;
+    }
+
+    public function getDialect(): GraphqlQueryDialect
+    {
+        return $this->dialect;
     }
 }

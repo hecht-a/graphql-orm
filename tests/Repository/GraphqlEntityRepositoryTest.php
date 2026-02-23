@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Repository;
 
+use GraphqlOrm\Dialect\DefaultDialect;
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\GraphqlManager;
@@ -148,6 +149,10 @@ final class GraphqlEntityRepositoryTest extends TestCase
         $manager
             ->method('execute')
             ->willReturnCallback(fn ($_, $hydration) => $hydration($response, $this->createStub(GraphqlExecutionContext::class)));
+
+        $manager
+            ->method('getDialect')
+            ->willReturn(new DefaultDialect());
 
         return $manager;
     }

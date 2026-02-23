@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\DependencyInjection;
 
+use GraphqlOrm\Dialect\DefaultDialect;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 
@@ -18,6 +19,10 @@ final class Configuration implements ConfigurationInterface
             ->scalarNode('endpoint')
             ->isRequired()
             ->cannotBeEmpty()
+            ->end()
+
+            ->scalarNode('dialect')
+            ->defaultValue(DefaultDialect::class)
             ->end()
 
             ->arrayNode('headers')

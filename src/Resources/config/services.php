@@ -12,6 +12,8 @@ use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
+use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
+
 return static function (ContainerConfigurator $config) {
     $services = $config->services()
         ->defaults()
@@ -20,8 +22,16 @@ return static function (ContainerConfigurator $config) {
 
     $services->set(GraphqlEntityMetadataFactory::class);
     $services->set(EntityHydrator::class);
+
+    $services
+        ->set('graphql_orm.dialect', '%graphql_orm.dialect%')
+        ->autowire()
+        ->autoconfigure();
+
     $services->set(GraphqlManager::class)
-        ->arg('$maxDepth', '%graphql_orm.max_depth%');
+        ->arg('$maxDepth', '%graphql_orm.max_depth%')
+        ->arg('$dialect', service('graphql_orm.dialect'));
+
     $services->set(GraphqlClientInterface::class);
 
     $services->set(GraphqlClient::class)
