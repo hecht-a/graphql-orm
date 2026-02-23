@@ -47,21 +47,25 @@ class GraphqlManager
 
         $context->trace->graphql = $graphql;
 
-        $result = $this->client
-            ->query(
-                $graphql,
-                $context,
-                $variables
+        try {
+            $result = $this->client
+                ->query(
+                    $graphql,
+                    $context,
+                    $variables
+                );
+
+            $entities = $hydration(
+                $result,
+                $context
             );
-
-        $entities = $hydration(
-            $result,
-            $context
-        );
-
-        $this->collector->addQuery(
-            $context->trace
-        );
+        } catch (\Throwable $e) {
+            throw $e;
+        } finally {
+            $this->collector->addQuery(
+                $context->trace
+            );
+        }
 
         return $entities;
     }

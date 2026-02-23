@@ -13,14 +13,19 @@
     {% set text %}
         <div class="sf-toolbar-info-piece">
             <b>Queries</b>
-            <span>{{ collector.queryCount }}</span>
+            <span class="sf-toolbar-status sf-toolbar-status-">{{ collector.queryCount }}</span>
+        </div>
+        <div class="sf-toolbar-info-piece">
+            <b>Errors</b>
+            <span class="sf-toolbar-status sf-toolbar-status-red">{{ collector.errorCount|default(0) }}</span>
         </div>
     {% endset %}
 
     {{ include('@WebProfiler/Profiler/toolbar_item.html.twig', {
         link: profiler_url,
         icon: icon,
-        text: text
+        text: text,
+        status: collector.errorCount > 0 ? 'red'
     }) }}
 
 {% endblock %}
@@ -28,7 +33,7 @@
 {# ================= MENU ================= #}
 
 {% block menu %}
-<span class="label">
+    <span class="label {% if collector.errorCount > 0 %}label-status-error{% endif %}">
     <span class="icon">
         {{ source('@GraphqlOrm/collector/icon.svg') }}
     </span>
@@ -53,7 +58,21 @@
     {% else %}
         {% for query in collector.queries %}
             <div class="sf-profiler-block">
-                <h3>Query #{{ loop.index }}</h3>
+                <h3>
+                    Query #{{ loop.index }}
+                    {% if query.errors %}
+                        <span style="
+                            background:#ff6b6b;
+                            color:white;
+                            padding:2px 6px;
+                            border-radius:4px;
+                            font-size:12px;
+                            margin-left:6px;
+                            ">
+                            ERROR
+                        </span>
+                    {% endif %}
+                </h3>
                 <table>
                     <tbody>
                     <tr>
@@ -71,8 +90,46 @@
                     </tbody>
                 </table>
 
+                {% if query.errors %}
+                    <h4 style="color: #ff6b6b">GraphQL Errors</h4>
+
+                    {% for error in query.errors %}
+                        <div style="
+                            background: #2a1416;
+                            border-left: 4px solid #ff6b6b;
+                            padding: 10px;
+                            margin-bottom: 10px;
+                            border-radius: 6px;
+                            ">
+                            <strong>{{ error.message }}</strong>
+
+                            {% if error.extensions.code ?? null %}
+                                <br>
+                                <small>Code : {{ error.extensions.code }}</small>
+                            {% endif %}
+
+                            {% if error.extensions.exception.stacktrace ?? null %}
+                                <details style="margin-top: 8px">
+                                    <summary style="cursor: pointer">
+                                        Stacktrace
+                                    </summary>
+                                    <pre style="
+                                        max-height: 250px;
+                                        overflow: auto;
+                                        background: #18171b;
+                                        padding: 10px;
+                                        border-radius: 6px;
+                                        ">
+{{ error.extensions.exception.stacktrace|join("\n") }}
+                                    </pre>
+                                </details>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
                 <h4>Hydration</h4>
-                <table>
+                <table {% if query.errors %}style="opacity: .5"{% endif %}>
                     <tbody>
                     <tr>
                         <th style="width:200px">Entities</th>
@@ -149,15 +206,15 @@ border-radius:6px;
     {% endif %}
 
     <script>
-        function copyGraphql(button){
+        function copyGraphql(button) {
             const query = button.dataset.graphql;
             navigator.clipboard.writeText(query)
-                .then(()=>{
+                .then(() => {
                     const original = button.innerText;
-                    button.innerText="Copied ✓";
-                    setTimeout(()=>{
-                        button.innerText=original;
-                    },1200);
+                    button.innerText = "Copied ✓";
+                    setTimeout(() => {
+                        button.innerText = original;
+                    }, 1200);
                 });
         }
     </script>
