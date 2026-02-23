@@ -36,7 +36,8 @@ return static function (ContainerConfigurator $config) {
 
     $services->set(GraphqlClient::class)
         ->arg('$endpoint', '%graphql_orm.endpoint%')
-        ->arg('$headers', '%graphql_orm.headers%');
+        ->arg('$headers', '%graphql_orm.headers%')
+        ->arg('$httpClientOptions', '%graphql_orm.http_client_options%');
 
     $services->alias(GraphqlClientInterface::class, GraphqlClient::class);
 

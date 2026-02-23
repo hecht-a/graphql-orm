@@ -33,6 +33,11 @@ final class GraphqlOrmExtension extends Extension
         );
 
         $container->setParameter(
+            'graphql_orm.http_client_options',
+            $config['http_client_options']
+        );
+
+        $container->setParameter(
             'graphql_orm.dialect',
             $config['dialect']
         );

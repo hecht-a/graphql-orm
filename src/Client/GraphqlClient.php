@@ -11,11 +11,13 @@ readonly class GraphqlClient implements GraphqlClientInterface
 {
     /**
      * @param array<string, mixed> $headers
+     * @param array<string, mixed> $httpClientOptions
      */
     public function __construct(
         private HttpClientInterface $httpClient,
         private string $endpoint,
         private array $headers = [],
+        private array $httpClientOptions = [],
     ) {
     }
 
@@ -35,6 +37,7 @@ readonly class GraphqlClient implements GraphqlClientInterface
                         'query' => $query,
                         'variables' => $variables,
                     ],
+                    ...$this->httpClientOptions,
                 ]
             );
 
