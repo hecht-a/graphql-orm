@@ -6,6 +6,7 @@ namespace GraphqlOrm\Query;
 
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\GraphqlManager;
+use GraphqlOrm\Query\Ast\QueryNode;
 
 /**
  * @template T of object
@@ -17,7 +18,7 @@ final readonly class GraphqlQuery
      * @param GraphqlManager<T> $manager
      */
     public function __construct(
-        private string $graphql,
+        private QueryNode|string $graphql,
         private string $entityClass,
         private GraphqlManager $manager,
     ) {
@@ -25,6 +26,10 @@ final readonly class GraphqlQuery
 
     public function getGraphQL(): string
     {
+        if ($this->graphql instanceof QueryNode) {
+            return $this->manager->getQueryCompiler()->compile($this->graphql);
+        }
+
         return $this->graphql;
     }
 

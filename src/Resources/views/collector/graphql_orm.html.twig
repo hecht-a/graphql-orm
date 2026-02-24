@@ -180,6 +180,14 @@ border-radius:6px;
 {{ query.graphql }}
 </pre>
                 </div>
+
+                {% if query.ast %}
+                    <h4>GraphQL AST</h4>
+                    <div class="graphql-ast-tree">
+                        {{ _self.renderAst(query.ast, 0) }}
+                    </div>
+                {% endif %}
+
                 <h4>Variables</h4>
                 {% if query.variables %}
                     <pre>{{ dump(query.variables) }}</pre>
@@ -205,6 +213,117 @@ border-radius:6px;
         {% endfor %}
     {% endif %}
 
+    {% macro renderAst(node, depth) %}
+        {% import _self as self %}
+        {% if node.operation is defined %}
+            <div class="ast-node ast-root">
+                <div class="ast-header open">
+                    <span class="ast-toggle">▼</span>
+                    <strong>{{ node.operation }}</strong>
+                    <span class="ast-meta">
+                        [depth: {{ depth }} | fields: {{ node.fields|length }}]
+                    </span>
+                </div>
+                <div class="ast-children">
+                    {% for field in node.fields %}
+                        {{ self.renderAst(field, depth + 1) }}
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            {% set hasChildren = node.selectionSet and node.selectionSet.fields|length > 0 %}
+            <div class="ast-node">
+                <div class="ast-header {{ hasChildren ? 'open' : '' }}">
+                    {% if hasChildren %}
+                        <span class="ast-toggle">▼</span>
+                    {% else %}
+                        <span class="ast-leaf">•</span>
+                    {% endif %}
+                    <span class="ast-name">
+                        {{ node.name }}
+                        {% if node.arguments is defined and node.arguments %}
+                            (
+                            {% for k,v in node.arguments %}
+                                {{ k }}={{ v }}{% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                            )
+                        {% endif %}
+                    </span>
+                    {% if hasChildren %}
+                        <span class="ast-meta">
+                            [depth: {{ depth }} | fields: {{ node.selectionSet.fields|length }}]
+                        </span>
+                    {% endif %}
+                </div>
+                {% if hasChildren %}
+                    <div class="ast-children">
+                        {% for child in node.selectionSet.fields %}
+                            {{ self.renderAst(child,depth + 1) }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+    {% endmacro %}
+
+    <style>
+        .graphql-ast-tree{
+            font-family:monospace;
+            background:#18171b;
+            padding:12px;
+            border-radius:6px;
+        }
+
+        .ast-node{
+            margin-left:12px;
+        }
+
+        .ast-header{
+            cursor:pointer;
+            padding:2px 6px;
+            border-radius:4px;
+            display:flex;
+            gap:8px;
+            align-items:center;
+        }
+
+        .ast-header:hover{
+            background:#2d2d2d;
+            outline:1px solid #4b4b4b;
+        }
+
+        .ast-toggle{
+            width:14px;
+            display:inline-block;
+            user-select:none;
+        }
+
+        .ast-leaf{
+            width:14px;
+            opacity:.4;
+        }
+
+        .ast-meta{
+            color:#888;
+            font-size:11px;
+            margin-left:auto;
+        }
+
+        .ast-name{
+            color:#9cdcfe;
+        }
+
+        .ast-children{
+            margin-left:18px;
+            border-left:1px solid #333;
+            padding-left:10px;
+        }
+
+        .ast-node.collapsed > .ast-children{
+            display:none;
+        }
+    </style>
+
     <script>
         function copyGraphql(button) {
             const query = button.dataset.graphql;
@@ -217,5 +336,28 @@ border-radius:6px;
                     }, 1200);
                 });
         }
+
+        document.addEventListener("click", (e) => {
+            const header = e.target.closest(".ast-header")
+
+            if (!header) {
+                return
+            }
+
+            const node = header.parentElement
+
+            const children = node.querySelector(":scope > .ast-children")
+
+            if (!children) {
+                return
+            }
+            node.classList.toggle("collapsed")
+
+            const toggle = header.querySelector(".ast-toggle")
+
+            if (toggle) {
+                toggle.innerText = node.classList.contains("collapsed") ? "▶" : "▼"
+            }
+        })
     </script>
 {% endblock %}

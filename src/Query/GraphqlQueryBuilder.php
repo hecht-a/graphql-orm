@@ -95,7 +95,7 @@ final class GraphqlQueryBuilder
 
         $manualSelect = $this->selectedFields !== null;
 
-        $graphql = (new GraphqlQueryStringBuilder($this->manager))
+        $ast = (new GraphqlQueryStringBuilder($this->manager))
             ->entity($this->entityClass)
             ->root($metadata->name)
             ->arguments($this->criteria)
@@ -103,7 +103,7 @@ final class GraphqlQueryBuilder
             ->build();
 
         return new GraphqlQuery(
-            $graphql,
+            $ast,
             $this->entityClass,
             $this->manager
         );

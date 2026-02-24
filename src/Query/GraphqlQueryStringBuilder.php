@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Query;
 
-use GraphqlOrm\Exception\InvalidArgumentException;
+use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
+use GraphqlOrm\Query\Ast\FieldNode;
+use GraphqlOrm\Query\Ast\QueryNode;
+use GraphqlOrm\Query\Ast\SelectionSetNode;
 
 /**
  * @template T of object
@@ -80,83 +83,70 @@ final class GraphqlQueryStringBuilder
         return $this;
     }
 
-    private function buildArguments(): string
+    public function build(): QueryNode
     {
-        if (!$this->arguments) {
-            return '';
-        }
+        $query = new QueryNode();
 
-        $args = [];
+        $root = new FieldNode(
+            $this->root,
+            $this->arguments,
+            new SelectionSetNode()
+        );
 
-        foreach ($this->arguments as $name => $value) {
-            $args[] = $name . ': ' . $this->formatValue($value);
-        }
-
-        return '(' . implode(', ', $args) . ')';
-    }
-
-    public function build(): string
-    {
         if ($this->manualSelect) {
             $tree = $this->buildSelectionTree($this->fields);
-            $selection = $this->buildFromTree($this->entityClass, $tree, 2);
+            $selection = $this->buildFromTreeAst($this->entityClass, $tree);
         } else {
-            $selection = $this->buildAllFields($this->entityClass, 2) ?? '';
+            $selection = $this->buildAllFieldsAst($this->entityClass);
         }
 
-        $args = $this->buildArguments();
-        $dialect = $this->manager->getDialect();
-        $selection = $dialect->wrapCollection($selection, 2);
+        foreach ($selection->fields as $field) {
+            $root->selectionSet?->add($field);
+        }
 
-        return <<<GRAPHQL
-query {
-  {$this->root}{$args} {
-{$selection}
-  }
-}
-GRAPHQL;
+        $query->fields[] = $root;
+
+        return $query;
     }
 
     /**
      * @param class-string $entityClass
      */
-    private function buildAllFields(string $entityClass, int $level): ?string
+    private function buildAllFieldsAst(string $entityClass): SelectionSetNode
     {
+        $selection = new SelectionSetNode();
+
         if (isset($this->visited[$entityClass])) {
-            return null;
+            return $selection;
         }
 
         $this->visited[$entityClass] = true;
 
         try {
-            $metadata = $this->manager->metadataFactory->getMetadata($entityClass);
-            $dialect = $this->manager->getDialect();
-            $lines = [];
+            $metadata = $this
+                    ->manager
+                    ->metadataFactory
+                    ->getMetadata($entityClass);
 
             foreach ($metadata->fields as $field) {
-                $indent = str_repeat('  ', $level);
-
                 if ($field->relation !== null) {
-                    $nested = $this->buildAllFields($field->relation, $level + 1);
+                    $nested = $this->buildAllFieldsAst($field->relation);
 
-                    if ($nested === null || $nested === '') {
-                        $lines[] = $indent . $this->relationFallbackSelection($field, $level);
+                    if ($nested->fields === []) {
+                        $selection->add($this->relationFallbackAst($field));
+
                         continue;
                     }
 
-                    if ($field->isCollection) {
-                        $lines[] = $indent . $field->mappedFrom . " {\n" . $dialect->wrapCollection($nested, $level) . "\n" . $indent . '}';
-                    } else {
-                        $lines[] = $indent . $field->mappedFrom . " {\n" . $nested . "\n" . $indent . '}';
-                    }
+                    $selection->add(new FieldNode($field->mappedFrom, [], $nested));
 
                     continue;
                 }
 
-                $lines[] = $indent . $field->mappedFrom;
+                $selection->add(new FieldNode($field->mappedFrom));
             }
 
-            return implode("\n", $lines);
+            return $selection;
         } finally {
             unset($this->visited[$entityClass]);
         }
@@ -206,137 +196,114 @@ GRAPHQL;
      * @param class-string         $entityClass
      * @param array<string, mixed> $tree
      */
-    private function buildFromTree(string $entityClass, array $tree, int $level): string
+    private function buildFromTreeAst(string $entityClass, array $tree, ): SelectionSetNode
     {
-        $metadata = $this->manager->metadataFactory->getMetadata($entityClass);
+        $selection = new SelectionSetNode();
 
-        $lines = [];
+        $metadata = $this
+            ->manager
+            ->metadataFactory
+            ->getMetadata($entityClass);
 
         foreach ($tree as $fieldName => $children) {
             if (!\is_array($children)) {
                 continue;
             }
 
-            $indent = str_repeat('  ', $level);
             $field = $this->findFieldMetadata($metadata, $fieldName);
 
             if ($field === null) {
-                $lines[] = $indent . $fieldName;
-                continue;
-            }
-
-            if ($field->relation !== null) {
-                $explicit = isset($children['__explicit']);
-                unset($children['__explicit']);
-
-                $relationMetadata = $this->manager->metadataFactory->getMetadata($field->relation);
-
-                if ($relationMetadata->identifier !== null) {
-                    $identifier = $relationMetadata->identifier->mappedFrom;
-
-                    $children[$identifier] ??= [];
-                }
-
-                if ($explicit) {
-                    $nested = $this->buildAllFields($field->relation, $level + 1);
-
-                    if (!$nested) {
-                        $lines[] = $indent . $this->relationFallbackSelection($field, $level);
-
-                        continue;
-                    }
-
-                    $lines[] = $indent . $field->mappedFrom . " {\n" . $nested . "\n" . $indent . '}';
-
-                    continue;
-                }
-
-                if ($this->manualSelect && !$children) {
-                    $lines[] = $indent . $this->relationFallbackSelection($field, $level);
-
-                    continue;
-                }
-
-                $nested = $this->buildFromTree($field->relation, $children, $level + 1);
-
-                if ($nested === '') {
-                    $lines[] = $indent . $this->relationFallbackSelection($field, $level);
-
-                    continue;
-                }
-
-                $lines[] = $indent . $field->mappedFrom . " {\n" . $nested . "\n" . $indent . '}';
+                $selection->add(new FieldNode($fieldName));
 
                 continue;
             }
 
-            $lines[] = $indent . $field->mappedFrom;
+            if ($field->relation === null) {
+                $selection->add(new FieldNode($field->mappedFrom));
+
+                continue;
+            }
+
+            $explicit = isset($children['__explicit']);
+
+            unset($children['__explicit']);
+
+            $relationMetadata = $this
+                    ->manager
+                    ->metadataFactory
+                    ->getMetadata($field->relation);
+
+            if ($relationMetadata->identifier !== null) {
+                $identifier = $relationMetadata->identifier->mappedFrom;
+
+                $children[$identifier] ??= [];
+            }
+
+            if ($explicit) {
+                $nested = $this->buildAllFieldsAst($field->relation);
+
+                if ($nested->fields === []) {
+                    $selection->add($this->relationFallbackAst($field));
+
+                    continue;
+                }
+
+                $selection->add(new FieldNode($field->mappedFrom, [], $nested));
+
+                continue;
+            }
+
+            if ($this->manualSelect && $children === []) {
+                $selection->add($this->relationFallbackAst($field));
+
+                continue;
+            }
+
+            $nested = $this->buildFromTreeAst($field->relation, $children);
+
+            if ($nested->fields === []) {
+                $selection->add($this->relationFallbackAst($field));
+
+                continue;
+            }
+
+            $selection->add(new FieldNode($field->mappedFrom, [], $nested));
         }
 
-        return implode("\n", $lines);
+        return $selection;
     }
 
-    private function relationFallbackSelection(GraphqlFieldMetadata $field, int $level): string
+    private function relationFallbackAst(GraphqlFieldMetadata $field): FieldNode
     {
         if ($field->relation === null) {
-            return $field->mappedFrom;
+            throw new LogicException('Relation metadata requested on non relation field.');
         }
-        $dialect = $this->manager->getDialect();
 
-        $relationMetadata = $this->manager->metadataFactory->getMetadata($field->relation);
+        $relationMetadata = $this
+                ->manager
+                ->metadataFactory
+                ->getMetadata($field->relation);
 
         $identifier = $relationMetadata->identifier?->mappedFrom ?? 'id';
 
-        $indent = str_repeat('  ', $level);
+        $selection = new SelectionSetNode();
+        $selection->add(new FieldNode($identifier));
 
-        $inner = str_repeat('  ', $level + 1);
-
-        if ($field->isCollection) {
-            return $field->mappedFrom . " {\n" . $inner . $dialect->wrapCollection($identifier, $level) . "\n" . $indent . '}';
-        }
-
-        return $field->mappedFrom . " {\n" . $inner . $identifier . "\n" . $indent . '}';
+        return new FieldNode($field->mappedFrom, [], $selection);
     }
 
     private function findFieldMetadata(GraphqlEntityMetadata $metadata, string $name): ?GraphqlFieldMetadata
     {
         foreach ($metadata->fields as $field) {
-            if ($field->mappedFrom === $name || $field->property === $name) {
+            if ($field->mappedFrom === $name) {
+                return $field;
+            }
+
+            if ($field->property === $name) {
                 return $field;
             }
         }
 
         return null;
-    }
-
-    private function formatValue(mixed $value): string
-    {
-        if (\is_string($value)) {
-            return '"' . addslashes($value) . '"';
-        }
-
-        if (\is_bool($value)) {
-            return $value ? 'true' : 'false';
-        }
-
-        if ($value === null) {
-            return 'null';
-        }
-
-        if (\is_array($value)) {
-            return '[' . implode(
-                ', ',
-                array_map(
-                    fn ($v) => $this->formatValue($v),
-                    $value
-                )
-            ) . ']';
-        }
-
-        if (\is_scalar($value)) {
-            return (string) $value;
-        }
-
-        throw new InvalidArgumentException(\sprintf('Invalid GraphQL argument value of type "%s".', get_debug_type($value)));
     }
 }

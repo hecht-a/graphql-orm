@@ -37,6 +37,8 @@ final class GraphqlQueryStringBuilderTest extends TestCase
             ])
             ->build();
 
+        $query = $manager->getQueryCompiler()->compile($query);
+
         self::assertStringContainsString('task(id: 1, active: true, status: "OPEN", tags: ["a", "b"], nullable: null)', $query);
     }
 
@@ -49,6 +51,8 @@ final class GraphqlQueryStringBuilderTest extends TestCase
             ->entity(Task::class)
             ->fields(['title'], true)
             ->build();
+
+        $query = $manager->getQueryCompiler()->compile($query);
 
         self::assertSame(
             <<<GRAPHQL
@@ -76,6 +80,8 @@ GRAPHQL,
             ], true)
             ->build();
 
+        $query = $manager->getQueryCompiler()->compile($query);
+
         self::assertSame(
             <<<GRAPHQL
 query {
@@ -102,6 +108,8 @@ GRAPHQL,
             ->entity(Task::class)
             ->fields(['user'], true)
             ->build();
+
+        $query = $manager->getQueryCompiler()->compile($query);
 
         self::assertSame(
             <<<GRAPHQL
@@ -137,6 +145,8 @@ GRAPHQL,
             ->fields(['manager'], true)
             ->build();
 
+        $query = $manager->getQueryCompiler()->compile($query);
+
         self::assertStringContainsString(
             <<<GRAPHQL
       manager {
@@ -164,6 +174,8 @@ GRAPHQL,
             ->entity(User::class)
             ->build();
 
+        $query = $manager->getQueryCompiler()->compile($query);
+
         self::assertStringContainsString(
             <<<GRAPHQL
     manager {
@@ -184,6 +196,8 @@ GRAPHQL,
             ->fields(['customGraphqlField'], true)
             ->build();
 
+        $query = $manager->getQueryCompiler()->compile($query);
+
         self::assertStringContainsString('customGraphqlField', $query);
     }
 
@@ -193,13 +207,15 @@ GRAPHQL,
 
         $manager = $this->createManager();
 
-        (new GraphqlQueryStringBuilder($manager))
+        $query = (new GraphqlQueryStringBuilder($manager))
             ->root('task')
             ->entity(Task::class)
             ->arguments([
                 'invalid' => new \stdClass(),
             ])
             ->build();
+
+        $manager->getQueryCompiler()->compile($query);
     }
 
     private function createManager(): GraphqlManager
