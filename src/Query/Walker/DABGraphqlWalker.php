@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Query\Walker;
 
+use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Ast\QueryNode;
+use GraphqlOrm\Query\Direction;
 use GraphqlOrm\Query\Printer\GraphqlPrinter;
 
 final class DABGraphqlWalker extends AbstractGraphqlWalker
@@ -52,5 +54,72 @@ final class DABGraphqlWalker extends AbstractGraphqlWalker
         $this->printer->outdent();
 
         $this->printer->line('}');
+    }
+
+    protected function formatValue(mixed $value): string
+    {
+        if (\is_string($value)) {
+            return '"' . $value . '"';
+        }
+
+        if (\is_int($value) || \is_float($value)) {
+            return (string) $value;
+        }
+
+        if (\is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        if ($value === null) {
+            return 'null';
+        }
+
+        if (\is_array($value)) {
+            if (array_is_list($value)) {
+                $items = array_map(fn ($v) => $this->formatValue($v), $value);
+
+                return '[' . implode(', ', $items) . ']';
+            }
+
+            $fields = [];
+            foreach ($value as $key => $item) {
+                $fields[] = $key . ': ' . $this->formatValue($item);
+            }
+
+            return '{ ' . implode(', ', $fields) . ' }';
+        }
+
+        if ($value instanceof \BackedEnum) {
+            return $value instanceof Direction
+                ? $value->value
+                : '"' . $value->value . '"';
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return '"' . $value->format(DATE_ATOM) . '"';
+        }
+
+        throw new InvalidArgumentException(\sprintf('Unsupported GraphQL argument type "%s".', get_debug_type($value)));
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    protected function formatArguments(array $arguments): string
+    {
+        if ($arguments === []) {
+            return '';
+        }
+
+        $pairs = [];
+
+        foreach ($arguments as $key => $value) {
+            if ($value === null) {
+                continue;
+            }
+            $pairs[] = \sprintf('%s: %s', $key, $this->formatValue($value));
+        }
+
+        return '(' . implode(', ', $pairs) . ')';
     }
 }

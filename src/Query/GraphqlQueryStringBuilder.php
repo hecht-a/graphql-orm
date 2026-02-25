@@ -11,6 +11,7 @@ use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\Ast\SelectionSetNode;
+use GraphqlOrm\Query\Expr\FilterExpressionInterface;
 
 /**
  * @template T of object
@@ -27,6 +28,8 @@ final class GraphqlQueryStringBuilder
     private ?bool $manualSelect = false;
     /** @var array<string, bool> */
     private array $visited = [];
+    private QueryOptions $options;
+    private ?FilterExpressionInterface $filter = null;
 
     /**
      * @param GraphqlManager<T> $manager
@@ -34,6 +37,7 @@ final class GraphqlQueryStringBuilder
     public function __construct(
         private readonly GraphqlManager $manager,
     ) {
+        $this->options = new QueryOptions();
     }
 
     /**
@@ -83,13 +87,39 @@ final class GraphqlQueryStringBuilder
         return $this;
     }
 
+    /**
+     * @return GraphqlQueryStringBuilder<T>
+     */
+    public function options(QueryOptions $options): self
+    {
+        $this->options = $options;
+
+        return $this;
+    }
+
+    /**
+     * @return GraphqlQueryStringBuilder<T>
+     */
+    public function filter(?FilterExpressionInterface $filter): self
+    {
+        $this->filter = $filter;
+
+        return $this;
+    }
+
     public function build(): QueryNode
     {
         $query = new QueryNode();
 
+        $dialect = $this->manager->getDialect();
+
+        $options = $dialect->applyQueryOptions($this->arguments, $this->options);
+        $filter = $dialect->applyFilter($this->filter);
+        $args = [...$options, ...$filter];
+
         $root = new FieldNode(
             $this->root,
-            $this->arguments,
+            $args,
             new SelectionSetNode()
         );
 

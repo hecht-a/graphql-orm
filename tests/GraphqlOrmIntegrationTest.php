@@ -77,10 +77,10 @@ final class GraphqlOrmIntegrationTest extends TestCase
 
         $repo = new GraphqlEntityRepository($manager, Task::class);
 
-        $result = $repo
-            ->createQueryBuilder()
+        $qb = $repo->createQueryBuilder();
+        $result = $qb
             ->select('title')
-            ->where('id', 2)
+            ->where($qb->expr()->eq('title', 2))
             ->getQuery()
             ->getResult();
 
