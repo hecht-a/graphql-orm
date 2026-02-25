@@ -6,6 +6,7 @@ namespace GraphqlOrm\Tests\Query;
 
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
+use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
@@ -79,15 +80,19 @@ final class GraphqlQueryBuilderTest extends TestCase
     public function testWhereAddsArguments(): void
     {
         $manager = $this->createManager();
+        $manager->dialect = new DataApiBuilderDialect();
 
-        $query = (new GraphqlQueryBuilder(FakeEntity::class, $manager))
-            ->where('id', 1)
-            ->where('status', 'OPEN')
+        $query = (new GraphqlQueryBuilder(FakeEntity::class, $manager));
+        $query = $query
+            ->where($query->expr()->andX(
+                $query->expr()->eq('id', 1),
+                $query->expr()->eq('status', 'OPEN')
+            ))
             ->getQuery();
 
         $graphql = $query->getGraphQL();
 
-        self::assertStringContainsString('(id: 1, status: "OPEN")', $graphql);
+        self::assertStringContainsString('and: [{ id: { eq: 1 } }, { status: { eq: "OPEN" } }]', $graphql);
     }
 
     public function testAddSelectWithoutCallingSelectFirst(): void

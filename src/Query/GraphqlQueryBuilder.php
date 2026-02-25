@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace GraphqlOrm\Query;
 
 use GraphqlOrm\GraphqlManager;
+use GraphqlOrm\Query\Expr\ExpressionBuilder;
+use GraphqlOrm\Query\Expr\FilterExpressionInterface;
 
 /**
  * @template T of object
@@ -16,6 +18,7 @@ final class GraphqlQueryBuilder
     /** @var string[]|null */
     private ?array $selectedFields = null;
     private ?string $graphql = null;
+    private ?FilterExpressionInterface $filter = null;
 
     /**
      * @param class-string<T>   $entityClass
@@ -24,6 +27,7 @@ final class GraphqlQueryBuilder
     public function __construct(
         private readonly string $entityClass,
         private readonly GraphqlManager $manager,
+        private readonly QueryOptions $options = new QueryOptions(),
     ) {
     }
 
@@ -53,11 +57,37 @@ final class GraphqlQueryBuilder
     /**
      * @return GraphqlQueryBuilder<T>
      */
-    public function where(string $field, mixed $value): self
+    public function where(FilterExpressionInterface $expr): self
     {
-        $this->criteria[$field] = $value;
+        $this->filter = $expr;
 
         return $this;
+    }
+
+    /**
+     * @return GraphqlQueryBuilder<T>
+     */
+    public function limit(int $limit): self
+    {
+        $this->options->limit = $limit;
+
+        return $this;
+    }
+
+    /**
+     * @return GraphqlQueryBuilder<T>
+     */
+    public function orderBy(string $orderBy, Direction $direction): self
+    {
+        $this->options->orderBy ??= [];
+        $this->options->orderBy[$orderBy] = $direction;
+
+        return $this;
+    }
+
+    public function expr(): ExpressionBuilder
+    {
+        return new ExpressionBuilder();
     }
 
     /**
@@ -99,6 +129,8 @@ final class GraphqlQueryBuilder
             ->entity($this->entityClass)
             ->root($metadata->name)
             ->arguments($this->criteria)
+            ->options($this->options)
+            ->filter($this->filter)
             ->fields($fields, $manualSelect)
             ->build();
 
