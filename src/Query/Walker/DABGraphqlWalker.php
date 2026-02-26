@@ -9,11 +9,16 @@ use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\Direction;
 use GraphqlOrm\Query\Printer\GraphqlPrinter;
+use GraphqlOrm\Query\QueryOptions;
 
 final class DABGraphqlWalker extends AbstractGraphqlWalker
 {
-    public function walk(QueryNode $query): string
+    private QueryOptions $options;
+
+    public function walk(QueryNode $query, QueryOptions $options): string
     {
+        $this->options = $options;
+
         $this->printer = new GraphqlPrinter();
 
         $this->printer->line($query->operation . ' {');
@@ -33,7 +38,7 @@ final class DABGraphqlWalker extends AbstractGraphqlWalker
 
     private function walkRootField(FieldNode $field): void
     {
-        $args = $this->formatArguments($field->arguments);
+        $args = $this->formatArguments($this->applyPaginationArguments($field->arguments));
 
         $this->printer->line($field->name . $args . ' {');
 
@@ -51,9 +56,36 @@ final class DABGraphqlWalker extends AbstractGraphqlWalker
 
         $this->printer->line('}');
 
+        if ($this->options->paginate) {
+            $this->printer->line('hasNextPage');
+            $this->printer->line('endCursor');
+        }
+
         $this->printer->outdent();
 
         $this->printer->line('}');
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     *
+     * @return array<string, mixed>
+     */
+    private function applyPaginationArguments(array $arguments): array
+    {
+        if (!$this->options->paginate) {
+            return $arguments;
+        }
+
+        if ($this->options->limit !== null) {
+            $arguments['first'] = $this->options->limit;
+        }
+
+        if ($this->options->cursor !== null) {
+            $arguments['after'] = $this->options->cursor;
+        }
+
+        return $arguments;
     }
 
     protected function formatValue(mixed $value): string

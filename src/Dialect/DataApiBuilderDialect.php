@@ -13,7 +13,7 @@ final class DataApiBuilderDialect implements GraphqlQueryDialect
 {
     public function extractCollection(array $data): array
     {
-        /** @var array<string|int, mixed> $items */
+        /** @var array<string|int, mixed>[] $items */
         $items = $data['items'] ?? [];
 
         return $items;
@@ -31,6 +31,16 @@ final class DataApiBuilderDialect implements GraphqlQueryDialect
         }
 
         $arguments['orderBy'] = $options->orderBy;
+
+        if ($options->paginate) {
+            if ($options->limit) {
+                $arguments['first'] = $options->limit;
+            }
+
+            if ($options->cursor) {
+                $arguments['after'] = $options->cursor;
+            }
+        }
 
         return $arguments;
     }

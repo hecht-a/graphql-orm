@@ -14,4 +14,11 @@ final class QueryOptions
 
     /** @var array<string, Direction>|null */
     public ?array $orderBy = null;
+
+    public bool $paginate = false;
+
+    public ?string $cursor = null;
+
+    /** @var string[] */
+    public array $cursorStack = [];
 }

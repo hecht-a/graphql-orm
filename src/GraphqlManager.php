@@ -13,6 +13,8 @@ use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\GraphqlQueryCompiler;
+use GraphqlOrm\Query\Pagination\PaginatedResult;
+use GraphqlOrm\Query\QueryOptions;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
@@ -39,14 +41,14 @@ class GraphqlManager
     /**
      * @param array<string, mixed> $variables
      *
-     * @return T[]
+     * @return T[]|PaginatedResult<T>
      */
-    public function execute(QueryNode|string $graphql, callable $hydration, array $variables = [], ): array
+    public function execute(QueryNode|string $graphql, callable $hydration, QueryOptions $options = new QueryOptions(), array $variables = []): array|PaginatedResult
     {
         $context = new GraphqlExecutionContext();
 
         if ($graphql instanceof QueryNode) {
-            $compiled = $this->getQueryCompiler()->compile($graphql);
+            $compiled = $this->getQueryCompiler()->compile($graphql, $options);
             /** @var array<string|int, mixed> $ast */
             $ast = json_decode(json_encode($graphql, JSON_THROW_ON_ERROR), true);
             $context->trace->ast = $ast;

@@ -11,6 +11,7 @@ use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Query\GraphqlQuery;
+use GraphqlOrm\Query\QueryOptions;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntity;
 use GraphqlOrm\Tests\Fixtures\FakeRepository\FakeRepository;
 use PHPUnit\Framework\TestCase;
@@ -19,7 +20,7 @@ final class GraphqlQueryTest extends TestCase
 {
     public function testGetGraphQL(): void
     {
-        $query = new GraphqlQuery('query { tasks { id } }', FakeEntity::class, $this->createManager([]));
+        $query = new GraphqlQuery('query { tasks { id } }', FakeEntity::class, $this->createManager([]), new QueryOptions());
 
         self::assertSame('query { tasks { id } }', $query->getGraphQL());
     }
@@ -30,7 +31,7 @@ final class GraphqlQueryTest extends TestCase
             'data' => [],
         ]);
 
-        $query = new GraphqlQuery('query', FakeEntity::class, $manager);
+        $query = new GraphqlQuery('query', FakeEntity::class, $manager, new QueryOptions());
 
         self::assertSame([], $query->getResult());
     }
@@ -45,7 +46,7 @@ final class GraphqlQueryTest extends TestCase
             ],
         ]);
 
-        (new GraphqlQuery('query', FakeEntity::class, $manager))->getResult();
+        (new GraphqlQuery('query', FakeEntity::class, $manager, new QueryOptions()))->getResult();
     }
 
     public function testHydratesSingleObject(): void
@@ -66,7 +67,7 @@ final class GraphqlQueryTest extends TestCase
             ],
         ], $hydrator);
 
-        $query = new GraphqlQuery('query', FakeEntity::class, $manager);
+        $query = new GraphqlQuery('query', FakeEntity::class, $manager, new QueryOptions());
 
         self::assertSame([$stdClass], $query->getResult());
     }
@@ -91,7 +92,7 @@ final class GraphqlQueryTest extends TestCase
             ],
         ], $hydrator);
 
-        $query = new GraphqlQuery('query', FakeEntity::class, $manager);
+        $query = new GraphqlQuery('query', FakeEntity::class, $manager, new QueryOptions());
 
         self::assertSame([$stdClass1, $stdClass2], $query->getResult());
     }
@@ -111,7 +112,7 @@ final class GraphqlQueryTest extends TestCase
             ],
         ], $hydrator);
 
-        $query = new GraphqlQuery('query', FakeEntity::class, $manager);
+        $query = new GraphqlQuery('query', FakeEntity::class, $manager, new QueryOptions());
 
         self::assertSame($stdClass, $query->getOneOrNullResult());
     }
@@ -122,7 +123,7 @@ final class GraphqlQueryTest extends TestCase
             'data' => [],
         ]);
 
-        $query = new GraphqlQuery('query', FakeEntity::class, $manager);
+        $query = new GraphqlQuery('query', FakeEntity::class, $manager, new QueryOptions());
 
         self::assertNull($query->getOneOrNullResult());
     }

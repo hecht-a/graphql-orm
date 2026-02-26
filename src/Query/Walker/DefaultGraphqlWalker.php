@@ -7,10 +7,11 @@ namespace GraphqlOrm\Query\Walker;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\Printer\GraphqlPrinter;
+use GraphqlOrm\Query\QueryOptions;
 
 final class DefaultGraphqlWalker extends AbstractGraphqlWalker
 {
-    public function walk(QueryNode $query): string
+    public function walk(QueryNode $query, QueryOptions $options): string
     {
         $this->printer = new GraphqlPrinter();
 

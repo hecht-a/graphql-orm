@@ -13,6 +13,7 @@ use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Query\GraphqlQueryStringBuilder;
+use GraphqlOrm\Query\QueryOptions;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\Task;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\User;
 use GraphqlOrm\Tests\Fixtures\FakeRepository\TaskRepository;
@@ -37,7 +38,7 @@ final class GraphqlQueryStringBuilderTest extends TestCase
             ])
             ->build();
 
-        $query = $manager->getQueryCompiler()->compile($query);
+        $query = $manager->getQueryCompiler()->compile($query, new QueryOptions());
 
         self::assertStringContainsString('task(id: 1, active: true, status: "OPEN", tags: ["a", "b"], nullable: null)', $query);
     }
@@ -52,7 +53,7 @@ final class GraphqlQueryStringBuilderTest extends TestCase
             ->fields(['title'], true)
             ->build();
 
-        $query = $manager->getQueryCompiler()->compile($query);
+        $query = $manager->getQueryCompiler()->compile($query, new QueryOptions());
 
         self::assertSame(
             <<<GRAPHQL
@@ -80,7 +81,7 @@ GRAPHQL,
             ], true)
             ->build();
 
-        $query = $manager->getQueryCompiler()->compile($query);
+        $query = $manager->getQueryCompiler()->compile($query, new QueryOptions());
 
         self::assertSame(
             <<<GRAPHQL
@@ -109,7 +110,7 @@ GRAPHQL,
             ->fields(['user'], true)
             ->build();
 
-        $query = $manager->getQueryCompiler()->compile($query);
+        $query = $manager->getQueryCompiler()->compile($query, new QueryOptions());
 
         self::assertSame(
             <<<GRAPHQL
@@ -145,7 +146,7 @@ GRAPHQL,
             ->fields(['manager'], true)
             ->build();
 
-        $query = $manager->getQueryCompiler()->compile($query);
+        $query = $manager->getQueryCompiler()->compile($query, new QueryOptions());
 
         self::assertStringContainsString(
             <<<GRAPHQL
@@ -174,7 +175,7 @@ GRAPHQL,
             ->entity(User::class)
             ->build();
 
-        $query = $manager->getQueryCompiler()->compile($query);
+        $query = $manager->getQueryCompiler()->compile($query, new QueryOptions());
 
         self::assertStringContainsString(
             <<<GRAPHQL
@@ -196,7 +197,7 @@ GRAPHQL,
             ->fields(['customGraphqlField'], true)
             ->build();
 
-        $query = $manager->getQueryCompiler()->compile($query);
+        $query = $manager->getQueryCompiler()->compile($query, new QueryOptions());
 
         self::assertStringContainsString('customGraphqlField', $query);
     }
@@ -215,7 +216,7 @@ GRAPHQL,
             ])
             ->build();
 
-        $manager->getQueryCompiler()->compile($query);
+        $manager->getQueryCompiler()->compile($query, new QueryOptions());
     }
 
     private function createManager(): GraphqlManager
