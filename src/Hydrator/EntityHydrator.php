@@ -24,7 +24,7 @@ readonly class EntityHydrator
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param array<string|int, mixed> $data
      */
     public function hydrate(
         GraphqlEntityMetadata $metadata,

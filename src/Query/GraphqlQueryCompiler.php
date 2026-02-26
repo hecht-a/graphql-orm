@@ -14,8 +14,8 @@ readonly class GraphqlQueryCompiler
     ) {
     }
 
-    public function compile(QueryNode $node): string
+    public function compile(QueryNode $node, QueryOptions $options): string
     {
-        return $this->walker->walk($node);
+        return $this->walker->walk($node, $options);
     }
 }

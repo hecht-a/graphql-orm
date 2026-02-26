@@ -9,6 +9,7 @@ use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\Ast\SelectionSetNode;
 use GraphqlOrm\Query\GraphqlQueryCompiler;
+use GraphqlOrm\Query\QueryOptions;
 use GraphqlOrm\Query\Walker\DefaultGraphqlWalker;
 use PHPUnit\Framework\TestCase;
 
@@ -25,7 +26,7 @@ final class DefaultGraphqlWalkerTest extends TestCase
         $query->fields[] = new FieldNode(name: 'tasks', selectionSet: $selection);
 
         $walker = new DefaultGraphqlWalker();
-        $graphql = $walker->walk($query);
+        $graphql = $walker->walk($query, new QueryOptions());
 
         self::assertSame(
             <<<GQL
@@ -55,7 +56,7 @@ GQL,
         $query->fields[] = new FieldNode('tasks', selectionSet: $taskSelection);
 
         $walker = new DefaultGraphqlWalker();
-        $graphql = $walker->walk($query);
+        $graphql = $walker->walk($query, new QueryOptions());
 
         self::assertSame(
             <<<GQL
@@ -89,7 +90,7 @@ GQL,
         );
 
         $walker = new DefaultGraphqlWalker();
-        $graphql = $walker->walk($query);
+        $graphql = $walker->walk($query, new QueryOptions());
 
         self::assertStringContainsString('task(id: 1, active: true)', $graphql);
     }
@@ -132,7 +133,7 @@ GQL,
 
         $compiler = new GraphqlQueryCompiler(new DefaultGraphqlWalker());
 
-        $graphql = $compiler->compile($query);
+        $graphql = $compiler->compile($query, new QueryOptions());
 
         self::assertStringContainsString('tasks', $graphql);
     }

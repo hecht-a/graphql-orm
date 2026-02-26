@@ -60,7 +60,8 @@ class GraphqlEntityRepository
             ->fields($fields)
             ->build();
 
-        return $this
+        /** @var T[] $result */
+        $result = $this
             ->manager
             ->execute($graphql, hydration: function (array $result, GraphqlExecutionContext $context) use ($metadata) {
                 $dialect = $this->manager->getDialect();
@@ -106,6 +107,8 @@ class GraphqlEntityRepository
                     $rows
                 );
             });
+
+        return $result;
     }
 
     /**

@@ -85,6 +85,21 @@ final class GraphqlQueryBuilder
         return $this;
     }
 
+    /**
+     * @return GraphqlQueryBuilder<T>
+     */
+    public function paginate(?string $after = null): self
+    {
+        $this->options->paginate = true;
+
+        if ($after !== null) {
+            $this->options->cursor = $after;
+            $this->options->cursorStack[] = $after;
+        }
+
+        return $this;
+    }
+
     public function expr(): ExpressionBuilder
     {
         return new ExpressionBuilder();
@@ -109,7 +124,8 @@ final class GraphqlQueryBuilder
             return new GraphqlQuery(
                 $this->graphql,
                 $this->entityClass,
-                $this->manager
+                $this->manager,
+                $this->options
             );
         }
 
@@ -137,7 +153,8 @@ final class GraphqlQueryBuilder
         return new GraphqlQuery(
             $ast,
             $this->entityClass,
-            $this->manager
+            $this->manager,
+            $this->options
         );
     }
 }
