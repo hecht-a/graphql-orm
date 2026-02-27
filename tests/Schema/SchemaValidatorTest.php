@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Schema;
 
+use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Schema\SchemaValidator;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntityWithUnknownField;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntityWithUnknownType;
@@ -69,6 +71,77 @@ final class SchemaValidatorTest extends TestCase
         self::assertCount(1, $violations);
         self::assertStringContainsString('doesNotExist', $violations[0]);
         self::assertStringContainsString('Product', $violations[0]);
+    }
+
+    public function testSuggestsClosestFieldOnViolation(): void
+    {
+        $schemaTypes = [
+            'Product' => [
+                'kind' => 'OBJECT',
+                'fields' => [
+                    'id' => ['kind' => 'SCALAR', 'name' => 'Int'],
+                    'name' => ['kind' => 'SCALAR', 'name' => 'String'],
+                ],
+            ],
+        ];
+
+        $metadata = new GraphqlEntityMetadata(
+            FakeEntityWithUnknownField::class,
+            'products',
+            null,
+            [
+                new GraphqlFieldMetadata(
+                    property: 'id',
+                    mappedFrom: 'id',
+                    isIdentifier: true,
+                ),
+                new GraphqlFieldMetadata(
+                    property: 'nme',
+                    mappedFrom: 'nme',
+                ),
+            ],
+        );
+
+        $factory = $this->createStub(GraphqlEntityMetadataFactory::class);
+        $factory->method('getMetadata')->willReturn($metadata);
+
+        $validator = new SchemaValidator($factory);
+        $violations = $validator->validate(
+            [FakeEntityWithUnknownField::class],
+            $schemaTypes
+        );
+
+        self::assertCount(1, $violations);
+        self::assertStringContainsString('nme', $violations[0]);
+        self::assertStringContainsString('Did you mean "name"', $violations[0]);
+    }
+
+    public function testNoSuggestionWhenFieldIsTooFarFromAllCandidates(): void
+    {
+        $metadata = new GraphqlEntityMetadata(
+            FakeEntityWithUnknownField::class,
+            'products',
+            null,
+            [
+                new GraphqlFieldMetadata(
+                    property: 'wxyz',
+                    mappedFrom: 'wxyz',
+                    isIdentifier: false,
+                ),
+            ],
+        );
+
+        $factory = $this->createStub(GraphqlEntityMetadataFactory::class);
+        $factory->method('getMetadata')->willReturn($metadata);
+
+        $validator = new SchemaValidator($factory);
+        $violations = $validator->validate(
+            [FakeEntityWithUnknownField::class],
+            $this->schemaTypes
+        );
+
+        self::assertCount(1, $violations);
+        self::assertStringNotContainsString('Did you mean', $violations[0]);
     }
 
     public function testViolationWhenScalarTypeMismatch(): void

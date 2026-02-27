@@ -15,7 +15,7 @@ final readonly class SchemaValidator
     /**
      * @var array<string, string[]>
      */
-    private const SCALAR_MAP = [
+    private const array SCALAR_MAP = [
         'int' => ['Int', 'ID'],
         'float' => ['Float'],
         'string' => ['String', 'ID', 'Date', 'DateTime', 'Time', 'JSON', 'UUID'],
@@ -85,12 +85,16 @@ final readonly class SchemaValidator
                 continue;
             }
             if (!isset($schemaFields[$field->mappedFrom])) {
+                $suggestion = $this->suggestField($field->mappedFrom, array_keys($schemaFields));
+                $didYouMean = $suggestion !== null ? \sprintf(' Did you mean "%s"?', $suggestion) : '';
+
                 $violations[] = \sprintf(
-                    '[%s] Field "%s" (mapped from "%s") does not exist on GraphQL type "%s".',
+                    '[%s] Field "%s" (mapped from "%s") does not exist on GraphQL type "%s".%s',
                     $metadata->class,
                     $field->property,
                     $field->mappedFrom,
                     $typeName,
+                    $didYouMean,
                 );
 
                 continue;
@@ -180,5 +184,29 @@ final readonly class SchemaValidator
         }
 
         return [];
+    }
+
+    /**
+     * @param string[] $candidates
+     */
+    private function suggestField(string $fieldName, array $candidates): ?string
+    {
+        $best = null;
+        $bestDistance = PHP_INT_MAX;
+
+        foreach ($candidates as $candidate) {
+            $distance = levenshtein($fieldName, $candidate);
+
+            if ($distance < $bestDistance) {
+                $bestDistance = $distance;
+                $best = $candidate;
+            }
+        }
+
+        if ($bestDistance > 3 || $best === null) {
+            return null;
+        }
+
+        return $best;
     }
 }
