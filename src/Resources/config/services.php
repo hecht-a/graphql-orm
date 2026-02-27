@@ -5,6 +5,7 @@ declare(strict_types=1);
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Client\GraphqlClientInterface;
 use GraphqlOrm\Codegen\StubRenderer;
+use GraphqlOrm\Command\DebugEntityCommand;
 use GraphqlOrm\Command\MakeGraphqlEntityCommand;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\EventListener\SchemaValidationListener;
@@ -60,6 +61,9 @@ return static function (ContainerConfigurator $config) {
         ->arg('$stubsDir', __DIR__ . '/../stubs');
 
     $services->set(MakeGraphqlEntityCommand::class)
+        ->tag('console.command');
+
+    $services->set(DebugEntityCommand::class)
         ->tag('console.command');
 
     $services->set(SchemaIntrospector::class);
