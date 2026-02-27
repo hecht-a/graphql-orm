@@ -6,6 +6,7 @@ namespace GraphqlOrm\Query;
 
 final class GraphqlQueryTrace
 {
+    public readonly string $id;
     public string $graphql;
     /** @var array<string|int, mixed> */
     public ?array $ast = null;
@@ -28,4 +29,10 @@ final class GraphqlQueryTrace
     public int $hydratedRelations = 0;
     public int $hydratedCollections = 0;
     public int $hydrationMaxDepth = 0;
+    public float|int $duration = 0;
+
+    public function __construct()
+    {
+        $this->id = uniqid('gql_', true);
+    }
 }

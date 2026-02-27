@@ -16,6 +16,10 @@
             <span class="sf-toolbar-status sf-toolbar-status-">{{ collector.queryCount }}</span>
         </div>
         <div class="sf-toolbar-info-piece">
+            <b>Duration</b>
+            <span class="sf-toolbar-status">{{ collector.totalDuration|number_format(2) }} ms</span>
+        </div>
+        <div class="sf-toolbar-info-piece">
             <b>Errors</b>
             <span class="sf-toolbar-status sf-toolbar-status-red">{{ collector.errorCount|default(0) }}</span>
         </div>
@@ -40,7 +44,7 @@
 
     <strong>GraphQL ORM</strong>
     {% if collector.queryCount > 0 %}
-    <span class="count">
+        <span class="count">
         <span>{{ collector.queryCount }}</span>
     </span>
     {% endif %}
@@ -78,6 +82,10 @@
                     <tr>
                         <th style="width:150px">Endpoint</th>
                         <td>{{ query.endpoint }}</td>
+                    </tr>
+                    <tr>
+                        <th>Duration</th>
+                        <td>{{ query.duration|number_format(2) }} ms</td>
                     </tr>
                     <tr>
                         <th>Response size</th>

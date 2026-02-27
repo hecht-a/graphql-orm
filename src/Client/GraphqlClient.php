@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GraphqlOrm\Client;
 
 use GraphqlOrm\Execution\GraphqlExecutionContext;
+use Symfony\Component\Stopwatch\Stopwatch;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 readonly class GraphqlClient implements GraphqlClientInterface
@@ -18,6 +19,7 @@ readonly class GraphqlClient implements GraphqlClientInterface
         private string $endpoint,
         private array $headers = [],
         private array $httpClientOptions = [],
+        private ?Stopwatch $stopwatch = null,
     ) {
     }
 
@@ -26,6 +28,10 @@ readonly class GraphqlClient implements GraphqlClientInterface
      */
     public function query(string $query, GraphqlExecutionContext $context, array $variables = [],
     ): array {
+        $eventName = 'graphql_orm.query.' . $context->trace->id;
+
+        $this->stopwatch?->start($eventName, 'graphql_orm');
+
         $response = $this
             ->httpClient
             ->request(
@@ -51,6 +57,9 @@ readonly class GraphqlClient implements GraphqlClientInterface
         $context->trace->endpoint = $this->endpoint;
 
         $content = $response->getContent(false);
+
+        $event = $this->stopwatch?->stop($eventName);
+        $context->trace->duration = $event ? $event->getDuration() : 0.0;
 
         $context->trace->responseSize = \strlen($content);
 
