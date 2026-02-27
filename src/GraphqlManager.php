@@ -15,6 +15,7 @@ use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\GraphqlQueryCompiler;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
 use GraphqlOrm\Query\QueryOptions;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
@@ -35,6 +36,7 @@ class GraphqlManager
         public int $maxDepth,
         public GraphqlQueryDialect $dialect = new DefaultDialect(),
         private ?GraphqlQueryCompiler $compiler = null,
+        private ?LoggerInterface $logger = null,
     ) {
     }
 
@@ -59,23 +61,12 @@ class GraphqlManager
         $context->trace->graphql = $compiled;
 
         try {
-            $result = $this->client
-                ->query(
-                    $compiled,
-                    $context,
-                    $variables
-                );
+            $result = $this->client->query($compiled, $context, $variables);
 
-            $entities = $hydration(
-                $result,
-                $context
-            );
-        } catch (\Throwable $e) {
-            throw $e;
+            $entities = $hydration($result, $context);
         } finally {
-            $this->collector->addQuery(
-                $context->trace
-            );
+            $this->collector->addQuery($context->trace);
+            $this->log($context);
         }
 
         return $entities;
@@ -97,5 +88,35 @@ class GraphqlManager
         $this->compiler = new GraphqlQueryCompiler($walker);
 
         return $this->compiler;
+    }
+
+    private function log(GraphqlExecutionContext $context): void
+    {
+        if ($this->logger === null) {
+            return;
+        }
+
+        $trace = $context->trace;
+
+        $context = [
+            'endpoint' => $trace->endpoint,
+            'duration_ms' => round($trace->duration, 2),
+            'response_size' => $trace->responseSize,
+            'hydrated_entities' => $trace->hydratedEntities,
+            'hydrated_relations' => $trace->hydratedRelations,
+            'caller' => $trace->caller,
+            'query' => $trace->graphql,
+        ];
+
+        if (!empty($trace->errors)) {
+            $this->logger->error('GraphQL query returned errors', [
+                ...$context,
+                'errors' => $trace->errors,
+            ]);
+
+            return;
+        }
+
+        $this->logger->debug('GraphQL query executed', $context);
     }
 }

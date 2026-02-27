@@ -36,7 +36,8 @@ return static function (ContainerConfigurator $config) {
 
     $services->set(GraphqlManager::class)
         ->arg('$maxDepth', '%graphql_orm.max_depth%')
-        ->arg('$dialect', service('graphql_orm.dialect'));
+        ->arg('$dialect', service('graphql_orm.dialect'))
+        ->arg('$logger', service('monolog.logger.graphql_orm')->nullOnInvalid());
 
     $services->set(GraphqlClientInterface::class);
 
