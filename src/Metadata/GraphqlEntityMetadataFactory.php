@@ -100,7 +100,8 @@ class GraphqlEntityMetadataFactory
                 mappedFrom: $instance->mappedFrom,
                 relation: $relation,
                 isCollection: $isCollection,
-                isIdentifier: $instance->identifier
+                isIdentifier: $instance->identifier,
+                ignoreValidation: $instance->ignoreValidation
             );
 
             if ($field->isIdentifier) {

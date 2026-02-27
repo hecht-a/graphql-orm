@@ -13,6 +13,7 @@ final readonly class GraphqlFieldMetadata
         public ?string $relation = null,
         public bool $isCollection = false,
         public bool $isIdentifier = false,
+        public bool $ignoreValidation = false,
     ) {
     }
 }

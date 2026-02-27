@@ -12,6 +12,7 @@ final readonly class GraphqlField
         /** @var class-string|null */
         public ?string $targetEntity = null,
         public bool $identifier = false,
+        public bool $ignoreValidation = false,
     ) {
     }
 }

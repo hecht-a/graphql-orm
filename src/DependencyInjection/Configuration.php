@@ -49,6 +49,17 @@ final class Configuration implements ConfigurationInterface
             ->min(1)
             ->end()
 
+            ->arrayNode('schema_validation')
+            ->addDefaultsIfNotSet()
+            ->children()
+            ->enumNode('mode')
+            ->values(['exception', 'warning', 'disabled'])
+            ->defaultValue('disabled')
+            ->info('What to do when entity mapping does not match the GraphQL schema. "exception" blocks the boot, "warning" logs a warning, "disabled" skips validation.')
+            ->end()
+            ->end()
+            ->end()
+
             ->arrayNode('mapping')
             ->addDefaultsIfNotSet()
             ->children()
