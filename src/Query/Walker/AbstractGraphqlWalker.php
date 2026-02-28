@@ -26,7 +26,17 @@ abstract class AbstractGraphqlWalker implements GraphqlWalkerInterface
 
         $this->printer->indent();
 
+        if ($field->isCollection) {
+            $this->printer->line('items {');
+            $this->printer->indent();
+        }
+
         $this->walkSelectionSet($field->selectionSet);
+
+        if ($field->isCollection) {
+            $this->printer->outdent();
+            $this->printer->line('}');
+        }
 
         $this->printer->outdent();
 

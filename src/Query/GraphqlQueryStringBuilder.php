@@ -120,7 +120,7 @@ final class GraphqlQueryStringBuilder
         $root = new FieldNode(
             $this->root,
             $args,
-            new SelectionSetNode()
+            new SelectionSetNode(),
         );
 
         if ($this->manualSelect) {
@@ -168,12 +168,12 @@ final class GraphqlQueryStringBuilder
                         continue;
                     }
 
-                    $selection->add(new FieldNode($field->mappedFrom, [], $nested));
+                    $selection->add(new FieldNode($field->mappedFrom, [], $nested, $field->isCollection));
 
                     continue;
                 }
 
-                $selection->add(new FieldNode($field->mappedFrom));
+                $selection->add(new FieldNode($field->mappedFrom, isCollection: $field->isCollection));
             }
 
             return $selection;
@@ -249,7 +249,7 @@ final class GraphqlQueryStringBuilder
             }
 
             if ($field->relation === null) {
-                $selection->add(new FieldNode($field->mappedFrom));
+                $selection->add(new FieldNode($field->mappedFrom, isCollection: $field->isCollection));
 
                 continue;
             }
@@ -278,7 +278,7 @@ final class GraphqlQueryStringBuilder
                     continue;
                 }
 
-                $selection->add(new FieldNode($field->mappedFrom, [], $nested));
+                $selection->add(new FieldNode($field->mappedFrom, [], $nested, $field->isCollection));
 
                 continue;
             }
@@ -297,7 +297,7 @@ final class GraphqlQueryStringBuilder
                 continue;
             }
 
-            $selection->add(new FieldNode($field->mappedFrom, [], $nested));
+            $selection->add(new FieldNode($field->mappedFrom, [], $nested, $field->isCollection));
         }
 
         return $selection;
@@ -317,9 +317,9 @@ final class GraphqlQueryStringBuilder
         $identifier = $relationMetadata->identifier?->mappedFrom ?? 'id';
 
         $selection = new SelectionSetNode();
-        $selection->add(new FieldNode($identifier));
+        $selection->add(new FieldNode($identifier, isCollection: $field->isCollection));
 
-        return new FieldNode($field->mappedFrom, [], $selection);
+        return new FieldNode($field->mappedFrom, [], $selection, isCollection: $field->isCollection);
     }
 
     private function findFieldMetadata(GraphqlEntityMetadata $metadata, string $name): ?GraphqlFieldMetadata

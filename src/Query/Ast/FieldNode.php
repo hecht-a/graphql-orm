@@ -13,6 +13,7 @@ final class FieldNode
         public string $name,
         public array $arguments = [],
         public ?SelectionSetNode $selectionSet = null,
+        public bool $isCollection = false,
     ) {
     }
 }
