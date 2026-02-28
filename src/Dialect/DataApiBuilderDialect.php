@@ -30,7 +30,9 @@ final class DataApiBuilderDialect implements GraphqlQueryDialect
             $arguments['first'] = $options->limit;
         }
 
-        $arguments['orderBy'] = $options->orderBy;
+        if ($options->orderBy !== null) {
+            $arguments['orderBy'] = $options->orderBy;
+        }
 
         if ($options->paginate) {
             if ($options->limit) {
