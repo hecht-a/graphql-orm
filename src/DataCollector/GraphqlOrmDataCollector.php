@@ -37,7 +37,6 @@ class GraphqlOrmDataCollector extends DataCollector
         ?\Throwable $exception = null,
     ): void {
         $this->data['queries'] ??= [];
-        dump($this->data['queries']);
     }
 
     public function reset(): void
