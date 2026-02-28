@@ -19,6 +19,9 @@ automatic hydration, relation handling, schema validation, and deep Symfony inte
 - [Schema validation](#schema-validation)
 - [Logging](#logging)
 - [Profiler (Symfony Web Debug Toolbar)](#profiler)
+- [BeforeHydrate hook](#beforehydrate-hook)
+- [AfterHydrate hook](#afterhydrate-hook)
+- [Using both hooks together](#using-both-hooks-together)
 - [Console commands](#console-commands)
 
 ---
@@ -473,6 +476,166 @@ For each request, the panel shows:
 	- Caller (file + line that triggered the query)
 
 No additional configuration is needed — the collector is registered automatically when `symfony/stopwatch` is available.
+
+---
+
+## BeforeHydrate hook
+
+The `#[BeforeHydrate]` attribute marks a method to be called just before the entity fields are assigned. The method
+receives the **raw GraphQL data array**, allowing inspection or capture of fields that are not mapped (e.g.
+`__typename`, pagination metadata, extra context).
+
+### Basic usage
+
+```php
+use GraphqlOrm\Attribute\BeforeHydrate;
+use GraphqlOrm\Attribute\GraphqlEntity;
+use GraphqlOrm\Attribute\GraphqlField;
+
+#[GraphqlEntity(name: 'products', repositoryClass: ProductRepository::class)]
+class Product
+{
+    #[GraphqlField(mappedFrom: 'id', identifier: true)]
+    public int $id;
+
+    #[GraphqlField(mappedFrom: 'name')]
+    public string $name;
+
+    // Populated from raw data before hydration — not a mapped field
+    public string $graphqlType = '';
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    #[BeforeHydrate]
+    public function onBeforeHydrate(array $data): void
+    {
+        $this->graphqlType = $data['__typename'] ?? 'unknown';
+    }
+}
+```
+
+### Rules
+
+- The method must be **public** and accept a **single `array` parameter** (the raw data)
+- Multiple `#[BeforeHydrate]` methods are supported on the same entity — all are called
+- The hook always runs when the entity is first created — there is no partial hydration check (unlike `#[AfterHydrate]`)
+- At the time the hook runs, no fields are hydrated yet — all typed properties without a default value are uninitialized
+
+---
+
+## AfterHydrate hook
+
+The `#[AfterHydrate]` attribute marks a method to be called automatically after the entity has been fully hydrated. Use
+it to compute virtual fields or run any post-hydration logic.
+
+### Basic usage
+
+```php
+use GraphqlOrm\Attribute\AfterHydrate;
+use GraphqlOrm\Attribute\GraphqlEntity;
+use GraphqlOrm\Attribute\GraphqlField;
+
+#[GraphqlEntity(name: 'tasks', repositoryClass: TaskRepository::class)]
+class Task
+{
+    #[GraphqlField(mappedFrom: 'id', identifier: true)]
+    public int $id;
+
+    #[GraphqlField(mappedFrom: 'title')]
+    public string $title;
+
+    #[GraphqlField(mappedFrom: 'dueDate')]
+    public ?\DateTimeImmutable $dueDate = null;
+
+    // Virtual field — not in the GraphQL schema, computed after hydration
+    public bool $isOverdue = false;
+
+    #[AfterHydrate]
+    public function compute(): void
+    {
+        $this->isOverdue = $this->dueDate !== null
+            && $this->dueDate < new \DateTimeImmutable();
+    }
+}
+```
+
+### Rules
+
+- The method must be **public** and take **no arguments**
+- Multiple `#[AfterHydrate]` methods are supported on the same entity — all are called
+- The hook is **skipped** if any mapped field (`#[GraphqlField]`) is not initialized, which happens when an entity is
+  partially hydrated (e.g. a nested relation with only a subset of fields selected)
+- Virtual fields (properties without `#[GraphqlField]`) are intentionally ignored in this check — they are expected to
+  be populated by the hook itself
+
+### Partial hydration
+
+When a relation is loaded with only a subset of fields (e.g. `tasks { id }` inside a `user`), the `Task` entity is
+hydrated without `title`, `dueDate`, etc. In this case, the hook is skipped to avoid accessing uninitialized properties:
+
+```graphql
+query {
+  users {
+    items {
+      id
+      name
+      tasks {
+        items {
+          id         # only id selected — AfterHydrate on Task is skipped
+        }
+      }
+    }
+  }
+}
+```
+
+---
+
+## Using both hooks together
+
+`#[BeforeHydrate]` and `#[AfterHydrate]` can coexist on the same entity. They always execute in order: **before →
+hydration → after**.
+
+```php
+#[GraphqlEntity(name: 'products', repositoryClass: ProductRepository::class)]
+class Product
+{
+    #[GraphqlField(mappedFrom: 'id', identifier: true)]
+    public int $id;
+
+    #[GraphqlField(mappedFrom: 'price')]
+    public float $price;
+
+    #[GraphqlField(mappedFrom: 'taxRate')]
+    public float $taxRate;
+
+    public string $graphqlType = '';
+    public float $priceWithTax = 0.0;
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    #[BeforeHydrate]
+    public function captureMetadata(array $data): void
+    {
+        // Runs before fields are assigned
+        $this->graphqlType = $data['__typename'] ?? 'unknown';
+    }
+
+    #[AfterHydrate]
+    public function computePrices(): void
+    {
+        // Runs after all fields are assigned
+        $this->priceWithTax = $this->price * (1 + $this->taxRate / 100);
+    }
+}
+```
+
+| Hook               | Runs                    | Arguments                        | Use case                                |
+|--------------------|-------------------------|----------------------------------|-----------------------------------------|
+| `#[BeforeHydrate]` | Before field assignment | `array $data` (raw GraphQL data) | Capture unmapped fields, raw metadata   |
+| `#[AfterHydrate]`  | After field assignment  | none                             | Compute virtual fields, post-processing |
 
 ---
 

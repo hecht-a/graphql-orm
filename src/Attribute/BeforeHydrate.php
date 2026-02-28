@@ -1,0 +1,10 @@
+<?php
+
+declare(strict_types=1);
+
+namespace GraphqlOrm\Attribute;
+
+#[\Attribute(\Attribute::TARGET_METHOD)]
+final readonly class BeforeHydrate
+{
+}

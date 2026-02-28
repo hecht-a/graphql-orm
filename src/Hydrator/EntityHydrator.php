@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Hydrator;
 
+use GraphqlOrm\Attribute\AfterHydrate;
+use GraphqlOrm\Attribute\BeforeHydrate;
 use GraphqlOrm\Exception\CastException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
@@ -48,11 +50,14 @@ readonly class EntityHydrator
             }
         }
 
+        /** @var T $entity */
         $entity = new ($metadata->class)();
 
         if ($uniqueField !== null) {
             $context->identityMap[$metadata->class][$uniqueField] = $entity;
         }
+
+        $this->callBeforeHydrateMethods($entity, $data);
 
         foreach ($metadata->fields as $field) {
             if (!\array_key_exists($field->mappedFrom, $data)) {
@@ -107,7 +112,69 @@ readonly class EntityHydrator
             $property->setValue($entity, $value);
         }
 
+        $this->callAfterHydrateMethods($entity, $metadata);
+
         return $entity;
+    }
+
+    /**
+     * @param array<string|int, mixed> $data
+     */
+    private function callBeforeHydrateMethods(object $entity, array $data): void
+    {
+        $reflection = new \ReflectionClass($entity);
+
+        foreach ($reflection->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
+            if ($method->getAttributes(BeforeHydrate::class) === []) {
+                continue;
+            }
+
+            $method->invoke($entity, $data);
+        }
+    }
+
+    /**
+     * @param T $entity
+     */
+    private function callAfterHydrateMethods(object $entity, GraphqlEntityMetadata $metadata): void
+    {
+        $reflection = new \ReflectionClass($entity);
+
+        if (!$this->areMappedFieldsInitialized($reflection, $entity, $metadata)) {
+            return;
+        }
+
+        foreach ($reflection->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
+            if ($method->getAttributes(AfterHydrate::class) === []) {
+                continue;
+            }
+
+            $method->invoke($entity);
+        }
+    }
+
+    /**
+     * @param \ReflectionClass<T> $reflection
+     */
+    private function areMappedFieldsInitialized(\ReflectionClass $reflection, object $entity, GraphqlEntityMetadata $metadata): bool
+    {
+        foreach ($metadata->fields as $field) {
+            try {
+                $property = $reflection->getProperty($field->property);
+            } catch (\ReflectionException) {
+                continue;
+            }
+
+            if ($property->hasDefaultValue() || $property->getType() === null) {
+                continue;
+            }
+
+            if (!$property->isInitialized($entity)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
