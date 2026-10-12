@@ -6,8 +6,12 @@ Dialects adapt query generation and response parsing to a specific GraphQL API f
 
 | Dialect          | Class                   | Use case                   |
 |------------------|-------------------------|----------------------------|
-| Default          | `DefaultDialect`        | Standard GraphQL APIs      |
+| Default          | `DefaultDialect`        | Standard GraphQL APIs (no ordering nor pagination) |
 | Data API Builder | `DataApiBuilderDialect` | Microsoft Data API Builder |
+
+Standard GraphQL defines no ordering nor pagination arguments: `DefaultDialect` throws a `LogicException` when
+`orderBy()` or `paginate()` is used, instead of silently ignoring it. Use a dialect matching your API, or write one
+(see below). `limit()` is sent as a `first` argument.
 
 ## Configure a dialect
 

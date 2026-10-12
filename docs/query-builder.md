@@ -50,6 +50,8 @@ $qb
     ->limit(20);
 ```
 
+Ordering requires a dialect that supports it, see [dialects.md](dialects.md).
+
 ## Raw GraphQL query
 
 You can bypass the builder entirely and provide a raw query string:

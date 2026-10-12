@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- `http_client` option: id of the HTTP client service to use, e.g. a scoped client with a timeout and retries
+
+### Changed
+
+- `DefaultDialect` throws a `LogicException` on `orderBy()` and `paginate()`, which it used to silently ignore:
+  standard GraphQL defines no ordering nor pagination arguments. Use a dialect matching your API.
+
+---
+
 ## [2.0.0] — 2026-10-12
 
 ### Upgrading from 1.x

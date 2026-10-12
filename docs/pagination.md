@@ -29,4 +29,4 @@ $page = $repository->createQueryBuilder()
     ->getResult();
 ```
 
-> Pagination support requires a compatible GraphQL dialect. See [dialects.md](dialects.md).
+> Pagination requires a compatible GraphQL dialect: `DefaultDialect` throws a `LogicException`. See [dialects.md](dialects.md).
