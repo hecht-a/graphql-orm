@@ -11,7 +11,7 @@ For each request, the panel shows:
 	- Duration (measured via Symfony Stopwatch)
 	- Response size
 	- Hydration stats (entities, relations, collections, max depth)
-	- Generated GraphQL query (with Copy button)
+	- Generated GraphQL query (with Copy button), values masked by default (see [logging.md](logging.md#masked-values))
 	- Interactive AST viewer
 	- Variables
 	- Caller (file + line that triggered the query)

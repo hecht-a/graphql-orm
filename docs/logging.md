@@ -28,7 +28,7 @@ Logs are written to your environment's default log file (`var/log/dev.log`, etc.
     "hydrated_entities": 12,
     "hydrated_relations": 4,
     "caller": { "file": "src/Controller/HomeController.php", "line": 23 },
-    "query": "query { tasks { id title } }"
+    "query": "query { tasks(filter: { email: { eq: \"***\" } }) { id title } }"
 }
 
 [error] GraphQL query returned errors {
@@ -37,3 +37,20 @@ Logs are written to your environment's default log file (`var/log/dev.log`, etc.
     "query": "query { tasks { foo } }"
 }
 ```
+
+## Masked values
+
+Query values may hold personal data (emails, customer numbers, amounts...). By default, string and number literals,
+variables and AST arguments are replaced by `***` in logs and in the profiler. Names, enum values, `true`/`false`/`null`
+and variable references are kept, and the query sent to the API is not affected.
+
+To see the values while developing:
+
+```yaml
+# config/packages/graphql_orm.yaml
+when@dev:
+    graphql_orm:
+        redact_query_values: false
+```
+
+> Error messages returned by the API are logged as is: they may quote a value sent in the query.

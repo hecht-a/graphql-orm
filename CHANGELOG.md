@@ -12,11 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `http_client` option: id of the HTTP client service to use, e.g. a scoped client with a timeout and retries
+- `redact_query_values` option (default `true`): query values are masked in logs and in the profiler, as they may hold
+  personal data. The query sent to the API is not affected.
 
 ### Changed
 
 - `DefaultDialect` throws a `LogicException` on `orderBy()` and `paginate()`, which it used to silently ignore:
   standard GraphQL defines no ordering nor pagination arguments. Use a dialect matching your API.
+- Logs and profiler show `***` instead of query values by default; set `redact_query_values: false` (e.g. under
+  `when@dev`) to see them.
 
 ---
 

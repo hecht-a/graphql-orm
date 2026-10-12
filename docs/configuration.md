@@ -6,6 +6,9 @@ graphql_orm:
     endpoint: 'http://localhost:4000/graphql'
     max_depth: 3
 
+    # Optional: mask query values in logs and profiler (default: true)
+    redact_query_values: true
+
     # Optional: id of the HTTP client service (see "HTTP client" below)
     http_client: graphql.client
 
@@ -40,6 +43,7 @@ graphql_orm:
 |-----------------------------------|--------------------------|-----------------------------------------|
 | `endpoint`                        | *(required)*             | GraphQL API endpoint                    |
 | `max_depth`                       | `2`                      | Relation levels loaded by the automatic selection; deeper relations only get their identifier (an explicit `select()` is not limited) |
+| `redact_query_values`             | `true`                   | Mask query values in logs and profiler (see [logging.md](logging.md#masked-values)) |
 | `http_client`                     | `null`                   | HTTP client service id; defaults to the autowired `HttpClientInterface` |
 | `dialect`                         | `DefaultDialect`         | GraphQL dialect to use                  |
 | `headers`                         | `[]`                     | HTTP headers sent with every request    |
