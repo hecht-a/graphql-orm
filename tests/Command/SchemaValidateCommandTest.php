@@ -66,7 +66,8 @@ final class SchemaValidateCommandTest extends TestCase
             [FakeAddress::class],
         );
 
-        return new CommandTester(new Command(null, $command));
+        // Same wrapping as the console DI pass, available since symfony/console 7.3.
+        return new CommandTester((new Command('graphqlorm:schema:validate'))->setCode($command));
     }
 
     /**
