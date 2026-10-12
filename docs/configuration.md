@@ -36,7 +36,7 @@ graphql_orm:
 | Option                            | Default                  | Description                             |
 |-----------------------------------|--------------------------|-----------------------------------------|
 | `endpoint`                        | *(required)*             | GraphQL API endpoint                    |
-| `max_depth`                       | `2`                      | Maximum nested relation loading depth   |
+| `max_depth`                       | `2`                      | Relation levels loaded by the automatic selection; deeper relations only get their identifier (an explicit `select()` is not limited) |
 | `dialect`                         | `DefaultDialect`         | GraphQL dialect to use                  |
 | `headers`                         | `[]`                     | HTTP headers sent with every request    |
 | `http_client_options.verify_host` | `true`                   | TLS host verification                   |

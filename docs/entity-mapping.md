@@ -52,10 +52,18 @@ public User $user;
 #[GraphqlField(mappedFrom: 'user', targetEntity: User::class)]
 public mixed $user;
 
-// Collection
+// Collection: the item type is read from the docblock (`Task[]`, `list<Task>`, `array<int, Task>`)
+/** @var Task[] */
 #[GraphqlField(mappedFrom: 'tasks')]
 public array $tasks = [];
+
+// Collection with an explicit target
+#[GraphqlField(mappedFrom: 'tasks', targetEntity: Task::class)]
+public array $tasks = [];
 ```
+
+An `array` property without `targetEntity` and without a docblock pointing to a `#[GraphqlEntity]` class is a plain
+array (e.g. a list of scalars such as `/** @var string[] */`). An untyped property is hydrated with the raw value.
 
 ## Supported PHP types
 

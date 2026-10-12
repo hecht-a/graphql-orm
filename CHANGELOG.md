@@ -21,8 +21,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - PHP 8.2 compatibility: removed a typed class constant (PHP 8.3 syntax)
 - `symfony/console` requirement raised to `^7.3`, needed by the invokable commands and `#[Argument]` / `#[Option]`
 - Documentation: `Direction::DESC` case and `getGraphQL()` example output
+- `max_depth` was ignored: relations beyond it are now reduced to their identifier in the automatic selection
+- Metadata: a `targetEntity` on a union-typed property crashed, and untyped mapped properties were silently ignored
+- Pagination: fetching another page altered the options of the original query; a `null` root returned an array instead
+  of an empty `PaginatedResult`
+- Profiler: variables, root result count and hydration depth were never recorded
+
+### Added
+
+- Collection relations are detected from the property docblock (`@var Task[]`, `list<Task>`), through
+  `symfony/type-info` and `phpstan/phpdoc-parser` (new dependencies)
 
 ### Changed
+
+- `getOneOrNullResult()` requests a single result (`first: 1`) when no limit is set
+- Removed the unused `QueryOptions::$filter` property
 
 - `GraphqlClient` throws `GraphqlRequestException` on transport failure, HTTP status >= 400, non-JSON body, or GraphQL
   errors without data. Partial data alongside errors is still returned, errors being recorded in the query trace.
