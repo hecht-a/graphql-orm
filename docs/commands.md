@@ -52,3 +52,12 @@ Relations
 ```
 
 The `★` marks the identifier field.
+
+## Validate the schema
+
+```bash
+php bin/console graphqlorm:schema:validate
+```
+
+Checks every entity of `mapping.entity.dir` against the live GraphQL schema and exits with a non-zero code on any
+violation. See [schema-validation.md](schema-validation.md).

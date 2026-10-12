@@ -69,8 +69,8 @@ array (e.g. a list of scalars such as `/** @var string[] */`). An untyped proper
 
 | PHP type            | GraphQL scalars                                            |
 |---------------------|------------------------------------------------------------|
-| `int`               | `Int`, `ID`                                                |
-| `float`             | `Float`                                                    |
+| `int`               | `Int`, `ID`, `Byte`, `Short`, `Long`                       |
+| `float`             | `Float`, `Single`, `Decimal`                               |
 | `string`            | `String`, `ID`, `Date`, `DateTime`, `Time`, `JSON`, `UUID` |
 | `bool`              | `Boolean`                                                  |
 | `DateTimeImmutable` | `DateTime`, `Date`, `Time`, `String`                       |

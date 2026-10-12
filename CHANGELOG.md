@@ -26,9 +26,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pagination: fetching another page altered the options of the original query; a `null` root returned an array instead
   of an empty `PaginatedResult`
 - Profiler: variables, root result count and hydration depth were never recorded
+- Schema validation: the GraphQL type is resolved from the root query field (including Data API Builder connections)
+  instead of being guessed by removing a trailing "s"
+- Schema validation: Data API Builder scalars (`Byte`, `Short`, `Long`, `Single`, `Decimal`) were reported as mismatches
+- Schema introspection: `[Type!]!` fields were not fully unwrapped
+- `InvalidGraphqlResponseException` now implements `GraphqlOrmException`
 
 ### Added
 
+- `graphqlorm:schema:validate` command, to validate the mapping against the schema in CI
+- `SchemaIntrospector::introspectSchema()` also returns the name of the root query type
 - Collection relations are detected from the property docblock (`@var Task[]`, `list<Task>`), through
   `symfony/type-info` and `phpstan/phpdoc-parser` (new dependencies)
 
