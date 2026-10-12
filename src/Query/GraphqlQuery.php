@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GraphqlOrm\Query;
 
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
+use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Ast\QueryNode;
@@ -16,8 +17,7 @@ use GraphqlOrm\Query\Pagination\PaginatedResult;
 final readonly class GraphqlQuery
 {
     /**
-     * @param class-string<T>   $entityClass
-     * @param GraphqlManager<T> $manager
+     * @param class-string<T> $entityClass
      */
     public function __construct(
         private QueryNode|string $graphql,
@@ -47,11 +47,9 @@ final readonly class GraphqlQuery
 
         return $this->manager->execute(
             $this->graphql,
-            function ($result, $context) use ($metadata) {
-                $dialect = $this->manager->getDialect();
-                $data = $result['data'] ?? [];
-
-                $root = $data[$metadata->name] ?? null;
+            function (array $result, GraphqlExecutionContext $context) use ($metadata) {
+                $data = $result['data'] ?? null;
+                $root = \is_array($data) ? ($data[$metadata->name] ?? null) : null;
 
                 if ($root === null) {
                     return $this->options->paginate
@@ -63,48 +61,66 @@ final readonly class GraphqlQuery
                     throw InvalidGraphqlResponseException::expectedArray($root);
                 }
 
-                $collection = $dialect->extractCollection($root);
-
-                if (array_is_list($collection)) {
-                    $rows = $collection;
-                } else {
-                    $rows = [$collection];
-                }
-
-                if (array_is_list($rows) === false) {
-                    $rows = [$rows];
-                }
-
+                /** @var T[] $items the rows are hydrated as instances of the queried entity */
                 $items = array_map(
-                    fn ($row) => $this->manager
+                    fn (array $row) => $this->manager
                         ->getHydrator()
                         ->hydrate($metadata, $row, $context),
-                    $rows
+                    $this->rows($root)
                 );
 
                 if (!$this->options->paginate) {
                     return $items;
                 }
 
-                $fetchPage = function (?string $cursor, array $newStack) {
-                    // Each page works on its own options so that navigating never alters this query.
-                    $options = clone $this->options;
-                    $options->cursor = $cursor;
-                    $options->cursorStack = $newStack;
-
-                    return (new self($this->graphql, $this->entityClass, $this->manager, $options))->getResult();
-                };
+                $endCursor = $root['endCursor'] ?? null;
 
                 return new PaginatedResult(
                     $items,
-                    $root['hasNextPage'] ?? false,
+                    ($root['hasNextPage'] ?? false) === true,
                     \count($this->options->cursorStack) > 0,
-                    $root['endCursor'] ?? null,
+                    \is_string($endCursor) ? $endCursor : null,
                     $this->options->cursorStack,
-                    $fetchPage
+                    $this->fetchPage(...)
                 );
             },
             $this->options
+        );
+    }
+
+    /**
+     * Each page works on its own options so that navigating never alters this query.
+     *
+     * @param string[] $cursorStack
+     *
+     * @return PaginatedResult<T>|null
+     */
+    private function fetchPage(?string $cursor, array $cursorStack): ?PaginatedResult
+    {
+        $options = clone $this->options;
+        $options->cursor = $cursor;
+        $options->cursorStack = $cursorStack;
+
+        $page = (new self($this->graphql, $this->entityClass, $this->manager, $options))->getResult();
+
+        return $page instanceof PaginatedResult ? $page : null;
+    }
+
+    /**
+     * @param array<mixed> $root
+     *
+     * @return list<array<mixed>>
+     *
+     * @throws InvalidGraphqlResponseException when a row is not an object
+     */
+    private function rows(array $root): array
+    {
+        $collection = $this->manager->getDialect()->extractCollection($root);
+        $rows = array_is_list($collection) ? $collection : [$collection];
+
+        return array_map(
+            fn (mixed $row): array => \is_array($row) ? $row : throw InvalidGraphqlResponseException::expectedArray($row),
+            $rows
         );
     }
 

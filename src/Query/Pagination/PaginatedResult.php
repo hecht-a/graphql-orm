@@ -10,8 +10,9 @@ namespace GraphqlOrm\Query\Pagination;
 final readonly class PaginatedResult
 {
     /**
-     * @param T[]      $items
-     * @param string[] $cursorStack
+     * @param T[]                                                    $items
+     * @param string[]                                               $cursorStack
+     * @param \Closure(?string, string[]): (PaginatedResult<T>|null) $fetchPage
      */
     public function __construct(
         public array $items,
@@ -28,7 +29,7 @@ final readonly class PaginatedResult
      */
     public function next(): ?self
     {
-        if (!$this->hasNextPage) {
+        if (!$this->hasNextPage || $this->endCursor === null) {
             return null;
         }
 

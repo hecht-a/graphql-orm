@@ -8,6 +8,7 @@ use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\Dialect\DefaultDialect;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
+use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
@@ -15,6 +16,7 @@ use GraphqlOrm\Query\Pagination\PaginatedResult;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Tests\Fixtures\Entity\Task;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
+use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeUserWithCollection;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -46,6 +48,45 @@ final class QueryResultTest extends TestCase
         $firstPage->next();
 
         self::assertStringNotContainsString('after', $query->getGraphQL());
+    }
+
+    #[Test]
+    public function itHasNoNextPageWithoutAnEndCursor(): void
+    {
+        $client = new FakeGraphqlClient(
+            ['data' => ['tasks' => ['items' => [['id' => 1, 'title' => 'A']], 'hasNextPage' => true, 'endCursor' => null]]],
+        );
+        $firstPage = $this->createRepository($client, new DataApiBuilderDialect(), FakeTask::class)
+            ->createQueryBuilder()
+            ->paginate()
+            ->getQuery()
+            ->getResult();
+        self::assertInstanceOf(PaginatedResult::class, $firstPage);
+
+        $nextPage = $firstPage->next();
+
+        self::assertNull($nextPage);
+        self::assertSame(1, $client->callCount);
+    }
+
+    #[Test]
+    public function itRejectsACollectionRowThatIsNotAnObject(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['tasks' => ['items' => ['not an object']]]]);
+        $repository = $this->createRepository($client, new DataApiBuilderDialect(), FakeTask::class);
+
+        $this->expectException(InvalidGraphqlResponseException::class);
+        $repository->findAll();
+    }
+
+    #[Test]
+    public function itRejectsANestedCollectionRowThatIsNotAnObject(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['users' => ['items' => [['id' => 1, 'tasks' => ['items' => [42]]]]]]]);
+        $repository = $this->createRepository($client, new DataApiBuilderDialect(), FakeUserWithCollection::class);
+
+        $this->expectException(InvalidGraphqlResponseException::class);
+        $repository->findAll();
     }
 
     #[Test]

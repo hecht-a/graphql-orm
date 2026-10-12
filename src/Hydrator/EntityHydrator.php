@@ -7,14 +7,13 @@ namespace GraphqlOrm\Hydrator;
 use GraphqlOrm\Attribute\AfterHydrate;
 use GraphqlOrm\Attribute\BeforeHydrate;
 use GraphqlOrm\Exception\CastException;
+use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 
 /**
- * @template T of object
- *
  * @internal
  */
 class EntityHydrator
@@ -34,9 +33,6 @@ class EntityHydrator
      */
     private array $hookMethods = [];
 
-    /**
-     * @param GraphqlEntityMetadataFactory<T> $metadataFactory
-     */
     public function __construct(
         private readonly GraphqlEntityMetadataFactory $metadataFactory,
     ) {
@@ -71,7 +67,6 @@ class EntityHydrator
 
         ++$context->trace->hydratedEntities;
 
-        /** @var T $entity */
         $entity = new ($metadata->class)();
 
         if ($uniqueField !== null) {
@@ -96,9 +91,9 @@ class EntityHydrator
                     ++$context->trace->hydratedCollections;
 
                     $value = array_map(
-                        fn ($row) => $this->hydrate(
+                        fn (mixed $row) => $this->hydrate(
                             $relationMetadata,
-                            $row,
+                            \is_array($row) ? $row : throw InvalidGraphqlResponseException::expectedArray($row),
                             $context,
                             $depth + 1
                         ),
@@ -141,9 +136,6 @@ class EntityHydrator
         }
     }
 
-    /**
-     * @param T $entity
-     */
     private function callAfterHydrateMethods(object $entity, GraphqlEntityMetadata $metadata): void
     {
         $methods = $this->hookMethods($entity::class, AfterHydrate::class);
@@ -175,6 +167,9 @@ class EntityHydrator
         return $this->hookMethods[$class][$attribute];
     }
 
+    /**
+     * @param class-string $class
+     */
     private function property(string $class, string $name): \ReflectionProperty
     {
         return $this->properties[$class][$name] ??= new \ReflectionProperty($class, $name);
