@@ -91,7 +91,7 @@ final class DABGraphqlWalker extends AbstractGraphqlWalker
     protected function formatValue(mixed $value): string
     {
         if (\is_string($value)) {
-            return '"' . $value . '"';
+            return $this->formatString($value);
         }
 
         if (\is_int($value) || \is_float($value)) {
@@ -115,7 +115,7 @@ final class DABGraphqlWalker extends AbstractGraphqlWalker
 
             $fields = [];
             foreach ($value as $key => $item) {
-                $fields[] = $key . ': ' . $this->formatValue($item);
+                $fields[] = $this->assertValidName($key) . ': ' . $this->formatValue($item);
             }
 
             return '{ ' . implode(', ', $fields) . ' }';
@@ -124,11 +124,11 @@ final class DABGraphqlWalker extends AbstractGraphqlWalker
         if ($value instanceof \BackedEnum) {
             return $value instanceof Direction
                 ? $value->value
-                : '"' . $value->value . '"';
+                : $this->formatString((string) $value->value);
         }
 
         if ($value instanceof \DateTimeInterface) {
-            return '"' . $value->format(DATE_ATOM) . '"';
+            return $this->formatString($value->format(DATE_ATOM));
         }
 
         throw new InvalidArgumentException(\sprintf('Unsupported GraphQL argument type "%s".', get_debug_type($value)));
@@ -149,7 +149,7 @@ final class DABGraphqlWalker extends AbstractGraphqlWalker
             if ($value === null) {
                 continue;
             }
-            $pairs[] = \sprintf('%s: %s', $key, $this->formatValue($value));
+            $pairs[] = \sprintf('%s: %s', $this->assertValidName($key), $this->formatValue($value));
         }
 
         return '(' . implode(', ', $pairs) . ')';

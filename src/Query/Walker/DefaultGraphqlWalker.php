@@ -33,7 +33,7 @@ final class DefaultGraphqlWalker extends AbstractGraphqlWalker
     protected function formatValue(mixed $value): string
     {
         if (\is_string($value)) {
-            return '"' . $value . '"';
+            return $this->formatString($value);
         }
 
         if (\is_int($value) || \is_float($value)) {
@@ -49,17 +49,26 @@ final class DefaultGraphqlWalker extends AbstractGraphqlWalker
         }
 
         if (\is_array($value)) {
-            $items = array_map(fn ($v) => $this->formatValue($v), $value);
+            if (array_is_list($value)) {
+                $items = array_map(fn ($v) => $this->formatValue($v), $value);
 
-            return '[' . implode(', ', $items) . ']';
+                return '[' . implode(', ', $items) . ']';
+            }
+
+            $fields = [];
+            foreach ($value as $key => $item) {
+                $fields[] = $this->assertValidName($key) . ': ' . $this->formatValue($item);
+            }
+
+            return '{ ' . implode(', ', $fields) . ' }';
         }
 
         if ($value instanceof \BackedEnum) {
-            return '"' . $value->value . '"';
+            return $this->formatString((string) $value->value);
         }
 
         if ($value instanceof \DateTimeInterface) {
-            return '"' . $value->format(DATE_ATOM) . '"';
+            return $this->formatString($value->format(DATE_ATOM));
         }
 
         throw new InvalidArgumentException(\sprintf('Unsupported GraphQL argument type "%s".', get_debug_type($value)));
@@ -77,7 +86,7 @@ final class DefaultGraphqlWalker extends AbstractGraphqlWalker
         $pairs = [];
 
         foreach ($arguments as $key => $value) {
-            $pairs[] = \sprintf('%s: %s', $key, $this->formatValue($value));
+            $pairs[] = \sprintf('%s: %s', $this->assertValidName($key), $this->formatValue($value));
         }
 
         return '(' . implode(', ', $pairs) . ')';

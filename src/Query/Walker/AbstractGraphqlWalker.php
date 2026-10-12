@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Query\Walker;
 
+use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Ast\SelectionSetNode;
 use GraphqlOrm\Query\Printer\GraphqlPrinter;
 
 abstract class AbstractGraphqlWalker implements GraphqlWalkerInterface
 {
+    private const GRAPHQL_NAME_PATTERN = '/^[_A-Za-z][_0-9A-Za-z]*$/';
+
     protected GraphqlPrinter $printer;
 
     protected function walkField(FieldNode $field): void
@@ -49,6 +52,26 @@ abstract class AbstractGraphqlWalker implements GraphqlWalkerInterface
      * @param array<string, mixed> $arguments
      */
     abstract protected function formatArguments(array $arguments): string;
+
+    /**
+     * GraphQL string escapes are a subset of JSON ones, so a JSON-encoded string is a valid GraphQL string literal.
+     */
+    protected function formatString(string $value): string
+    {
+        return json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    /**
+     * @throws InvalidArgumentException when the name could break out of the generated query
+     */
+    protected function assertValidName(string|int $name): string
+    {
+        if (!\is_string($name) || preg_match(self::GRAPHQL_NAME_PATTERN, $name) !== 1) {
+            throw new InvalidArgumentException(\sprintf('"%s" is not a valid GraphQL name.', $name));
+        }
+
+        return $name;
+    }
 
     protected function walkSelectionSet(SelectionSetNode $selectionSet): void
     {
