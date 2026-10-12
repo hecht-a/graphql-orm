@@ -68,6 +68,7 @@ final class QueryBuilderEndToEndTest extends TestCase
                 ->getQuery()
                 ->getResult();
 
+        self::assertIsArray($result);
         self::assertCount(1, $result);
 
         $task = $result[0];
@@ -124,6 +125,7 @@ final class QueryBuilderEndToEndTest extends TestCase
             ->paginate()
             ->getQuery()
             ->getResult();
+        self::assertInstanceOf(PaginatedResult::class, $page1);
         self::assertTrue($page1->hasNextPage);
         self::assertCount(1, $page1->items);
         self::assertSame(1, $page1->items[0]->id);
@@ -183,10 +185,13 @@ final class QueryBuilderEndToEndTest extends TestCase
             ->paginate()
             ->getQuery()
             ->getResult();
+        self::assertInstanceOf(PaginatedResult::class, $page1);
 
         $page2 = $page1->next();
+        self::assertNotNull($page2);
         $page1Again = $page2->previous();
 
+        self::assertNotNull($page1Again);
         self::assertSame(1, $page1Again->items[0]->id);
     }
 

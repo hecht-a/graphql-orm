@@ -13,10 +13,9 @@ final class DataApiBuilderDialect implements GraphqlQueryDialect
 {
     public function extractCollection(array $data): array
     {
-        /** @var array<string|int, mixed>[] $items */
         $items = $data['items'] ?? [];
 
-        return $items;
+        return \is_array($items) ? $items : [];
     }
 
     public function createWalker(): GraphqlWalkerInterface

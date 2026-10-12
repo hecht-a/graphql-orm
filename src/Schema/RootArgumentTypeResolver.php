@@ -95,8 +95,11 @@ final readonly class RootArgumentTypeResolver
             return null;
         }
 
-        $data = $result['data'] ?? null;
-        $fields = \is_array($data) ? ($data['__schema']['queryType']['fields'] ?? null) : null;
+        $fields = $result['data'] ?? null;
+
+        foreach (['__schema', 'queryType', 'fields'] as $key) {
+            $fields = \is_array($fields) ? ($fields[$key] ?? null) : null;
+        }
 
         if (!\is_array($fields)) {
             $this->warn('the response does not describe the root query type');

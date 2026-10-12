@@ -13,11 +13,15 @@ final class FakeGraphqlClient implements GraphqlClientInterface
     /** @var array<string, mixed> */
     public array $lastVariables = [];
     public int $callCount = 0;
+    /** @var list<array<string, mixed>> */
     private array $responses;
 
+    /**
+     * @param array<string, mixed> ...$responses
+     */
     public function __construct(array ...$responses)
     {
-        $this->responses = $responses;
+        $this->responses = array_values($responses);
     }
 
     public function query(string $query, GraphqlExecutionContext $context, array $variables = []): array

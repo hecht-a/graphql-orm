@@ -17,7 +17,8 @@ final class GraphqlOrmDataCollector extends DataCollector
     public function addQuery(
         GraphqlQueryTrace $trace,
     ): void {
-        $this->data['queries'][] = [
+        $queries = $this->getQueries();
+        $queries[] = [
             'graphql' => $trace->graphql,
             'ast' => $trace->ast,
             'variables' => $trace->variables,
@@ -32,6 +33,7 @@ final class GraphqlOrmDataCollector extends DataCollector
             'hydrated_relations' => $trace->hydratedRelations,
             'duration' => $trace->duration,
         ];
+        $this->data['queries'] = $queries;
     }
 
     public function collect(
@@ -48,11 +50,14 @@ final class GraphqlOrmDataCollector extends DataCollector
     }
 
     /**
-     * @return array<int, array<string, array<string, mixed>>>
+     * @return array<int, array<string, mixed>>
      */
     public function getQueries(): array
     {
-        return $this->data['queries'] ?? [];
+        /** @var array<int, array<string, mixed>> $queries */
+        $queries = $this->data['queries'] ?? [];
+
+        return $queries;
     }
 
     public function getQueryCount(): int
@@ -62,12 +67,14 @@ final class GraphqlOrmDataCollector extends DataCollector
 
     public function getTotalDuration(): float
     {
-        return array_sum(
-            array_column(
-                $this->getQueries(),
-                'duration'
-            )
-        );
+        $total = 0.0;
+
+        foreach ($this->getQueries() as $query) {
+            $duration = $query['duration'] ?? 0;
+            $total += \is_int($duration) || \is_float($duration) ? $duration : 0;
+        }
+
+        return $total;
     }
 
     public function getErrorCount(): int

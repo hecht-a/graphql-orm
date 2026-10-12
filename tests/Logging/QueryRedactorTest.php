@@ -74,7 +74,8 @@ line two""")', 'tasks(note: "***")'];
 
         $redacted = $this->redactor->redactAst($ast);
 
-        self::assertSame(['filter' => ['email' => ['eq' => '***']]], $redacted['fields'][0]['arguments']);
-        self::assertSame('id', $redacted['fields'][0]['selectionSet']['fields'][0]['name']);
+        $expected = $ast;
+        $expected['fields'][0]['arguments'] = ['filter' => ['email' => ['eq' => '***']]];
+        self::assertSame($expected, $redacted);
     }
 }

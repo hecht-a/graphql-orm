@@ -7,6 +7,7 @@ namespace GraphqlOrm\Tests\Metadata;
 use GraphqlOrm\Exception\NotAGraphqlEntityException;
 use GraphqlOrm\Exception\TooManyIdentifiersException;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\EntityWithMultipleIdentifiers;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntityWithIgnoredProperty;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
@@ -33,8 +34,9 @@ final class GraphqlEntityMetadataFactoryTest extends TestCase
 
         self::assertCount(2, $metadata->fields);
 
-        self::assertSame('id', $metadata->identifier?->property);
-        self::assertSame('id', $metadata->identifier?->mappedFrom);
+        self::assertNotNull($metadata->identifier);
+        self::assertSame('id', $metadata->identifier->property);
+        self::assertSame('id', $metadata->identifier->mappedFrom);
     }
 
     public function testRelationDetectedFromTargetEntityAttribute(): void
@@ -115,7 +117,10 @@ final class GraphqlEntityMetadataFactoryTest extends TestCase
         self::assertSame($a, $b);
     }
 
-    private function findField(array $fields, string $property)
+    /**
+     * @param GraphqlFieldMetadata[] $fields
+     */
+    private function findField(array $fields, string $property): GraphqlFieldMetadata
     {
         foreach ($fields as $field) {
             if ($field->property === $property) {

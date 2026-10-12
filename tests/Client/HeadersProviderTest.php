@@ -63,7 +63,9 @@ final class HeadersProviderTest extends TestCase
     private function createClient(array $staticHeaders, ?FakeHeadersProvider $provider): GraphqlClient
     {
         $httpClient = new MockHttpClient(function (string $method, string $url, array $options) {
-            $this->sentHeaders[] = $options['normalized_headers'];
+            /** @var array<string, list<string>> $headers */
+            $headers = $options['normalized_headers'];
+            $this->sentHeaders[] = $headers;
 
             return new MockResponse('{"data":{"tasks":[]}}');
         });

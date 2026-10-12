@@ -24,8 +24,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 final readonly class SchemaValidateCommand
 {
     /**
-     * @param SchemaValidator<object> $validator
-     * @param class-string[]          $entityClasses
+     * @param class-string[] $entityClasses
      */
     public function __construct(
         private SchemaIntrospector $introspector,

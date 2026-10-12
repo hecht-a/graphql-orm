@@ -14,6 +14,7 @@ class FakeUserWithCollection
     #[GraphqlField(mappedFrom: 'id', identifier: true)]
     public int $id;
 
+    /** @var FakeTask[] */
     #[GraphqlField(mappedFrom: 'tasks', targetEntity: FakeTask::class)]
     public array $tasks;
 }

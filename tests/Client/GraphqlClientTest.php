@@ -37,7 +37,7 @@ final class GraphqlClientTest extends TestCase
 
         $result = $client->query(self::QUERY, $context);
 
-        self::assertSame([['id' => 1]], $result['data']['tasks']);
+        self::assertSame(['tasks' => [['id' => 1]]], $result['data']);
         self::assertSame([['message' => 'Field "secret" is restricted']], $context->trace->errors);
     }
 

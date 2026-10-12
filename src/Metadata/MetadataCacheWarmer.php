@@ -16,8 +16,7 @@ use Symfony\Component\HttpKernel\CacheWarmer\CacheWarmerInterface;
 final readonly class MetadataCacheWarmer implements CacheWarmerInterface
 {
     /**
-     * @param GraphqlEntityMetadataFactory<object> $metadataFactory
-     * @param class-string[]                       $entityClasses   classes found in the entity directory
+     * @param string[] $entityClasses class names derived from the files of the entity directory
      */
     public function __construct(
         private GraphqlEntityMetadataFactory $metadataFactory,

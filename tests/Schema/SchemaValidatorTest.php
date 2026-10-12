@@ -213,8 +213,9 @@ final class SchemaValidatorTest extends TestCase
 
     public function testSchemaFieldNotInEntityIsNotAViolation(): void
     {
-        $schemaWithExtraField = $this->schemaTypes;
-        $schemaWithExtraField['Product']['fields']['createdAt'] = ['kind' => 'SCALAR', 'name' => 'String'];
+        $product = $this->schemaTypes['Product'];
+        $product['fields']['createdAt'] = ['kind' => 'SCALAR', 'name' => 'String'];
+        $schemaWithExtraField = [...$this->schemaTypes, 'Product' => $product];
 
         $violations = $this->validator->validate(
             [FakeValidEntity::class],

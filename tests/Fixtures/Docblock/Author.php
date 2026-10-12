@@ -28,11 +28,13 @@ class Author
     #[GraphqlField(mappedFrom: 'tags')]
     public array $tags = [];
 
+    /** @var array<mixed> */
     #[GraphqlField(mappedFrom: 'raw')]
     public array $raw = [];
 
+    // Deliberately untyped: the metadata factory must cope with properties without a type.
     #[GraphqlField(mappedFrom: 'legacy')]
-    public $legacy;
+    public $legacy; // @phpstan-ignore missingType.property
 
     #[GraphqlField(mappedFrom: 'editor', targetEntity: FakeUser::class)]
     public FakeUser|\stdClass|null $editor = null;

@@ -126,7 +126,9 @@ final class EntityHydratorTest extends TestCase
         ];
 
         $task1 = $this->hydrator->hydrate($this->taskMetadata, $data, $this->context);
+        self::assertInstanceOf(Task::class, $task1);
         $task2 = $this->hydrator->hydrate($this->taskMetadata, $data, $this->context);
+        self::assertInstanceOf(Task::class, $task2);
 
         self::assertSame($task1, $task2);
     }
@@ -143,6 +145,7 @@ final class EntityHydratorTest extends TestCase
         ];
 
         $task = $this->hydrator->hydrate($this->taskMetadata, $data, $this->context);
+        self::assertInstanceOf(Task::class, $task);
 
         self::assertInstanceOf(User::class, $task->user);
         self::assertSame('John', $task->user->name);
@@ -158,8 +161,8 @@ final class EntityHydratorTest extends TestCase
             ],
             $this->context
         );
+        self::assertInstanceOf(Task::class, $task);
 
-        self::assertIsInt($task->id);
         self::assertSame(42, $task->id);
     }
 
@@ -173,6 +176,7 @@ final class EntityHydratorTest extends TestCase
             ],
             $this->context
         );
+        self::assertInstanceOf(Task::class, $task);
 
         self::assertNull($task->title);
     }
@@ -188,6 +192,7 @@ final class EntityHydratorTest extends TestCase
             ],
             $this->context
         );
+        self::assertInstanceOf(Task::class, $task);
 
         self::assertSame('doc', $task->title);
     }
@@ -213,7 +218,9 @@ final class EntityHydratorTest extends TestCase
         ];
 
         $task1 = $this->hydrator->hydrate($this->taskMetadata, $data1, $this->context);
+        self::assertInstanceOf(Task::class, $task1);
         $task2 = $this->hydrator->hydrate($this->taskMetadata, $data2, $this->context);
+        self::assertInstanceOf(Task::class, $task2);
 
         self::assertSame($task1->user, $task2->user);
     }
@@ -240,7 +247,8 @@ final class EntityHydratorTest extends TestCase
         ];
 
         $task = $this->hydrator->hydrate($this->taskMetadata, $data, $this->context);
+        self::assertInstanceOf(Task::class, $task);
 
-        self::assertSame([], $task->user->tasks);
+        self::assertSame([], $task->user?->tasks);
     }
 }

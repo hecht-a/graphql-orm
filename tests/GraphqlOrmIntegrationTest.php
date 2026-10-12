@@ -84,6 +84,7 @@ final class GraphqlOrmIntegrationTest extends TestCase
             ->getQuery()
             ->getResult();
 
+        self::assertIsArray($result);
         self::assertSame('Filtered', $result[0]->title);
     }
 }

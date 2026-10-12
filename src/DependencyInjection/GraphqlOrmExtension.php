@@ -28,6 +28,25 @@ final class GraphqlOrmExtension extends Extension
     {
         $configuration = new Configuration();
 
+        /**
+         * @var array{
+         *   endpoint: string,
+         *   http_client_options: array{verify_host: bool, verify_peer: bool},
+         *   redact_query_values: bool,
+         *   variables: array{enabled: bool, cache_pool: string, ttl: int},
+         *   http_client: string|null,
+         *   dialect: string,
+         *   headers: array<string, string>,
+         *   metadata_cache_pool: string|null,
+         *   headers_provider: string|null,
+         *   max_depth: int,
+         *   schema_validation: array{mode: string},
+         *   mapping: array{
+         *     entity: array{dir: string, namespace: string},
+         *     repository: array{dir: string, namespace: string}
+         *   }
+         * } $config
+         */
         $config = $this->processConfiguration(
             $configuration,
             $configs

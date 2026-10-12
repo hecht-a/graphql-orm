@@ -19,8 +19,7 @@ use GraphqlOrm\Query\QueryOptions;
 class GraphqlEntityRepository
 {
     /**
-     * @param GraphqlManager<T> $manager
-     * @param class-string<T>   $entityClass
+     * @param class-string<T> $entityClass
      */
     public function __construct(
         protected readonly GraphqlManager $manager,
@@ -77,6 +76,8 @@ class GraphqlEntityRepository
     public function findBy(array $criteria, ?array $orderBy = null, ?int $limit = null): array
     {
         foreach ($orderBy ?? [] as $field => $direction) {
+            // Callers without static analysis may still pass 'ASC' or 'DESC' strings.
+            // @phpstan-ignore instanceof.alwaysTrue
             if (!$direction instanceof Direction) {
                 throw new InvalidArgumentException(\sprintf('The ordering of "%s" must be a %s.', $field, Direction::class));
             }

@@ -36,9 +36,11 @@ final class QueryRedactor
     }
 
     /**
-     * @param array<mixed> $values
+     * @template K of array-key
      *
-     * @return array<mixed>
+     * @param array<K, mixed> $values
+     *
+     * @return array<K, mixed>
      */
     public function redactValues(array $values): array
     {

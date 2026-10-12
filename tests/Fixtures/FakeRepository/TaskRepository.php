@@ -12,7 +12,7 @@ use GraphqlOrm\Tests\Fixtures\FakeEntity\Task;
  * @extends GraphqlEntityRepository<Task>
  *
  * @method Task[] findAll()
- * @method Task[] findBy(array $criteria)
+ * @method Task[] findBy(array<string, mixed> $criteria)
  */
 class TaskRepository extends GraphqlEntityRepository
 {

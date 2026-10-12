@@ -22,16 +22,9 @@ use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
-/**
- * @template T of object
- */
 #[AutoconfigureTag('graphql.manager')]
 class GraphqlManager
 {
-    /**
-     * @param GraphqlEntityMetadataFactory<T> $metadataFactory
-     * @param EntityHydrator<T>               $hydrator
-     */
     public function __construct(
         private GraphqlEntityMetadataFactory $metadataFactory,
         private GraphqlClientInterface $client,
@@ -47,9 +40,12 @@ class GraphqlManager
     }
 
     /**
-     * @param array<string, mixed> $variables
+     * @template E of object
      *
-     * @return T[]|PaginatedResult<T>
+     * @param callable(array<string, mixed>, GraphqlExecutionContext): (E[]|PaginatedResult<E>) $hydration
+     * @param array<string, mixed>                                                              $variables
+     *
+     * @return E[]|PaginatedResult<E>
      */
     public function execute(QueryNode|string $graphql, callable $hydration, QueryOptions $options = new QueryOptions(), array $variables = []): array|PaginatedResult
     {
@@ -88,17 +84,11 @@ class GraphqlManager
         return $this->dialect;
     }
 
-    /**
-     * @return GraphqlEntityMetadataFactory<T>
-     */
     public function getMetadataFactory(): GraphqlEntityMetadataFactory
     {
         return $this->metadataFactory;
     }
 
-    /**
-     * @return EntityHydrator<T>
-     */
     public function getHydrator(): EntityHydrator
     {
         return $this->hydrator;

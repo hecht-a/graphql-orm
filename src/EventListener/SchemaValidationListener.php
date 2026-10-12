@@ -14,8 +14,6 @@ use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 
 /**
- * @template T of object
- *
  * @internal
  */
 #[AsEventListener(event: KernelEvents::REQUEST, priority: 255)]
@@ -24,8 +22,7 @@ final class SchemaValidationListener
     private static bool $validated = false;
 
     /**
-     * @param class-string[]     $entityClasses
-     * @param SchemaValidator<T> $validator
+     * @param class-string[] $entityClasses
      */
     public function __construct(
         private readonly SchemaIntrospector $introspector,

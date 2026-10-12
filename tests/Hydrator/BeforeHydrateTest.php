@@ -31,6 +31,10 @@ final class BeforeHydrateTest extends TestCase
         return new EntityHydrator($factory);
     }
 
+    /**
+     * @param class-string           $class
+     * @param GraphqlFieldMetadata[] $fields
+     */
     private function makeMetadata(string $class, array $fields): GraphqlEntityMetadata
     {
         return new GraphqlEntityMetadata($class, 'products', FakeRepository::class, $fields);

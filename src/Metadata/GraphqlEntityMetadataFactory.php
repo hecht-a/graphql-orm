@@ -16,8 +16,6 @@ use Symfony\Component\TypeInfo\TypeResolver\TypeResolverInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 
 /**
- * @template T of object
- *
  * @internal
  */
 class GraphqlEntityMetadataFactory
@@ -79,7 +77,6 @@ class GraphqlEntityMetadataFactory
             throw NotAGraphqlEntityException::forClass($class);
         }
 
-        /** @var GraphqlEntity<T> $entity */
         $entity = $entityAttr->newInstance();
 
         $fields = [];

@@ -11,9 +11,11 @@ use GraphqlOrm\Query\Walker\GraphqlWalkerInterface;
 interface GraphqlQueryDialect
 {
     /**
-     * @param array<string|int, mixed>[] $data
+     * Extracts the rows of a collection field, e.g. the `items` of a Data API Builder connection.
      *
-     * @return array<string|int, mixed>[]
+     * @param array<mixed> $data the decoded value of the collection field
+     *
+     * @return array<mixed> the rows (a single row when the field is an object)
      */
     public function extractCollection(array $data): array;
 

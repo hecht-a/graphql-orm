@@ -286,6 +286,9 @@ GRAPHQL,
         return $metadataFactory;
     }
 
+    /**
+     * @param class-string|null $relation
+     */
     private function field(string $property, string $mappedFrom, ?string $relation = null): GraphqlFieldMetadata
     {
         return new GraphqlFieldMetadata($property, $mappedFrom, $relation);

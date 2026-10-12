@@ -10,6 +10,7 @@ namespace GraphqlOrm\Metadata;
 final readonly class GraphqlEntityMetadata
 {
     /**
+     * @param class-string           $class
      * @param GraphqlFieldMetadata[] $fields
      */
     public function __construct(

@@ -14,6 +14,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Adapter\TraceableAdapter;
+use Symfony\Component\Cache\Adapter\TraceableAdapterEvent;
 
 final class MetadataCacheTest extends TestCase
 {
@@ -27,7 +28,9 @@ final class MetadataCacheTest extends TestCase
         $cached = (new GraphqlEntityMetadataFactory(cache: $pool))->getMetadata(FakeUserWithCollection::class);
 
         self::assertEquals($built, $cached);
-        self::assertSame(1, $pool->getCalls()[0]->hits);
+        $call = $pool->getCalls()[0] ?? null;
+        self::assertInstanceOf(TraceableAdapterEvent::class, $call);
+        self::assertSame(1, $call->hits);
     }
 
     #[Test]

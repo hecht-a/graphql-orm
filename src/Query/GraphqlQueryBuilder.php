@@ -19,8 +19,7 @@ final class GraphqlQueryBuilder
     private ?FilterExpressionInterface $filter = null;
 
     /**
-     * @param class-string<T>   $entityClass
-     * @param GraphqlManager<T> $manager
+     * @param class-string<T> $entityClass
      */
     public function __construct(
         private readonly string $entityClass,

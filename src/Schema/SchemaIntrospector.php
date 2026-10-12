@@ -73,7 +73,6 @@ final readonly class SchemaIntrospector
 
         $result = $this->client->query(self::INTROSPECTION_QUERY, $context);
 
-        /** @var array<string, mixed> $data */
         $data = $result['data'] ?? null;
 
         if (!\is_array($data)) {
@@ -147,7 +146,7 @@ final readonly class SchemaIntrospector
     }
 
     /**
-     * @param array<string, mixed> $type
+     * @param array<mixed> $type
      *
      * @return array{kind: string, name: string|null}
      */

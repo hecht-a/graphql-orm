@@ -14,8 +14,6 @@ use GraphqlOrm\Query\Ast\SelectionSetNode;
 use GraphqlOrm\Query\Expr\FilterExpressionInterface;
 
 /**
- * @template T of object
- *
  * @internal
  */
 final class GraphqlQueryStringBuilder
@@ -33,18 +31,12 @@ final class GraphqlQueryStringBuilder
     private QueryOptions $options;
     private ?FilterExpressionInterface $filter = null;
 
-    /**
-     * @param GraphqlManager<T> $manager
-     */
     public function __construct(
         private readonly GraphqlManager $manager,
     ) {
         $this->options = new QueryOptions();
     }
 
-    /**
-     * @return GraphqlQueryStringBuilder<T>
-     */
     public function root(string $name): self
     {
         $this->root = $name;
@@ -54,8 +46,6 @@ final class GraphqlQueryStringBuilder
 
     /**
      * @param array<string, mixed> $arguments
-     *
-     * @return GraphqlQueryStringBuilder<T>
      */
     public function arguments(array $arguments): self
     {
@@ -66,8 +56,6 @@ final class GraphqlQueryStringBuilder
 
     /**
      * @param string[] $fields
-     *
-     * @return GraphqlQueryStringBuilder<T>
      */
     public function fields(array $fields, ?bool $manualSelect = false): self
     {
@@ -79,8 +67,6 @@ final class GraphqlQueryStringBuilder
 
     /**
      * @param class-string $entityClass
-     *
-     * @return GraphqlQueryStringBuilder<T>
      */
     public function entity(string $entityClass): self
     {
@@ -89,9 +75,6 @@ final class GraphqlQueryStringBuilder
         return $this;
     }
 
-    /**
-     * @return GraphqlQueryStringBuilder<T>
-     */
     public function options(QueryOptions $options): self
     {
         $this->options = $options;
@@ -99,9 +82,6 @@ final class GraphqlQueryStringBuilder
         return $this;
     }
 
-    /**
-     * @return GraphqlQueryStringBuilder<T>
-     */
     public function filter(?FilterExpressionInterface $filter): self
     {
         $this->filter = $filter;
@@ -233,8 +213,8 @@ final class GraphqlQueryStringBuilder
     }
 
     /**
-     * @param class-string         $entityClass
-     * @param array<string, mixed> $tree
+     * @param class-string $entityClass
+     * @param array<mixed> $tree
      */
     private function buildFromTreeAst(string $entityClass, array $tree, ): SelectionSetNode
     {
@@ -249,6 +229,8 @@ final class GraphqlQueryStringBuilder
             if (!\is_array($children)) {
                 continue;
             }
+
+            $fieldName = (string) $fieldName;
 
             $field = $this->findFieldMetadata($metadata, $fieldName);
 
@@ -324,7 +306,7 @@ final class GraphqlQueryStringBuilder
                 ->getMetadataFactory()
                 ->getMetadata($field->relation);
 
-        $identifier = $relationMetadata->identifier?->mappedFrom ?? 'id';
+        $identifier = $relationMetadata->identifier->mappedFrom ?? 'id';
 
         $selection = new SelectionSetNode();
         $selection->add(new FieldNode($identifier, isCollection: $field->isCollection));

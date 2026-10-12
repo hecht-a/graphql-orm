@@ -24,9 +24,6 @@ use Symfony\Component\Finder\Finder;
 )]
 final readonly class DebugEntityCommand
 {
-    /**
-     * @param GraphqlEntityMetadataFactory<object> $metadataFactory
-     */
     public function __construct(
         private GraphqlEntityMetadataFactory $metadataFactory,
         #[Autowire('%graphql_orm.mapping.entity.dir%')]
@@ -176,6 +173,9 @@ final readonly class DebugEntityCommand
         return null;
     }
 
+    /**
+     * @param class-string $class
+     */
     private function resolvePhpType(string $class, string $property): string
     {
         try {
@@ -193,12 +193,11 @@ final readonly class DebugEntityCommand
                             return $t->getName();
                         }
 
-                        if ($t instanceof \ReflectionIntersectionType) {
-                            return '(' . implode('&', array_map(
-                                fn (\ReflectionType $i) => $i instanceof \ReflectionNamedType ? $i->getName() : '',
-                                $t->getTypes(),
-                            )) . ')';
-                        }
+                        // The other members of a union type are intersection types (DNF types).
+                        return '(' . implode('&', array_map(
+                            fn (\ReflectionType $i) => $i instanceof \ReflectionNamedType ? $i->getName() : '',
+                            $t->getTypes(),
+                        )) . ')';
                     },
                     $type->getTypes(),
                 ));

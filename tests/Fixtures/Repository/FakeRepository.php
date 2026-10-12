@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Fixtures\Repository;
 
-class FakeRepository
+use GraphqlOrm\Repository\GraphqlEntityRepository;
+
+/**
+ * @extends GraphqlEntityRepository<object>
+ */
+class FakeRepository extends GraphqlEntityRepository
 {
 }

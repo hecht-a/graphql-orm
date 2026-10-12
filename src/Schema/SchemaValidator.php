@@ -8,8 +8,6 @@ use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 
 /**
- * @template T of object
- *
  * @internal
  */
 final readonly class SchemaValidator
@@ -33,9 +31,6 @@ final readonly class SchemaValidator
         'DateTimeImmutable' => ['DateTime', 'Date', 'Time', 'String'],
     ];
 
-    /**
-     * @param GraphqlEntityMetadataFactory<T> $metadataFactory
-     */
     public function __construct(
         private GraphqlEntityMetadataFactory $metadataFactory,
     ) {
@@ -175,6 +170,8 @@ final readonly class SchemaValidator
     }
 
     /**
+     * @param class-string $entityClass
+     *
      * @return string[]
      */
     private function validateScalar(string $entityClass, string $property, string $mappedFrom, ?string $graphqlScalar, ): array

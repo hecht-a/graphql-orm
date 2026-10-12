@@ -65,7 +65,7 @@ final class RepositoryFindMethodsTest extends TestCase
         $repository = $this->repository(new FakeGraphqlClient(self::DAB_TASKS), new DataApiBuilderDialect());
 
         $this->expectException(InvalidArgumentException::class);
-        $repository->findBy([], ['title' => 'DESC']);
+        $repository->findBy([], ['title' => 'DESC']); // @phpstan-ignore argument.type (the runtime check is what is tested)
     }
 
     #[Test]
@@ -127,9 +127,6 @@ final class RepositoryFindMethodsTest extends TestCase
         return new GraphqlEntityRepository($this->manager($client, $dialect), FakeTask::class);
     }
 
-    /**
-     * @return GraphqlManager<object>
-     */
     private function manager(FakeGraphqlClient $client, GraphqlQueryDialect $dialect): GraphqlManager
     {
         $metadataFactory = new GraphqlEntityMetadataFactory();

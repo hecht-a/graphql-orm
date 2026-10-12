@@ -31,7 +31,8 @@ class FakeEntityWithBeforeHydrate
     #[BeforeHydrate]
     public function onBeforeHydrate(array $data): void
     {
-        $this->rawTypename = $data['__typename'] ?? 'unknown';
+        $typename = $data['__typename'] ?? null;
+        $this->rawTypename = \is_string($typename) ? $typename : 'unknown';
         $this->receivedData = $data;
         ++$this->beforeHydrateCallCount;
     }

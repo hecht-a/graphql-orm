@@ -10,6 +10,7 @@ use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\GraphqlQuery;
 use GraphqlOrm\Query\QueryOptions;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntity;
@@ -128,6 +129,9 @@ final class GraphqlQueryTest extends TestCase
         self::assertNull($query->getOneOrNullResult());
     }
 
+    /**
+     * @param array<string, mixed> $response
+     */
     private function createManager(array $response, ?EntityHydrator $hydrator = null): GraphqlManager
     {
         $metadataFactory = $this->createStub(GraphqlEntityMetadataFactory::class);
@@ -145,7 +149,7 @@ final class GraphqlQueryTest extends TestCase
 
         $manager
             ->method('execute')
-            ->willReturnCallback(fn ($_, $hydration) => $hydration($response, new GraphqlExecutionContext(), []));
+            ->willReturnCallback(fn (QueryNode|string $_, callable $hydration) => $hydration($response, new GraphqlExecutionContext(), []));
 
         $manager
             ->method('getDialect')
