@@ -7,7 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [3.0.0] — 2026-10-12
+
+### Upgrading from 2.x
+
+- PHP 8.3+ and Symfony 7.4 or 8.x are required.
+- Logs and profiler show `***` instead of query values: set `redact_query_values: false` (e.g. under `when@dev`) to
+  see them.
+- `DefaultDialect` throws a `LogicException` on `orderBy()` and `paginate()` instead of ignoring them: configure the
+  dialect matching your API.
+- With `DataApiBuilderDialect`, `findBy()` criteria are sent as an equality `filter` instead of plain root arguments.
+- A repository overriding `findBy()` must use the new signature
+  `findBy(array $criteria, ?array $orderBy = null, ?int $limit = null): array`. A repository declaring its own
+  `find()` or `findOneBy()` with another signature must rename it or align it on the new methods.
+- A custom dialect must implement `GraphqlQueryDialect::applyCriteria()`; a custom walker extending
+  `AbstractGraphqlWalker` must implement `walkRootField()`.
+- `GraphqlManager` properties are private: use `getMetadataFactory()`, `getHydrator()`, `getMaxDepth()` and
+  `getDialect()`, and pass the dialect to the constructor.
+- `GraphqlClient`, `GraphqlQueryCompiler`, `GraphqlExecutionContext` and `GraphqlOrmDataCollector` are `final`:
+  decorate `GraphqlClientInterface` instead of extending the client.
+- Classes marked `@internal` may change in any release: do not use or extend them.
+- `GraphqlManager` and `#[GraphqlEntity]` are no longer generic: remove `GraphqlManager<...>` type parameters from
+  PHPDoc.
+- Outside debug mode, entity metadata is cached in `cache.system`: clear or warm up the cache when deploying, as for the
+  rest of the Symfony cache.
 
 ### Added
 
