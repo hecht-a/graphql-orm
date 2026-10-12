@@ -25,6 +25,7 @@ readonly class GraphqlClient implements GraphqlClientInterface
         private array $headers = [],
         private array $httpClientOptions = [],
         private ?Stopwatch $stopwatch = null,
+        private ?string $projectDir = null,
     ) {
     }
 
@@ -108,6 +109,8 @@ readonly class GraphqlClient implements GraphqlClientInterface
     }
 
     /**
+     * Finds the first call made from application code: its file and line, and the class and function it was made from.
+     *
      * @param array<int, array<string, mixed>> $trace
      *
      * @return array{
@@ -119,57 +122,39 @@ readonly class GraphqlClient implements GraphqlClientInterface
      */
     private function findCaller(array $trace): ?array
     {
-        foreach ($trace as $frame) {
+        foreach ($trace as $index => $frame) {
             $file = $frame['file'] ?? null;
 
-            if (!\is_string($file)) {
-                continue;
-            }
-
-            if (str_contains($file, '/vendor/')) {
-                continue;
-            }
-
-            if (str_contains($file, 'graphql-orm')) {
+            if (!\is_string($file) || $this->isLibraryFile($file)) {
                 continue;
             }
 
             $line = $frame['line'] ?? null;
-
-            if (!\is_int($line)) {
-                $line = null;
-            }
-
-            $class = $frame['class'] ?? null;
-
-            if (!\is_string($class)) {
-                $class = null;
-            }
-
-            $function = $frame['function'] ?? null;
-
-            if (!\is_string($function)) {
-                $function = null;
-            }
+            $callingFrame = $trace[$index + 1] ?? [];
+            $class = $callingFrame['class'] ?? null;
+            $function = $callingFrame['function'] ?? null;
 
             return [
                 'file' => $this->shortenPath($file),
-                'line' => $line,
-                'class' => $class,
-                'function' => $function,
+                'line' => \is_int($line) ? $line : null,
+                'class' => \is_string($class) ? $class : null,
+                'function' => \is_string($function) ? $function : null,
             ];
         }
 
         return null;
     }
 
+    private function isLibraryFile(string $file): bool
+    {
+        return str_contains($file, \DIRECTORY_SEPARATOR . 'vendor' . \DIRECTORY_SEPARATOR)
+            || str_starts_with($file, \dirname(__DIR__) . \DIRECTORY_SEPARATOR);
+    }
+
     private function shortenPath(string $path): string
     {
-        $projectDir = $_SERVER['APP_RUNTIME_OPTIONS']['project_dir']
-            ?? \dirname(__DIR__, 3);
-
-        if (str_starts_with($path, $projectDir)) {
-            return substr($path, \strlen($projectDir) + 1);
+        if ($this->projectDir !== null && str_starts_with($path, $this->projectDir . \DIRECTORY_SEPARATOR)) {
+            return substr($path, \strlen($this->projectDir) + 1);
         }
 
         return $path;

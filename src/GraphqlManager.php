@@ -32,7 +32,7 @@ class GraphqlManager
         public GraphqlEntityMetadataFactory $metadataFactory,
         public GraphqlClientInterface $client,
         public EntityHydrator $hydrator,
-        public GraphqlOrmDataCollector $collector,
+        public ?GraphqlOrmDataCollector $collector,
         public int $maxDepth,
         public GraphqlQueryDialect $dialect = new DefaultDialect(),
         private ?GraphqlQueryCompiler $compiler = null,
@@ -67,7 +67,7 @@ class GraphqlManager
             $entities = $hydration($result, $context);
             $context->trace->hydratedCount = \count($entities instanceof PaginatedResult ? $entities->items : $entities);
         } finally {
-            $this->collector->addQuery($context->trace);
+            $this->collector?->addQuery($context->trace);
             $this->log($context);
         }
 

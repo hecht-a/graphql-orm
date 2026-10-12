@@ -17,6 +17,7 @@ use GraphqlOrm\Schema\SchemaIntrospector;
 use GraphqlOrm\Schema\SchemaValidationMode;
 use GraphqlOrm\Schema\SchemaValidator;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Stopwatch\Stopwatch;
 
 use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
@@ -37,6 +38,7 @@ return static function (ContainerConfigurator $config) {
         ->autoconfigure();
 
     $services->set(GraphqlManager::class)
+        ->arg('$collector', service(GraphqlOrmDataCollector::class)->nullOnInvalid())
         ->arg('$maxDepth', '%graphql_orm.max_depth%')
         ->arg('$dialect', service('graphql_orm.dialect'))
         ->arg('$logger', service('monolog.logger.graphql_orm')->nullOnInvalid());
@@ -47,6 +49,7 @@ return static function (ContainerConfigurator $config) {
         ->arg('$endpoint', '%graphql_orm.endpoint%')
         ->arg('$headers', '%graphql_orm.headers%')
         ->arg('$httpClientOptions', '%graphql_orm.http_client_options%')
+        ->arg('$projectDir', '%kernel.project_dir%')
         ->arg('$stopwatch', service(Stopwatch::class)->nullOnInvalid());
 
     $services->alias(GraphqlClientInterface::class, GraphqlClient::class);
@@ -61,7 +64,10 @@ return static function (ContainerConfigurator $config) {
     $services->set(StubRenderer::class)
         ->arg('$stubsDir', __DIR__ . '/../stubs');
 
+    $services->set('graphql_orm.filesystem', Filesystem::class);
+
     $services->set(MakeGraphqlEntityCommand::class)
+        ->arg('$fs', service('graphql_orm.filesystem'))
         ->tag('console.command');
 
     $services->set(DebugEntityCommand::class)

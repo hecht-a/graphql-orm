@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\DependencyInjection;
 
+use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
@@ -27,6 +28,11 @@ final class GraphqlOrmExtension extends Extension
         );
 
         $loader->load('services.php');
+
+        // The collector keeps every query in memory: only useful when the profiler can display it.
+        if (!$container->hasParameter('kernel.debug') || !$container->getParameter('kernel.debug')) {
+            $container->removeDefinition(GraphqlOrmDataCollector::class);
+        }
 
         $container->setParameter('graphql_orm.endpoint', $config['endpoint']);
         $container->setParameter('graphql_orm.http_client_options', $config['http_client_options']);
