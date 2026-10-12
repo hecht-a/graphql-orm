@@ -47,7 +47,7 @@ class GraphqlManager
      */
     public function execute(QueryNode|string $graphql, callable $hydration, QueryOptions $options = new QueryOptions(), array $variables = []): array|PaginatedResult
     {
-        $context = new GraphqlExecutionContext();
+        $context = new GraphqlExecutionContext(dialect: $this->dialect);
 
         if ($graphql instanceof QueryNode) {
             $compiled = $this->getQueryCompiler()->compile($graphql, $options);

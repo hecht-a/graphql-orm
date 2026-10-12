@@ -41,8 +41,12 @@ readonly class EntityHydrator
 
         ++$context->trace->hydratedEntities;
 
-        $idField = $this->findUniqueField($metadata->fields)?->mappedFrom;
-        $uniqueField = $data[$idField] ?? null;
+        $idField = $this->findUniqueField($metadata)?->mappedFrom;
+        $uniqueField = $idField !== null ? ($data[$idField] ?? null) : null;
+
+        if (!\is_int($uniqueField) && !\is_string($uniqueField)) {
+            $uniqueField = null;
+        }
 
         if ($uniqueField !== null) {
             if (isset($context->identityMap[$metadata->class][$uniqueField])) {
@@ -81,7 +85,7 @@ readonly class EntityHydrator
                             $context,
                             $depth + 1
                         ),
-                        $value
+                        $context->dialect->extractCollection($value)
                     );
                 } elseif ($value) {
                     ++$context->trace->hydratedRelations;
@@ -177,12 +181,19 @@ readonly class EntityHydrator
         return true;
     }
 
-    /**
-     * @param GraphqlFieldMetadata[] $fields
-     */
-    private function findUniqueField(array $fields): ?GraphqlFieldMetadata
+    private function findUniqueField(GraphqlEntityMetadata $metadata): ?GraphqlFieldMetadata
     {
-        return array_filter($fields, fn ($field) => $field->isIdentifier)[0] ?? null;
+        if ($metadata->identifier !== null) {
+            return $metadata->identifier;
+        }
+
+        foreach ($metadata->fields as $field) {
+            if ($field->isIdentifier) {
+                return $field;
+            }
+        }
+
+        return null;
     }
 
     private function normalizeValue(
@@ -213,7 +224,7 @@ readonly class EntityHydrator
                     ? $value
                     : (is_numeric($value)
                         ? (float) $value
-                        : CastException::cannotCast($value, 'float')
+                        : throw CastException::cannotCast($value, 'float')
                     ),
                 'bool' => match (true) {
                     \is_bool($value) => $value,
@@ -223,11 +234,11 @@ readonly class EntityHydrator
                     $value === 0,
                     $value === '0',
                     $value === 'false' => false,
-                    default => CastException::cannotCast($value, 'bool'),
+                    default => throw CastException::cannotCast($value, 'bool'),
                 },
                 'string' => \is_scalar($value)
                     ? (string) $value
-                    : CastException::cannotCast($value, 'string'),
+                    : throw CastException::cannotCast($value, 'string'),
                 'array' => (array) $value,
                 default => $value,
             };
