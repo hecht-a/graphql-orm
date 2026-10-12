@@ -56,6 +56,7 @@ graphql_orm:
 | `http_client`                     | `null`                   | HTTP client service id; defaults to the autowired `HttpClientInterface` |
 | `dialect`                         | `DefaultDialect`         | GraphQL dialect to use                  |
 | `headers`                         | `[]`                     | HTTP headers sent with every request    |
+| `headers_provider`                | `null`                   | Service id computing headers per request (see [dynamic headers](#dynamic-headers)) |
 | `http_client_options.verify_host` | `true`                   | TLS host verification                   |
 | `http_client_options.verify_peer` | `true`                   | TLS peer verification                   |
 | `schema_validation.mode`          | `disabled`               | `exception`, `warning`, or `disabled`   |
@@ -86,6 +87,47 @@ graphql_orm:
     endpoint: 'https://api.example.com/graphql'
     http_client: graphql.client
 ```
+
+## Dynamic headers
+
+Static `headers` suit a fixed API key. For a value computed at request time, such as an OAuth access token that
+expires, implement `HeadersProviderInterface` and pass its service id. It is called before every request, schema
+introspection included, and its headers override the static ones with the same name:
+
+```php
+use GraphqlOrm\Client\HeadersProviderInterface;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
+
+final readonly class OAuthHeadersProvider implements HeadersProviderInterface
+{
+    public function __construct(
+        private CacheInterface $cache,
+        private TokenClient $tokenClient, // your own client for the OAuth server
+    ) {
+    }
+
+    public function getHeaders(): array
+    {
+        $token = $this->cache->get('graphql_api_token', function (ItemInterface $item): string {
+            $token = $this->tokenClient->fetchAccessToken();
+            $item->expiresAfter($token->expiresIn - 30);
+
+            return $token->value;
+        });
+
+        return ['Authorization' => 'Bearer ' . $token];
+    }
+}
+```
+
+```yaml
+graphql_orm:
+    headers_provider: App\GraphQL\OAuthHeadersProvider
+```
+
+Cache the token: the provider runs on every request. Its exceptions are not caught, so a failure to get a token stops
+the query.
 
 ## Variables
 

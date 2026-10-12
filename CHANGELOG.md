@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `headers_provider` option: id of a service implementing `HeadersProviderInterface`, whose headers are computed
+  before every request (e.g. an OAuth access token) and override the static `headers`.
 - `GraphqlEntityRepository::find($id)` and `findOneBy($criteria, $orderBy)`, returning the entity or `null`.
 - `http_client` option: id of the HTTP client service to use, e.g. a scoped client with a timeout and retries
 - `variables` option (disabled by default): root query arguments are sent as typed GraphQL variables, their types
