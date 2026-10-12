@@ -7,7 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [2.0.0] — 2026-10-12
+
+### Upgrading from 1.x
+
+- `GraphqlClient` now throws `GraphqlRequestException` (a `GraphqlOrmException`) on transport failure, HTTP status
+  >= 400, non-JSON body, or GraphQL errors without data. Code relying on an empty result, or catching Symfony HTTP
+  client exceptions, must catch `GraphqlRequestException` instead.
+- `DefaultDialect` filters are now printed as input objects: `eq('status', 'active')` generates
+  `status: { eq: "active" }` (it generated the invalid `status: ["active"]`).
+- An argument or input object name that is not a valid GraphQL name throws `InvalidArgumentException`.
+- `max_depth` (default `2`) is now applied: the automatic selection loads fewer nested relations than before. Raise it,
+  or use an explicit `select()`, to load deeper relations.
+- `getOneOrNullResult()` sends `first: 1` when no limit is set: the API must accept a `first` argument.
+- New dependencies: `symfony/type-info` and `phpstan/phpdoc-parser`. `symfony/console` `^7.3` is required.
+- `QueryOptions::$filter` was removed (it was never read).
+- `GraphqlManager::$collector` is nullable, the profiler collector only exists in debug mode, and `EntityHydrator` is
+  no longer a `readonly` class.
+
+### Added
+
+- `graphqlorm:schema:validate` command, to validate the mapping against the schema in CI
+- `SchemaIntrospector::introspectSchema()` also returns the name of the root query type
+- Collection relations are detected from the property docblock (`@var Task[]`, `list<Task>`), through
+  `symfony/type-info` and `phpstan/phpdoc-parser`
+- Hydration of `BackedEnum`, `DateTime` and `DateTimeInterface` properties
+
+### Changed
+
+- `GraphqlClient` throws `GraphqlRequestException` on transport failure, HTTP status >= 400, non-JSON body, or GraphQL
+  errors without data. Partial data alongside errors is still returned, errors being recorded in the query trace.
+- `getOneOrNullResult()` requests a single result (`first: 1`) when no limit is set
+- The profiler collector is only registered in debug mode; `GraphqlManager::$collector` is nullable
+- `EntityHydrator` caches reflection per class and is no longer a `readonly` class
+- Removed the unused `QueryOptions::$filter` property
+- CI: tests also run against the lowest dependencies, and sources are linted on PHP 8.2
 
 ### Fixed
 
@@ -31,31 +65,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Schema validation: Data API Builder scalars (`Byte`, `Short`, `Long`, `Single`, `Decimal`) were reported as mismatches
 - Schema introspection: `[Type!]!` fields were not fully unwrapped
 - `InvalidGraphqlResponseException` now implements `GraphqlOrmException`
-- Hydration of `BackedEnum`, `DateTime` and `DateTimeInterface` properties; invalid dates now throw `CastException`
+- Invalid dates now throw `CastException`
 - Profiler caller: the path was shortened against a wrong project directory, frames were filtered on a `graphql-orm`
   substring (hiding projects whose path contains it), and the recorded class/function was the called one
 - The container no longer needs the `filesystem` service from FrameworkBundle
 - Non-finite floats (`INF`, `NAN`) are rejected instead of producing an invalid query
 - `graphqlorm:make:entity` rejects property and GraphQL field names that would generate invalid code
 - An entity reused from the identity map is no longer counted twice in the hydration stats
-
-### Added
-
-- `graphqlorm:schema:validate` command, to validate the mapping against the schema in CI
-- `SchemaIntrospector::introspectSchema()` also returns the name of the root query type
-- Collection relations are detected from the property docblock (`@var Task[]`, `list<Task>`), through
-  `symfony/type-info` and `phpstan/phpdoc-parser` (new dependencies)
-
-### Changed
-
-- `getOneOrNullResult()` requests a single result (`first: 1`) when no limit is set
-- Removed the unused `QueryOptions::$filter` property
-- The profiler collector is only registered in debug mode; `GraphqlManager::$collector` is nullable
-- `EntityHydrator` caches reflection per class and is no longer a `readonly` class
-
-- `GraphqlClient` throws `GraphqlRequestException` on transport failure, HTTP status >= 400, non-JSON body, or GraphQL
-  errors without data. Partial data alongside errors is still returned, errors being recorded in the query trace.
-- CI: tests also run against the lowest dependencies, and sources are linted on PHP 8.2
 
 ---
 
