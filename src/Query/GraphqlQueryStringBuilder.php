@@ -140,9 +140,11 @@ final class GraphqlQueryStringBuilder
     }
 
     /**
+     * Relations of an entity at or beyond the configured max depth only get their identifier selected.
+     *
      * @param class-string $entityClass
      */
-    private function buildAllFieldsAst(string $entityClass): SelectionSetNode
+    private function buildAllFieldsAst(string $entityClass, int $depth = 0): SelectionSetNode
     {
         $selection = new SelectionSetNode();
 
@@ -160,7 +162,13 @@ final class GraphqlQueryStringBuilder
 
             foreach ($metadata->fields as $field) {
                 if ($field->relation !== null) {
-                    $nested = $this->buildAllFieldsAst($field->relation);
+                    if ($depth >= $this->manager->maxDepth) {
+                        $selection->add($this->relationFallbackAst($field));
+
+                        continue;
+                    }
+
+                    $nested = $this->buildAllFieldsAst($field->relation, $depth + 1);
 
                     if ($nested->fields === []) {
                         $selection->add($this->relationFallbackAst($field));
@@ -270,7 +278,7 @@ final class GraphqlQueryStringBuilder
             }
 
             if ($explicit) {
-                $nested = $this->buildAllFieldsAst($field->relation);
+                $nested = $this->buildAllFieldsAst($field->relation, depth: 1);
 
                 if ($nested->fields === []) {
                     $selection->add($this->relationFallbackAst($field));
