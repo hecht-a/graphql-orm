@@ -42,6 +42,10 @@ final class GraphqlOrmExtension extends Extension
             $container->getDefinition(GraphqlClient::class)->setArgument('$httpClient', new Reference($config['http_client']));
         }
 
+        if ($config['headers_provider'] !== null) {
+            $container->getDefinition(GraphqlClient::class)->setArgument('$headersProvider', new Reference($config['headers_provider']));
+        }
+
         if ($config['variables']['enabled']) {
             $container->register(RootArgumentTypeResolver::class, RootArgumentTypeResolver::class)
                 ->setArguments([

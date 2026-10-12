@@ -66,6 +66,10 @@ final class Configuration implements ConfigurationInterface
             ->scalarPrototype()->end()
             ->defaultValue([])
             ->end()
+            ->scalarNode('headers_provider')
+            ->defaultNull()
+            ->info('Id of a service implementing HeadersProviderInterface, whose headers are computed before every request (e.g. an OAuth token) and override the static headers.')
+            ->end()
 
             ->integerNode('max_depth')
             ->defaultValue(2)

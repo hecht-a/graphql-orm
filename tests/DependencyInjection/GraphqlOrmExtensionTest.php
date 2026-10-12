@@ -11,6 +11,7 @@ use GraphqlOrm\DependencyInjection\GraphqlOrmExtension;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
+use GraphqlOrm\Tests\Fixtures\FakeHeadersProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -65,6 +66,21 @@ final class GraphqlOrmExtensionTest extends TestCase
         self::assertSame(
             $container->get('graphql.http_client'),
             (new \ReflectionProperty(GraphqlClient::class, 'httpClient'))->getValue($client),
+        );
+    }
+
+    #[Test]
+    public function itUsesTheConfiguredHeadersProvider(): void
+    {
+        $container = $this->createContainer(debug: false, config: ['headers_provider' => 'graphql.headers_provider']);
+        $container->register('graphql.headers_provider', FakeHeadersProvider::class);
+
+        $container->compile();
+
+        $client = $container->get(GraphqlClient::class);
+        self::assertSame(
+            $container->get('graphql.headers_provider'),
+            (new \ReflectionProperty(GraphqlClient::class, 'headersProvider'))->getValue($client),
         );
     }
 

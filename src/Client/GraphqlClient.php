@@ -26,6 +26,7 @@ final readonly class GraphqlClient implements GraphqlClientInterface
         private array $httpClientOptions = [],
         private ?Stopwatch $stopwatch = null,
         private ?string $projectDir = null,
+        private ?HeadersProviderInterface $headersProvider = null,
     ) {
     }
 
@@ -54,7 +55,7 @@ final readonly class GraphqlClient implements GraphqlClientInterface
                     'POST',
                     $this->endpoint,
                     [
-                        'headers' => $this->headers,
+                        'headers' => $this->headers(),
                         'json' => [
                             'query' => $query,
                             'variables' => $variables,
@@ -79,6 +80,18 @@ final readonly class GraphqlClient implements GraphqlClientInterface
         }
 
         return $this->decode($content, $context);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function headers(): array
+    {
+        if ($this->headersProvider === null) {
+            return $this->headers;
+        }
+
+        return [...$this->headers, ...$this->headersProvider->getHeaders()];
     }
 
     /**
