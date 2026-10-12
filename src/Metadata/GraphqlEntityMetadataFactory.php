@@ -16,6 +16,8 @@ use Symfony\Component\TypeInfo\TypeResolver\TypeResolverInterface;
 
 /**
  * @template T of object
+ *
+ * @internal
  */
 class GraphqlEntityMetadataFactory
 {

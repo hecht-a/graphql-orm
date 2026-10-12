@@ -18,6 +18,9 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 
+/**
+ * @internal
+ */
 #[AsCommand(
     name: 'graphqlorm:make:entity',
     description: 'Génère une entité GraphqlOrm + son repository.'

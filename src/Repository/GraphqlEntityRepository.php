@@ -45,7 +45,7 @@ class GraphqlEntityRepository
     {
         $metadata = $this
             ->manager
-            ->metadataFactory
+            ->getMetadataFactory()
             ->getMetadata($this->entityClass);
 
         $fields = array_map(
@@ -98,7 +98,7 @@ class GraphqlEntityRepository
 
                 return array_map(
                     fn ($row) => $this->manager
-                        ->hydrator
+                        ->getHydrator()
                         ->hydrate(
                             $metadata,
                             $row,

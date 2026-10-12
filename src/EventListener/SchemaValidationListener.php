@@ -15,6 +15,8 @@ use Symfony\Component\HttpKernel\KernelEvents;
 
 /**
  * @template T of object
+ *
+ * @internal
  */
 #[AsEventListener(event: KernelEvents::REQUEST, priority: 255)]
 final class SchemaValidationListener

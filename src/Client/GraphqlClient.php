@@ -11,7 +11,7 @@ use Symfony\Component\Stopwatch\Stopwatch;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-readonly class GraphqlClient implements GraphqlClientInterface
+final readonly class GraphqlClient implements GraphqlClientInterface
 {
     private const FIRST_HTTP_ERROR_STATUS = 400;
 

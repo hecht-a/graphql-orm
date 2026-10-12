@@ -7,6 +7,8 @@ namespace GraphqlOrm\Logging;
 /**
  * Masks the values of a GraphQL query before it is logged or shown in the profiler, as they may hold personal data.
  * Names, enum values, true/false/null and variable references are kept so the query stays readable.
+ *
+ * @internal
  */
 final class QueryRedactor
 {

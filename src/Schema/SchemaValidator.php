@@ -9,6 +9,8 @@ use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 
 /**
  * @template T of object
+ *
+ * @internal
  */
 final readonly class SchemaValidator
 {

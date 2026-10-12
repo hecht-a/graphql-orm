@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Metadata;
 
+/**
+ * @internal
+ */
 final readonly class GraphqlEntityMetadata
 {
     /**

@@ -42,7 +42,7 @@ final readonly class GraphqlQuery
     public function getResult(): array|PaginatedResult
     {
         $metadata = $this->manager
-            ->metadataFactory
+            ->getMetadataFactory()
             ->getMetadata($this->entityClass);
 
         return $this->manager->execute(
@@ -77,7 +77,7 @@ final readonly class GraphqlQuery
 
                 $items = array_map(
                     fn ($row) => $this->manager
-                        ->hydrator
+                        ->getHydrator()
                         ->hydrate($metadata, $row, $context),
                     $rows
                 );

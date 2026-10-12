@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Query;
 
-use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
+use GraphqlOrm\Dialect\DefaultDialect;
+use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
@@ -15,6 +16,7 @@ use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Query\GraphqlQuery;
 use GraphqlOrm\Query\GraphqlQueryBuilder;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntity;
+use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
 use GraphqlOrm\Tests\Fixtures\FakeRepository\FakeRepository;
 use PHPUnit\Framework\TestCase;
 
@@ -79,8 +81,7 @@ final class GraphqlQueryBuilderTest extends TestCase
 
     public function testWhereAddsArguments(): void
     {
-        $manager = $this->createManager();
-        $manager->dialect = new DataApiBuilderDialect();
+        $manager = $this->createManager(new DataApiBuilderDialect());
 
         $query = (new GraphqlQueryBuilder(FakeEntity::class, $manager));
         $query = $query
@@ -111,7 +112,7 @@ final class GraphqlQueryBuilderTest extends TestCase
         );
     }
 
-    private function createManager(): GraphqlManager
+    private function createManager(GraphqlQueryDialect $dialect = new DefaultDialect()): GraphqlManager
     {
         $metadataFactory = $this->createStub(GraphqlEntityMetadataFactory::class);
 
@@ -145,10 +146,11 @@ final class GraphqlQueryBuilderTest extends TestCase
 
         return new GraphqlManager(
             $metadataFactory,
-            $this->createStub(GraphqlClient::class),
+            new FakeGraphqlClient(),
             $this->createStub(EntityHydrator::class),
-            $this->createStub(GraphqlOrmDataCollector::class),
-            3
+            new GraphqlOrmDataCollector(),
+            3,
+            $dialect,
         );
     }
 }

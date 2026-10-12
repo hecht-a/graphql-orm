@@ -17,6 +17,9 @@ use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\Finder\Finder;
 
+/**
+ * @internal
+ */
 final class GraphqlOrmExtension extends Extension
 {
     public function load(array $configs, ContainerBuilder $container): void

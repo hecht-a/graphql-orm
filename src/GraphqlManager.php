@@ -33,12 +33,12 @@ class GraphqlManager
      * @param EntityHydrator<T>               $hydrator
      */
     public function __construct(
-        public GraphqlEntityMetadataFactory $metadataFactory,
-        public GraphqlClientInterface $client,
-        public EntityHydrator $hydrator,
-        public ?GraphqlOrmDataCollector $collector,
-        public int $maxDepth,
-        public GraphqlQueryDialect $dialect = new DefaultDialect(),
+        private GraphqlEntityMetadataFactory $metadataFactory,
+        private GraphqlClientInterface $client,
+        private EntityHydrator $hydrator,
+        private ?GraphqlOrmDataCollector $collector,
+        private int $maxDepth,
+        private GraphqlQueryDialect $dialect = new DefaultDialect(),
         private ?GraphqlQueryCompiler $compiler = null,
         private ?LoggerInterface $logger = null,
         private ?QueryRedactor $redactor = null,
@@ -86,6 +86,27 @@ class GraphqlManager
     public function getDialect(): GraphqlQueryDialect
     {
         return $this->dialect;
+    }
+
+    /**
+     * @return GraphqlEntityMetadataFactory<T>
+     */
+    public function getMetadataFactory(): GraphqlEntityMetadataFactory
+    {
+        return $this->metadataFactory;
+    }
+
+    /**
+     * @return EntityHydrator<T>
+     */
+    public function getHydrator(): EntityHydrator
+    {
+        return $this->hydrator;
+    }
+
+    public function getMaxDepth(): int
+    {
+        return $this->maxDepth;
     }
 
     public function getQueryCompiler(): GraphqlQueryCompiler

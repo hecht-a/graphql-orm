@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Codegen;
 
+/**
+ * @internal
+ */
 final class PropertyDefinition
 {
     public function __construct(

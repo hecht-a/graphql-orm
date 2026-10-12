@@ -143,12 +143,12 @@ final class GraphqlEntityRepositoryTest extends TestCase
 
         $manager = $this->createStub(GraphqlManager::class);
 
-        $manager->metadataFactory = $metadataFactory;
-        $manager->hydrator = $hydrator;
+        $manager->method('getMetadataFactory')->willReturn($metadataFactory);
+        $manager->method('getHydrator')->willReturn($hydrator);
 
         $manager
             ->method('execute')
-            ->willReturnCallback(fn ($_, $hydration) => $hydration($response, $this->createStub(GraphqlExecutionContext::class)));
+            ->willReturnCallback(fn ($_, $hydration) => $hydration($response, new GraphqlExecutionContext()));
 
         $manager
             ->method('getDialect')

@@ -14,6 +14,8 @@ use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 
 /**
  * @template T of object
+ *
+ * @internal
  */
 class EntityHydrator
 {

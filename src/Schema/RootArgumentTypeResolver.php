@@ -15,6 +15,8 @@ use Symfony\Contracts\Cache\ItemInterface;
  * Knows the GraphQL type of each argument of the root query fields, so they can be declared as variables.
  * The introspection result is cached; a failed introspection is cached as well, so that an API forbidding
  * introspection is not queried on every request.
+ *
+ * @internal
  */
 final readonly class RootArgumentTypeResolver
 {

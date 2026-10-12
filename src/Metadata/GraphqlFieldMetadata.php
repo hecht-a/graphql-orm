@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Metadata;
 
+/**
+ * @internal
+ */
 final readonly class GraphqlFieldMetadata
 {
     public function __construct(

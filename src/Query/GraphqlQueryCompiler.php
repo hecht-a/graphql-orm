@@ -8,7 +8,10 @@ use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\Walker\GraphqlWalkerInterface;
 use GraphqlOrm\Query\Walker\VariableAwareWalkerInterface;
 
-readonly class GraphqlQueryCompiler
+/**
+ * @internal
+ */
+final readonly class GraphqlQueryCompiler
 {
     public function __construct(
         private GraphqlWalkerInterface $walker,

@@ -6,6 +6,9 @@ namespace GraphqlOrm\Codegen;
 
 use Symfony\Component\Filesystem\Exception\FileNotFoundException;
 
+/**
+ * @internal
+ */
 final readonly class StubRenderer
 {
     public function __construct(

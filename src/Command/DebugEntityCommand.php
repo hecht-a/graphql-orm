@@ -15,6 +15,9 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Finder\Finder;
 
+/**
+ * @internal
+ */
 #[AsCommand(
     name: 'graphqlorm:debug:entity',
     description: 'Show metadata of a GraphQL Entity',

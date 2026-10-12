@@ -6,6 +6,8 @@ namespace GraphqlOrm\Tests;
 
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
+use GraphqlOrm\Dialect\DefaultDialect;
+use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
@@ -18,14 +20,15 @@ use PHPUnit\Framework\TestCase;
 
 final class QueryBuilderEndToEndTest extends TestCase
 {
-    private function createManager(FakeGraphqlClient $client): GraphqlManager
+    private function createManager(FakeGraphqlClient $client, GraphqlQueryDialect $dialect = new DefaultDialect()): GraphqlManager
     {
         return new GraphqlManager(
             new GraphqlEntityMetadataFactory(),
             $client,
             new EntityHydrator(new GraphqlEntityMetadataFactory()),
-            $this->createStub(GraphqlOrmDataCollector::class),
-            5
+            new GraphqlOrmDataCollector(),
+            5,
+            $dialect,
         );
     }
 
@@ -48,8 +51,7 @@ final class QueryBuilderEndToEndTest extends TestCase
             ],
         ]);
 
-        $manager = $this->createManager($client);
-        $manager->dialect = new DataApiBuilderDialect();
+        $manager = $this->createManager($client, new DataApiBuilderDialect());
 
         $repo = new GraphqlEntityRepository($manager, Task::class);
 
@@ -113,8 +115,7 @@ final class QueryBuilderEndToEndTest extends TestCase
             ],
         );
 
-        $manager = $this->createManager($client);
-        $manager->dialect = new DataApiBuilderDialect();
+        $manager = $this->createManager($client, new DataApiBuilderDialect());
 
         $repo = new GraphqlEntityRepository($manager, Task::class);
 
@@ -173,8 +174,7 @@ final class QueryBuilderEndToEndTest extends TestCase
             ],
         );
 
-        $manager = $this->createManager($client);
-        $manager->dialect = new DataApiBuilderDialect();
+        $manager = $this->createManager($client, new DataApiBuilderDialect());
 
         $repo = new GraphqlEntityRepository($manager, Task::class);
 
@@ -202,8 +202,7 @@ final class QueryBuilderEndToEndTest extends TestCase
             ],
         ]);
 
-        $manager = $this->createManager($client);
-        $manager->dialect = new DataApiBuilderDialect();
+        $manager = $this->createManager($client, new DataApiBuilderDialect());
 
         $repo = new GraphqlEntityRepository($manager, Task::class);
 

@@ -14,6 +14,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
+/**
+ * @internal
+ */
 #[AsCommand(
     name: 'graphqlorm:schema:validate',
     description: 'Validate the entity mapping against the live GraphQL schema',

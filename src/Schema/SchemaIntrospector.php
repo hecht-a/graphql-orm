@@ -8,6 +8,9 @@ use GraphqlOrm\Client\GraphqlClientInterface;
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 
+/**
+ * @internal
+ */
 final readonly class SchemaIntrospector
 {
     private const INTROSPECTION_QUERY = <<<'GQL'

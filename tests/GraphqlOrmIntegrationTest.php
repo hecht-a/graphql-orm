@@ -36,7 +36,7 @@ final class GraphqlOrmIntegrationTest extends TestCase
             new GraphqlEntityMetadataFactory(),
             $client,
             new EntityHydrator(new GraphqlEntityMetadataFactory()),
-            $this->createStub(GraphqlOrmDataCollector::class),
+            new GraphqlOrmDataCollector(),
             3
         );
 
@@ -71,7 +71,7 @@ final class GraphqlOrmIntegrationTest extends TestCase
             new GraphqlEntityMetadataFactory(),
             $client,
             new EntityHydrator(new GraphqlEntityMetadataFactory()),
-            $this->createStub(GraphqlOrmDataCollector::class),
+            new GraphqlOrmDataCollector(),
             3
         );
 

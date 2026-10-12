@@ -128,7 +128,7 @@ final class GraphqlQueryBuilder
         }
 
         $metadata = $this->manager
-            ->metadataFactory
+            ->getMetadataFactory()
             ->getMetadata($this->entityClass);
 
         $fields = $this->selectedFields

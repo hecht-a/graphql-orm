@@ -140,8 +140,8 @@ final class GraphqlQueryTest extends TestCase
 
         $manager = $this->createStub(GraphqlManager::class);
 
-        $manager->metadataFactory = $metadataFactory;
-        $manager->hydrator = $hydrator;
+        $manager->method('getMetadataFactory')->willReturn($metadataFactory);
+        $manager->method('getHydrator')->willReturn($hydrator);
 
         $manager
             ->method('execute')

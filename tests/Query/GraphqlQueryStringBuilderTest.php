@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Query;
 
-use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\GraphqlManager;
@@ -16,6 +15,7 @@ use GraphqlOrm\Query\GraphqlQueryStringBuilder;
 use GraphqlOrm\Query\QueryOptions;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\Task;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\User;
+use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
 use GraphqlOrm\Tests\Fixtures\FakeRepository\TaskRepository;
 use GraphqlOrm\Tests\Fixtures\FakeRepository\UserRepository;
 use PHPUnit\Framework\TestCase;
@@ -134,9 +134,9 @@ GRAPHQL,
 
         $manager = new GraphqlManager(
             $metadataFactory,
-            $this->createStub(GraphqlClient::class),
+            new FakeGraphqlClient(),
             $this->createStub(EntityHydrator::class),
-            $this->createStub(GraphqlOrmDataCollector::class),
+            new GraphqlOrmDataCollector(),
             3
         );
 
@@ -164,9 +164,9 @@ GRAPHQL,
 
         $manager = new GraphqlManager(
             $metadataFactory,
-            $this->createStub(GraphqlClient::class),
+            new FakeGraphqlClient(),
             $this->createStub(EntityHydrator::class),
-            $this->createStub(GraphqlOrmDataCollector::class),
+            new GraphqlOrmDataCollector(),
             3
         );
 
@@ -255,9 +255,9 @@ GRAPHQL,
 
         return new GraphqlManager(
             $metadataFactory,
-            $this->createStub(GraphqlClient::class),
+            new FakeGraphqlClient(),
             $this->createStub(EntityHydrator::class),
-            $this->createStub(GraphqlOrmDataCollector::class),
+            new GraphqlOrmDataCollector(),
             3
         );
     }

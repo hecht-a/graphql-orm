@@ -15,6 +15,8 @@ use GraphqlOrm\Query\Expr\FilterExpressionInterface;
 
 /**
  * @template T of object
+ *
+ * @internal
  */
 final class GraphqlQueryStringBuilder
 {
@@ -157,12 +159,12 @@ final class GraphqlQueryStringBuilder
         try {
             $metadata = $this
                     ->manager
-                    ->metadataFactory
+                    ->getMetadataFactory()
                     ->getMetadata($entityClass);
 
             foreach ($metadata->fields as $field) {
                 if ($field->relation !== null) {
-                    if ($depth >= $this->manager->maxDepth) {
+                    if ($depth >= $this->manager->getMaxDepth()) {
                         $selection->add($this->relationFallbackAst($field));
 
                         continue;
@@ -200,7 +202,7 @@ final class GraphqlQueryStringBuilder
         /** @var array<string, mixed> $tree */
         $tree = [];
 
-        $metadata = $this->manager->metadataFactory->getMetadata($this->entityClass);
+        $metadata = $this->manager->getMetadataFactory()->getMetadata($this->entityClass);
 
         if ($metadata->identifier !== null) {
             $identifier = $metadata->identifier->mappedFrom;
@@ -240,7 +242,7 @@ final class GraphqlQueryStringBuilder
 
         $metadata = $this
             ->manager
-            ->metadataFactory
+            ->getMetadataFactory()
             ->getMetadata($entityClass);
 
         foreach ($tree as $fieldName => $children) {
@@ -268,7 +270,7 @@ final class GraphqlQueryStringBuilder
 
             $relationMetadata = $this
                     ->manager
-                    ->metadataFactory
+                    ->getMetadataFactory()
                     ->getMetadata($field->relation);
 
             if ($relationMetadata->identifier !== null) {
@@ -319,7 +321,7 @@ final class GraphqlQueryStringBuilder
 
         $relationMetadata = $this
                 ->manager
-                ->metadataFactory
+                ->getMetadataFactory()
                 ->getMetadata($field->relation);
 
         $identifier = $relationMetadata->identifier?->mappedFrom ?? 'id';

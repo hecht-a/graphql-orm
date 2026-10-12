@@ -8,7 +8,7 @@ use GraphqlOrm\Dialect\DefaultDialect;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\Query\GraphqlQueryTrace;
 
-class GraphqlExecutionContext
+final class GraphqlExecutionContext
 {
     /**
      * @param array<string, array<int|string, object>> $identityMap
