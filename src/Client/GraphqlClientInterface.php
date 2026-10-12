@@ -13,7 +13,9 @@ interface GraphqlClientInterface
     /**
      * @param array<string, mixed> $variables
      *
-     * @return string[]
+     * @return array<string, mixed>
+     *
+     * @throws \GraphqlOrm\Exception\GraphqlRequestException when the request fails or returns errors without data
      */
     public function query(
         string $query,
