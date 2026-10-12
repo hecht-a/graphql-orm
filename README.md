@@ -13,6 +13,9 @@ automatic hydration, relation handling, schema validation, and deep Symfony inte
 composer require hecht-a/graphql-orm
 ```
 
+The bundle relies on the HTTP client service provided by FrameworkBundle (`framework.http_client`, enabled by default
+when `symfony/http-client` is installed).
+
 ## Quick start
 
 ```yaml

@@ -74,5 +74,7 @@ array (e.g. a list of scalars such as `/** @var string[] */`). An untyped proper
 | `string`            | `String`, `ID`, `Date`, `DateTime`, `Time`, `JSON`, `UUID` |
 | `bool`              | `Boolean`                                                  |
 | `DateTimeImmutable` | `DateTime`, `Date`, `Time`, `String`                       |
+| `DateTime`, `DateTimeInterface` | Same as `DateTimeImmutable` (`DateTimeInterface` gets a `DateTimeImmutable`) |
+| `BackedEnum`        | Built with `::from()`; an unknown value throws `CastException` |
 
-`DateTimeImmutable` fields are automatically cast from ISO 8601 strings or Unix timestamps (in milliseconds).
+Date fields are automatically cast from ISO 8601 strings or Unix timestamps (in milliseconds).

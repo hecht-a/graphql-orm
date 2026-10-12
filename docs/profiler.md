@@ -16,4 +16,5 @@ For each request, the panel shows:
 	- Variables
 	- Caller (file + line that triggered the query)
 
-No additional configuration is needed — the collector is registered automatically when `symfony/stopwatch` is available.
+No additional configuration is needed — the collector is registered automatically in debug mode (`kernel.debug`). It
+is not registered otherwise, so queries are not kept in memory in production.

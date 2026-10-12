@@ -31,6 +31,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Schema validation: Data API Builder scalars (`Byte`, `Short`, `Long`, `Single`, `Decimal`) were reported as mismatches
 - Schema introspection: `[Type!]!` fields were not fully unwrapped
 - `InvalidGraphqlResponseException` now implements `GraphqlOrmException`
+- Hydration of `BackedEnum`, `DateTime` and `DateTimeInterface` properties; invalid dates now throw `CastException`
+- Profiler caller: the path was shortened against a wrong project directory, frames were filtered on a `graphql-orm`
+  substring (hiding projects whose path contains it), and the recorded class/function was the called one
+- The container no longer needs the `filesystem` service from FrameworkBundle
+- Non-finite floats (`INF`, `NAN`) are rejected instead of producing an invalid query
+- `graphqlorm:make:entity` rejects property and GraphQL field names that would generate invalid code
+- An entity reused from the identity map is no longer counted twice in the hydration stats
 
 ### Added
 
@@ -43,6 +50,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `getOneOrNullResult()` requests a single result (`first: 1`) when no limit is set
 - Removed the unused `QueryOptions::$filter` property
+- The profiler collector is only registered in debug mode; `GraphqlManager::$collector` is nullable
+- `EntityHydrator` caches reflection per class and is no longer a `readonly` class
 
 - `GraphqlClient` throws `GraphqlRequestException` on transport failure, HTTP status >= 400, non-JSON body, or GraphQL
   errors without data. Partial data alongside errors is still returned, errors being recorded in the query trace.
