@@ -95,7 +95,7 @@ final class DABGraphqlWalker extends AbstractGraphqlWalker
         }
 
         if (\is_int($value) || \is_float($value)) {
-            return (string) $value;
+            return $this->formatNumber($value);
         }
 
         if (\is_bool($value)) {

@@ -7,12 +7,11 @@ namespace GraphqlOrm\Query\Walker;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Ast\SelectionSetNode;
+use GraphqlOrm\Query\GraphqlName;
 use GraphqlOrm\Query\Printer\GraphqlPrinter;
 
 abstract class AbstractGraphqlWalker implements GraphqlWalkerInterface
 {
-    private const GRAPHQL_NAME_PATTERN = '/^[_A-Za-z][_0-9A-Za-z]*$/';
-
     protected GraphqlPrinter $printer;
 
     protected function walkField(FieldNode $field): void
@@ -62,11 +61,23 @@ abstract class AbstractGraphqlWalker implements GraphqlWalkerInterface
     }
 
     /**
+     * @throws InvalidArgumentException when the value has no GraphQL literal (INF, NAN)
+     */
+    protected function formatNumber(int|float $value): string
+    {
+        if (\is_float($value) && !is_finite($value)) {
+            throw new InvalidArgumentException('Non-finite floats (INF, NAN) cannot be sent as GraphQL arguments.');
+        }
+
+        return (string) $value;
+    }
+
+    /**
      * @throws InvalidArgumentException when the name could break out of the generated query
      */
     protected function assertValidName(string|int $name): string
     {
-        if (!\is_string($name) || preg_match(self::GRAPHQL_NAME_PATTERN, $name) !== 1) {
+        if (!\is_string($name) || !GraphqlName::isValid($name)) {
             throw new InvalidArgumentException(\sprintf('"%s" is not a valid GraphQL name.', $name));
         }
 

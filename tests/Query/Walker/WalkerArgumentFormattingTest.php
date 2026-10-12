@@ -121,6 +121,18 @@ final class WalkerArgumentFormattingTest extends TestCase
         self::assertStringContainsString('things(ids: [1, 2])', $graphql);
     }
 
+    #[Test]
+    #[DataProvider('walkers')]
+    public function itRejectsANonFiniteFloat(GraphqlWalkerInterface $walker): void
+    {
+        // Arrange
+        $query = $this->queryWithArguments(['ratio' => NAN]);
+
+        // Act & Assert
+        $this->expectException(InvalidArgumentException::class);
+        $walker->walk($query, new QueryOptions());
+    }
+
     /**
      * @param array<string, mixed> $arguments
      */

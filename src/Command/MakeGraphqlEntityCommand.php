@@ -6,6 +6,7 @@ namespace GraphqlOrm\Command;
 
 use GraphqlOrm\Codegen\PropertyDefinition;
 use GraphqlOrm\Codegen\StubRenderer;
+use GraphqlOrm\Query\GraphqlName;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Option;
@@ -23,6 +24,8 @@ use Symfony\Component\Finder\Finder;
 )]
 final readonly class MakeGraphqlEntityCommand
 {
+    private const PHP_IDENTIFIER_PATTERN = '/^[a-zA-Z_][a-zA-Z0-9_]*$/';
+
     public function __construct(
         #[Autowire('%graphql_orm.mapping.entity.dir%')]
         private string $entityDir,
@@ -122,16 +125,16 @@ final readonly class MakeGraphqlEntityCommand
             /** @var ?string $name */
             $name = $io->ask('Property name');
 
-            if (!$name) {
-                $io->warning('Invalid property name');
+            if (!$name || preg_match(self::PHP_IDENTIFIER_PATTERN, $name) !== 1) {
+                $io->warning('Invalid property name: it must be a valid PHP identifier');
                 continue;
             }
 
             /** @var ?string $graphqlField */
             $graphqlField = $io->ask('Field name in GraphQL schema');
 
-            if (!$graphqlField) {
-                $io->warning('Invalid property GraphQL field');
+            if (!$graphqlField || !GraphqlName::isValid($graphqlField)) {
+                $io->warning('Invalid GraphQL field name');
                 continue;
             }
 
