@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Repository;
 
-use GraphqlOrm\Exception\InvalidGraphqlResponseException;
-use GraphqlOrm\Execution\GraphqlExecutionContext;
+use GraphqlOrm\Exception\InvalidArgumentException;
+use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\GraphqlManager;
+use GraphqlOrm\Query\Direction;
+use GraphqlOrm\Query\GraphqlQuery;
 use GraphqlOrm\Query\GraphqlQueryBuilder;
 use GraphqlOrm\Query\GraphqlQueryStringBuilder;
+use GraphqlOrm\Query\QueryOptions;
 
 /**
  * @template T of object
@@ -37,76 +40,63 @@ class GraphqlEntityRepository
     }
 
     /**
-     * @param array<string, mixed> $criteria
+     * @return T|null
+     *
+     * @throws LogicException when the entity has no identifier
+     */
+    public function find(mixed $id): ?object
+    {
+        $identifier = $this->manager->getMetadataFactory()->getMetadata($this->entityClass)->identifier;
+
+        if ($identifier === null) {
+            throw new LogicException(\sprintf('"%s" has no identifier: mark one of its fields with #[GraphqlField(identifier: true)].', $this->entityClass));
+        }
+
+        return $this->findOneBy([$identifier->mappedFrom => $id]);
+    }
+
+    /**
+     * @param array<string, mixed>          $criteria GraphQL field name => expected value
+     * @param array<string, Direction>|null $orderBy  GraphQL field name => direction
+     *
+     * @return T|null
+     */
+    public function findOneBy(array $criteria, ?array $orderBy = null): ?object
+    {
+        return $this->findBy($criteria, $orderBy, 1)[0] ?? null;
+    }
+
+    /**
+     * @param array<string, mixed>          $criteria GraphQL field name => expected value
+     * @param array<string, Direction>|null $orderBy  GraphQL field name => direction
      *
      * @return T[]
+     *
+     * @throws InvalidArgumentException when an ordering is not a Direction
      */
-    public function findBy(array $criteria): array
+    public function findBy(array $criteria, ?array $orderBy = null, ?int $limit = null): array
     {
-        $metadata = $this
-            ->manager
-            ->getMetadataFactory()
-            ->getMetadata($this->entityClass);
+        foreach ($orderBy ?? [] as $field => $direction) {
+            if (!$direction instanceof Direction) {
+                throw new InvalidArgumentException(\sprintf('The ordering of "%s" must be a %s.', $field, Direction::class));
+            }
+        }
 
-        $fields = array_map(
-            fn ($f) => $f->mappedFrom,
-            $metadata->fields
-        );
+        $options = new QueryOptions();
+        $options->orderBy = $orderBy;
+        $options->limit = $limit;
 
-        $graphql = (new GraphqlQueryStringBuilder($this->manager))
+        $metadata = $this->manager->getMetadataFactory()->getMetadata($this->entityClass);
+
+        $query = (new GraphqlQueryStringBuilder($this->manager))
             ->entity($this->entityClass)
             ->root($metadata->name)
-            ->arguments($criteria)
-            ->fields($fields)
+            ->arguments($this->manager->getDialect()->applyCriteria($criteria))
+            ->options($options)
             ->build();
 
         /** @var T[] $result */
-        $result = $this
-            ->manager
-            ->execute($graphql, hydration: function (array $result, GraphqlExecutionContext $context) use ($metadata) {
-                $dialect = $this->manager->getDialect();
-                $data = $result['data'] ?? [];
-
-                if (!\array_key_exists($metadata->name, $data)) {
-                    return [];
-                }
-
-                $root = $data[$metadata->name];
-
-                if ($root === null) {
-                    return [];
-                }
-
-                if (!\is_array($root)) {
-                    throw InvalidGraphqlResponseException::expectedArray($root);
-                }
-
-                $collection = $dialect->extractCollection($root);
-                $rows = !empty($collection) ? $collection : null;
-
-                if ($rows === null) {
-                    return [];
-                }
-
-                if (!\is_array($rows)) {
-                    throw InvalidGraphqlResponseException::expectedArray($rows);
-                }
-
-                if (array_is_list($rows) === false) {
-                    $rows = [$rows];
-                }
-
-                return array_map(
-                    fn ($row) => $this->manager
-                        ->getHydrator()
-                        ->hydrate(
-                            $metadata,
-                            $row,
-                            $context
-                        ),
-                    $rows
-                );
-            });
+        $result = (new GraphqlQuery($query, $this->entityClass, $this->manager, $options))->getResult();
 
         return $result;
     }

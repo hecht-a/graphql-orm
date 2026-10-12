@@ -55,4 +55,16 @@ final class DataApiBuilderDialect implements GraphqlQueryDialect
 
         return ['filter' => $filter->toArray()];
     }
+
+    public function applyCriteria(array $criteria): array
+    {
+        if ($criteria === []) {
+            return [];
+        }
+
+        return ['filter' => array_map(
+            fn (mixed $value) => $value === null ? ['isNull' => true] : ['eq' => $value],
+            $criteria,
+        )];
+    }
 }

@@ -30,4 +30,13 @@ interface GraphqlQueryDialect
      * @return array<string, mixed>
      */
     public function applyFilter(?FilterExpressionInterface $filter): array;
+
+    /**
+     * Turns the equality criteria of the repository find methods into root arguments.
+     *
+     * @param array<string, mixed> $criteria field name => expected value
+     *
+     * @return array<string, mixed>
+     */
+    public function applyCriteria(array $criteria): array;
 }

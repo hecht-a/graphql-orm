@@ -48,4 +48,9 @@ final class DefaultDialect implements GraphqlQueryDialect
 
         return $filter->toArray();
     }
+
+    public function applyCriteria(array $criteria): array
+    {
+        return $criteria;
+    }
 }
