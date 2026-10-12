@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Exception;
 
-final class InvalidGraphqlResponseException extends \UnexpectedValueException
+final class InvalidGraphqlResponseException extends \UnexpectedValueException implements GraphqlOrmException
 {
     public static function expectedArray(mixed $value): self
     {

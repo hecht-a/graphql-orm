@@ -55,7 +55,7 @@ final class SchemaValidationListener
         }
 
         try {
-            $schemaTypes = $this->introspector->introspect();
+            $schema = $this->introspector->introspectSchema();
         } catch (\Throwable $e) {
             $message = 'GraphQL schema introspection failed: ' . $e->getMessage();
 
@@ -68,7 +68,7 @@ final class SchemaValidationListener
             return;
         }
 
-        $violations = $this->validator->validate($this->entityClasses, $schemaTypes);
+        $violations = $this->validator->validate($this->entityClasses, $schema['types'], $schema['queryType']);
 
         if ($violations === []) {
             return;

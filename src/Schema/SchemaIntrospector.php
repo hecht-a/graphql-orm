@@ -13,6 +13,9 @@ final readonly class SchemaIntrospector
     private const INTROSPECTION_QUERY = <<<'GQL'
         query IntrospectionQuery {
             __schema {
+                queryType {
+                    name
+                }
                 types {
                     name
                     kind
@@ -27,6 +30,10 @@ final readonly class SchemaIntrospector
                                 ofType {
                                     name
                                     kind
+                                    ofType {
+                                        name
+                                        kind
+                                    }
                                 }
                             }
                         }
@@ -41,10 +48,23 @@ final readonly class SchemaIntrospector
     ) {
     }
 
+    private const DEFAULT_QUERY_TYPE = 'Query';
+
     /**
      * @return array<string, array{kind: string, fields: array<string, array{kind: string, name: string|null}>}>
      */
     public function introspect(): array
+    {
+        return $this->introspectSchema()['types'];
+    }
+
+    /**
+     * @return array{
+     *   queryType: string,
+     *   types: array<string, array{kind: string, fields: array<string, array{kind: string, name: string|null}>}>
+     * }
+     */
+    public function introspectSchema(): array
     {
         $context = new GraphqlExecutionContext();
 
@@ -68,6 +88,8 @@ final readonly class SchemaIntrospector
         if (!\is_array($types)) {
             throw new InvalidGraphqlResponseException('Introspection response is missing "types".');
         }
+
+        $queryType = \is_array($schema['queryType'] ?? null) ? $schema['queryType']['name'] ?? null : null;
 
         $map = [];
 
@@ -115,7 +137,10 @@ final readonly class SchemaIntrospector
             ];
         }
 
-        return $map;
+        return [
+            'queryType' => \is_string($queryType) ? $queryType : self::DEFAULT_QUERY_TYPE,
+            'types' => $map,
+        ];
     }
 
     /**
