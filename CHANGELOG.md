@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- GraphQL injection: string values are now escaped and argument / input object names are validated
+  (`InvalidArgumentException` on an invalid name)
+- `DefaultDialect`: filters were printed as lists (`status: ["active"]`) instead of input objects (`status: { eq: "active" }`)
+- `DataApiBuilderDialect`: nested collections were hydrated with their `items` envelope instead of the related entities
+- Hydration: invalid `float`, `bool` and `string` values now throw `CastException` instead of a `TypeError`
+  (or, for `string`, silently storing the exception text)
+- Identity map was ignored when the identifier was not the first mapped property
+- PHP 8.2 compatibility: removed a typed class constant (PHP 8.3 syntax)
+- `symfony/console` requirement raised to `^7.3`, needed by the invokable commands and `#[Argument]` / `#[Option]`
+- Documentation: `Direction::DESC` case and `getGraphQL()` example output
+
+### Changed
+
+- `GraphqlClient` throws `GraphqlRequestException` on transport failure, HTTP status >= 400, non-JSON body, or GraphQL
+  errors without data. Partial data alongside errors is still returned, errors being recorded in the query trace.
+- CI: tests also run against the lowest dependencies, and sources are linted on PHP 8.2
+
+---
+
 ## [1.0.0] — 2026-02-28
 
 ### Added

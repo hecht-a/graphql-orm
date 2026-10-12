@@ -46,7 +46,7 @@ $expr->orX($expr->eq('priority', 'high'), $expr->eq('priority', 'critical'))
 use GraphqlOrm\Query\Direction;
 
 $qb
-    ->orderBy('createdAt', Direction::Desc)
+    ->orderBy('createdAt', Direction::DESC)
     ->limit(20);
 ```
 
@@ -80,7 +80,7 @@ $graphql = $qb
 
 // outputs:
 // query {
-//   tasks(id: 1) {
+//   tasks(id: { eq: 1 }) {
 //     id
 //     title
 //   }

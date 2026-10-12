@@ -35,7 +35,8 @@ php bin/console graphqlorm:make:entity Task
 ```php
 $tasks = $taskRepository->findAll();
 
-$tasks = $taskRepository->createQueryBuilder()
+$qb = $taskRepository->createQueryBuilder();
+$tasks = $qb
     ->select('id', 'title', 'user.name')
     ->where($qb->expr()->eq('status', 'active'))
     ->limit(10)
