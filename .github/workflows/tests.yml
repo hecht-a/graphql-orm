@@ -31,13 +31,19 @@ jobs:
         run: 'castor qa:phpstan'
   tests:
     runs-on: ubuntu-latest
-    name: tests
+    name: 'tests (PHP ${{ matrix.php-versions }}, ${{ matrix.dependencies }} deps)'
     strategy:
       fail-fast: false
       matrix:
         php-versions:
           - 8.3
           - 8.4
+        dependencies:
+          - highest
+        include:
+          # Catches requirements declared lower than what the code actually needs.
+          - php-versions: 8.3
+            dependencies: lowest
     steps:
       - name: checkout
         uses: actions/checkout@master
@@ -47,6 +53,19 @@ jobs:
           php-version: '${{ matrix.php-versions }}'
           coverage: none
       - name: composer install
-        run: composer update --prefer-stable
+        run: composer update --prefer-stable ${{ matrix.dependencies == 'lowest' && '--prefer-lowest' || '' }}
       - name: tests
         run: vendor/bin/phpunit
+  # PHPUnit 12 needs PHP 8.3, so the lowest supported PHP version is only linted.
+  lint-php-8-2:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@master
+      - name: setup
+        uses: shivammathur/setup-php@2.32.0
+        with:
+          php-version: 8.2
+          coverage: none
+      - name: lint
+        run: find src -name '*.php' -not -path 'src/Resources/stubs/*' -print0 | xargs -0 -n1 php -l

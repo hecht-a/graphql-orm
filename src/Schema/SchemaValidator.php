@@ -15,7 +15,7 @@ final readonly class SchemaValidator
     /**
      * @var array<string, string[]>
      */
-    private const array SCALAR_MAP = [
+    private const SCALAR_MAP = [
         'int' => ['Int', 'ID'],
         'float' => ['Float'],
         'string' => ['String', 'ID', 'Date', 'DateTime', 'Time', 'JSON', 'UUID'],
