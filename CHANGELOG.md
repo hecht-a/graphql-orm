@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Requires PHP 8.3+ and Symfony 7.4 or 8.x (was PHP 8.2+ and Symfony 7.1+): Symfony 8 is now supported, and the
+  Symfony versions no longer maintained are dropped.
 - `GraphqlEntityRepository::findBy()` takes an optional ordering and limit (`findBy($criteria, $orderBy, $limit)`):
   a repository overriding `findBy()` must update its signature.
 - `GraphqlQueryDialect` declares `applyCriteria()`, which turns the criteria of the repository find methods into root
