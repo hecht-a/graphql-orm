@@ -15,13 +15,28 @@ use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 /**
  * @template T of object
  */
-readonly class EntityHydrator
+class EntityHydrator
 {
+    private const DATE_CLASSES = [\DateTimeImmutable::class, \DateTimeInterface::class, \DateTime::class];
+    private const MILLISECONDS_PER_SECOND = 1000;
+
+    /**
+     * Reflection is resolved once per class, not once per hydrated row.
+     *
+     * @var array<string, array<string, \ReflectionProperty>>
+     */
+    private array $properties = [];
+
+    /**
+     * @var array<string, array<class-string, \ReflectionMethod[]>>
+     */
+    private array $hookMethods = [];
+
     /**
      * @param GraphqlEntityMetadataFactory<T> $metadataFactory
      */
     public function __construct(
-        private GraphqlEntityMetadataFactory $metadataFactory,
+        private readonly GraphqlEntityMetadataFactory $metadataFactory,
     ) {
     }
 
@@ -39,8 +54,6 @@ readonly class EntityHydrator
             $depth
         );
 
-        ++$context->trace->hydratedEntities;
-
         $idField = $this->findUniqueField($metadata)?->mappedFrom;
         $uniqueField = $idField !== null ? ($data[$idField] ?? null) : null;
 
@@ -53,6 +66,8 @@ readonly class EntityHydrator
                 return $context->identityMap[$metadata->class][$uniqueField];
             }
         }
+
+        ++$context->trace->hydratedEntities;
 
         /** @var T $entity */
         $entity = new ($metadata->class)();
@@ -99,14 +114,7 @@ readonly class EntityHydrator
                 }
             }
 
-            $property = new \ReflectionProperty(
-                $metadata->class,
-                $field->property
-            );
-
-            if (!$property->isPublic()) {
-                $property->setAccessible(true);
-            }
+            $property = $this->property($metadata->class, $field->property);
 
             $value = $this->normalizeValue(
                 $value,
@@ -126,13 +134,7 @@ readonly class EntityHydrator
      */
     private function callBeforeHydrateMethods(object $entity, array $data): void
     {
-        $reflection = new \ReflectionClass($entity);
-
-        foreach ($reflection->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
-            if ($method->getAttributes(BeforeHydrate::class) === []) {
-                continue;
-            }
-
+        foreach ($this->hookMethods($entity::class, BeforeHydrate::class) as $method) {
             $method->invoke($entity, $data);
         }
     }
@@ -142,29 +144,45 @@ readonly class EntityHydrator
      */
     private function callAfterHydrateMethods(object $entity, GraphqlEntityMetadata $metadata): void
     {
-        $reflection = new \ReflectionClass($entity);
+        $methods = $this->hookMethods($entity::class, AfterHydrate::class);
 
-        if (!$this->areMappedFieldsInitialized($reflection, $entity, $metadata)) {
+        if ($methods === [] || !$this->areMappedFieldsInitialized($entity, $metadata)) {
             return;
         }
 
-        foreach ($reflection->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
-            if ($method->getAttributes(AfterHydrate::class) === []) {
-                continue;
-            }
-
+        foreach ($methods as $method) {
             $method->invoke($entity);
         }
     }
 
     /**
-     * @param \ReflectionClass<T> $reflection
+     * @param class-string $class
+     * @param class-string $attribute
+     *
+     * @return \ReflectionMethod[]
      */
-    private function areMappedFieldsInitialized(\ReflectionClass $reflection, object $entity, GraphqlEntityMetadata $metadata): bool
+    private function hookMethods(string $class, string $attribute): array
+    {
+        if (!isset($this->hookMethods[$class][$attribute])) {
+            $this->hookMethods[$class][$attribute] = array_values(array_filter(
+                (new \ReflectionClass($class))->getMethods(\ReflectionMethod::IS_PUBLIC),
+                fn (\ReflectionMethod $method) => $method->getAttributes($attribute) !== [],
+            ));
+        }
+
+        return $this->hookMethods[$class][$attribute];
+    }
+
+    private function property(string $class, string $name): \ReflectionProperty
+    {
+        return $this->properties[$class][$name] ??= new \ReflectionProperty($class, $name);
+    }
+
+    private function areMappedFieldsInitialized(object $entity, GraphqlEntityMetadata $metadata): bool
     {
         foreach ($metadata->fields as $field) {
             try {
-                $property = $reflection->getProperty($field->property);
+                $property = $this->property($entity::class, $field->property);
             } catch (\ReflectionException) {
                 continue;
             }
@@ -213,51 +231,84 @@ readonly class EntityHydrator
         $typeName = $type->getName();
 
         if ($type->isBuiltin()) {
-            return match ($typeName) {
-                'int' => \is_float($value)
-                    ? $value
-                    : (is_numeric($value)
-                        ? (int) $value
-                        : throw CastException::cannotCast($value, 'int')
-                    ),
-                'float' => \is_float($value)
-                    ? $value
-                    : (is_numeric($value)
-                        ? (float) $value
-                        : throw CastException::cannotCast($value, 'float')
-                    ),
-                'bool' => match (true) {
-                    \is_bool($value) => $value,
-                    $value === 1,
-                    $value === '1',
-                    $value === 'true' => true,
-                    $value === 0,
-                    $value === '0',
-                    $value === 'false' => false,
-                    default => throw CastException::cannotCast($value, 'bool'),
-                },
-                'string' => \is_scalar($value)
-                    ? (string) $value
-                    : throw CastException::cannotCast($value, 'string'),
-                'array' => (array) $value,
-                default => $value,
-            };
+            return $this->castBuiltin($value, $typeName);
         }
 
-        if ($typeName === \DateTimeImmutable::class) {
-            if (is_numeric($value)) {
-                return new \DateTimeImmutable(
-                    '@' . ((int) $value / 1000)
-                );
-            }
+        if (\in_array($typeName, self::DATE_CLASSES, true)) {
+            return $this->castDate($value, $typeName);
+        }
 
-            if (!\is_string($value)) {
-                throw CastException::invalidDateTime($value);
-            }
-
-            return new \DateTimeImmutable($value);
+        if (is_subclass_of($typeName, \BackedEnum::class)) {
+            return $this->castEnum($value, $typeName);
         }
 
         return $value;
+    }
+
+    private function castBuiltin(mixed $value, string $typeName): mixed
+    {
+        return match ($typeName) {
+            'int' => \is_float($value)
+                ? $value
+                : (is_numeric($value)
+                    ? (int) $value
+                    : throw CastException::cannotCast($value, 'int')
+                ),
+            'float' => \is_float($value)
+                ? $value
+                : (is_numeric($value)
+                    ? (float) $value
+                    : throw CastException::cannotCast($value, 'float')
+                ),
+            'bool' => match (true) {
+                \is_bool($value) => $value,
+                $value === 1,
+                $value === '1',
+                $value === 'true' => true,
+                $value === 0,
+                $value === '0',
+                $value === 'false' => false,
+                default => throw CastException::cannotCast($value, 'bool'),
+            },
+            'string' => \is_scalar($value)
+                ? (string) $value
+                : throw CastException::cannotCast($value, 'string'),
+            'array' => (array) $value,
+            default => $value,
+        };
+    }
+
+    /**
+     * Numeric values are Unix timestamps in milliseconds.
+     */
+    private function castDate(mixed $value, string $typeName): \DateTimeInterface
+    {
+        try {
+            $date = match (true) {
+                is_numeric($value) => new \DateTimeImmutable('@' . ((int) $value / self::MILLISECONDS_PER_SECOND)),
+                \is_string($value) => new \DateTimeImmutable($value),
+                default => throw CastException::invalidDateTime($value),
+            };
+        } catch (\Exception $e) {
+            throw $e instanceof CastException ? $e : CastException::invalidDateTime($value);
+        }
+
+        return $typeName === \DateTime::class ? \DateTime::createFromImmutable($date) : $date;
+    }
+
+    /**
+     * @param class-string<\BackedEnum> $enumClass
+     */
+    private function castEnum(mixed $value, string $enumClass): \BackedEnum
+    {
+        if (!\is_int($value) && !\is_string($value)) {
+            throw CastException::cannotCast($value, $enumClass);
+        }
+
+        try {
+            return $enumClass::from($value);
+        } catch (\ValueError|\TypeError) {
+            throw CastException::cannotCast($value, $enumClass);
+        }
     }
 }
