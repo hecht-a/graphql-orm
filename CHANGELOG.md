@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `http_client` option: id of the HTTP client service to use, e.g. a scoped client with a timeout and retries
+- `variables` option (disabled by default): root query arguments are sent as typed GraphQL variables, their types
+  being introspected from the schema and cached (`variables.cache_pool`, `variables.ttl`). Values are sent inline when
+  the schema cannot be introspected or an argument is unknown. New dependency: `symfony/cache-contracts`.
 - `redact_query_values` option (default `true`): query values are masked in logs and in the profiler, as they may hold
   personal data. The query sent to the API is not affected.
 
@@ -19,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `DefaultDialect` throws a `LogicException` on `orderBy()` and `paginate()`, which it used to silently ignore:
   standard GraphQL defines no ordering nor pagination arguments. Use a dialect matching your API.
+- `AbstractGraphqlWalker` now implements `walk()` and declares an abstract `walkRootField()`: a custom walker extending
+  it must implement `walkRootField()`. Walkers implementing `GraphqlWalkerInterface` directly are not affected (they
+  just do not support variables).
 - Logs and profiler show `***` instead of query values by default; set `redact_query_values: false` (e.g. under
   `when@dev`) to see them.
 

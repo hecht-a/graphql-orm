@@ -6,6 +6,12 @@ graphql_orm:
     endpoint: 'http://localhost:4000/graphql'
     max_depth: 3
 
+    # Optional: send root arguments as typed GraphQL variables (see "Variables" below)
+    variables:
+        enabled: false
+        cache_pool: cache.app
+        ttl: 3600
+
     # Optional: mask query values in logs and profiler (default: true)
     redact_query_values: true
 
@@ -43,6 +49,9 @@ graphql_orm:
 |-----------------------------------|--------------------------|-----------------------------------------|
 | `endpoint`                        | *(required)*             | GraphQL API endpoint                    |
 | `max_depth`                       | `2`                      | Relation levels loaded by the automatic selection; deeper relations only get their identifier (an explicit `select()` is not limited) |
+| `variables.enabled`               | `false`                  | Send root arguments as typed GraphQL variables |
+| `variables.cache_pool`            | `cache.app`              | Cache pool storing the introspected argument types |
+| `variables.ttl`                   | `3600`                   | Seconds before the schema is introspected again |
 | `redact_query_values`             | `true`                   | Mask query values in logs and profiler (see [logging.md](logging.md#masked-values)) |
 | `http_client`                     | `null`                   | HTTP client service id; defaults to the autowired `HttpClientInterface` |
 | `dialect`                         | `DefaultDialect`         | GraphQL dialect to use                  |
@@ -77,3 +86,29 @@ graphql_orm:
     endpoint: 'https://api.example.com/graphql'
     http_client: graphql.client
 ```
+
+## Variables
+
+By default, argument values are written in the query (escaped). With `variables.enabled`, the arguments of the root
+field are sent as GraphQL variables instead:
+
+```graphql
+query($filter: TaskFilterInput, $first: Int) {
+  tasks(filter: $filter, first: $first) {
+    items { id title }
+  }
+}
+```
+
+A variable must be declared with its exact GraphQL type, so the types of the root field arguments are read from the
+schema (introspection) and stored in `variables.cache_pool` for `variables.ttl` seconds. A schema change on the API
+side is taken into account once the cache expires; clear the pool to apply it immediately.
+
+Values are sent inline, as without the option, when:
+
+- the schema cannot be introspected (many APIs disable introspection in production): a warning is logged and the
+  failure is cached for `variables.ttl` seconds, so the API is not introspected on every request;
+- an argument is not found on the root field: a warning lists the missing arguments.
+
+Enums are sent as their value and dates as ISO 8601 strings. `getQuery()->getGraphQL()` still shows the query with
+inline values.
