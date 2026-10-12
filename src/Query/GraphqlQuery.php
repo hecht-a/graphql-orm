@@ -6,6 +6,7 @@ namespace GraphqlOrm\Query;
 
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\GraphqlManager;
+use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
 
@@ -50,16 +51,12 @@ final readonly class GraphqlQuery
                 $dialect = $this->manager->getDialect();
                 $data = $result['data'] ?? [];
 
-                if (!\array_key_exists($metadata->name, $data)) {
+                $root = $data[$metadata->name] ?? null;
+
+                if ($root === null) {
                     return $this->options->paginate
                         ? new PaginatedResult([], false, false, null, [], fn () => null)
                         : [];
-                }
-
-                $root = $data[$metadata->name];
-
-                if ($root === null) {
-                    return [];
                 }
 
                 if (!\is_array($root)) {
@@ -90,11 +87,12 @@ final readonly class GraphqlQuery
                 }
 
                 $fetchPage = function (?string $cursor, array $newStack) {
-                    $qb = clone $this;
-                    $qb->options->cursor = $cursor;
-                    $qb->options->cursorStack = $newStack;
+                    // Each page works on its own options so that navigating never alters this query.
+                    $options = clone $this->options;
+                    $options->cursor = $cursor;
+                    $options->cursorStack = $newStack;
 
-                    return $qb->getResult();
+                    return (new self($this->graphql, $this->entityClass, $this->manager, $options))->getResult();
                 };
 
                 return new PaginatedResult(
@@ -115,12 +113,40 @@ final readonly class GraphqlQuery
      */
     public function getOneOrNullResult(): ?object
     {
-        $result = $this->getResult();
+        $result = $this->limitedToOne()->getResult();
 
         if ($result instanceof PaginatedResult) {
             return $result->items[0] ?? null;
         }
 
         return $result[0] ?? null;
+    }
+
+    /**
+     * @return GraphqlQuery<T>
+     */
+    private function limitedToOne(): self
+    {
+        if ($this->options->limit !== null || !$this->graphql instanceof QueryNode) {
+            return $this;
+        }
+
+        $options = clone $this->options;
+        $options->limit = 1;
+
+        // Root arguments are computed when the query is built, so they have to be recomputed with the new limit.
+        $query = new QueryNode();
+        $query->operation = $this->graphql->operation;
+
+        foreach ($this->graphql->fields as $field) {
+            $query->fields[] = new FieldNode(
+                $field->name,
+                $this->manager->getDialect()->applyQueryOptions($field->arguments, $options),
+                $field->selectionSet,
+                $field->isCollection,
+            );
+        }
+
+        return new self($query, $this->entityClass, $this->manager, $options);
     }
 }

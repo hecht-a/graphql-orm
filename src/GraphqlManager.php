@@ -59,11 +59,13 @@ class GraphqlManager
         }
 
         $context->trace->graphql = $compiled;
+        $context->trace->variables = $variables;
 
         try {
             $result = $this->client->query($compiled, $context, $variables);
 
             $entities = $hydration($result, $context);
+            $context->trace->hydratedCount = \count($entities instanceof PaginatedResult ? $entities->items : $entities);
         } finally {
             $this->collector->addQuery($context->trace);
             $this->log($context);

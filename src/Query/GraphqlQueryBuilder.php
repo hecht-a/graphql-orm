@@ -13,8 +13,6 @@ use GraphqlOrm\Query\Expr\FilterExpressionInterface;
  */
 final class GraphqlQueryBuilder
 {
-    /** @var array<string, mixed> */
-    private array $criteria = [];
     /** @var string[]|null */
     private ?array $selectedFields = null;
     private ?string $graphql = null;
@@ -144,7 +142,6 @@ final class GraphqlQueryBuilder
         $ast = (new GraphqlQueryStringBuilder($this->manager))
             ->entity($this->entityClass)
             ->root($metadata->name)
-            ->arguments($this->criteria)
             ->options($this->options)
             ->filter($this->filter)
             ->fields($fields, $manualSelect)

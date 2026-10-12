@@ -23,7 +23,7 @@ class GraphqlOrmDataCollector extends DataCollector
             'response_size' => $trace->responseSize,
             'errors' => $trace->errors,
             'hydrated_count' => $trace->hydratedCount,
-            'depth_used' => $trace->depthUsed,
+            'depth_used' => $trace->hydrationMaxDepth,
             'hydrated_collections' => $trace->hydratedCollections,
             'hydrated_entities' => $trace->hydratedEntities,
             'hydrated_relations' => $trace->hydratedRelations,

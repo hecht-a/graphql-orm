@@ -24,7 +24,6 @@ final class GraphqlQueryTrace
     /** @var array<string|int, mixed>|null */
     public ?array $errors = null;
     public int $hydratedCount = 0;
-    public int $depthUsed = 0;
     public int $hydratedEntities = 0;
     public int $hydratedRelations = 0;
     public int $hydratedCollections = 0;
