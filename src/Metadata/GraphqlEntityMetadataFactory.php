@@ -13,6 +13,7 @@ use Symfony\Component\TypeInfo\Type\CollectionType;
 use Symfony\Component\TypeInfo\Type\ObjectType;
 use Symfony\Component\TypeInfo\TypeResolver\TypeResolver;
 use Symfony\Component\TypeInfo\TypeResolver\TypeResolverInterface;
+use Symfony\Contracts\Cache\CacheInterface;
 
 /**
  * @template T of object
@@ -21,15 +22,22 @@ use Symfony\Component\TypeInfo\TypeResolver\TypeResolverInterface;
  */
 class GraphqlEntityMetadataFactory
 {
+    private const CACHE_KEY_PREFIX = 'graphql_orm.metadata.';
+
     /**
      * @var array<string, GraphqlEntityMetadata>
      */
-    private array $cache = [];
+    private array $loaded = [];
 
     private readonly TypeResolverInterface $typeResolver;
 
-    public function __construct(?TypeResolverInterface $typeResolver = null)
-    {
+    /**
+     * @param CacheInterface|null $cache persistent cache, so that attributes and docblocks are not read on every request
+     */
+    public function __construct(
+        ?TypeResolverInterface $typeResolver = null,
+        private readonly ?CacheInterface $cache = null,
+    ) {
         $this->typeResolver = $typeResolver ?? TypeResolver::create();
     }
 
@@ -37,13 +45,32 @@ class GraphqlEntityMetadataFactory
      * @param class-string $class
      *
      * @throws \ReflectionException
+     * @throws NotAGraphqlEntityException  when the class has no #[GraphqlEntity] attribute
+     * @throws TooManyIdentifiersException when several fields are marked as identifier
      */
     public function getMetadata(string $class): GraphqlEntityMetadata
     {
-        if (isset($this->cache[$class])) {
-            return $this->cache[$class];
+        if (isset($this->loaded[$class])) {
+            return $this->loaded[$class];
         }
 
+        if ($this->cache === null) {
+            return $this->loaded[$class] = $this->build($class);
+        }
+
+        // A failed build throws before anything is stored, so invalid entities are never cached.
+        return $this->loaded[$class] = $this->cache->get(self::CACHE_KEY_PREFIX . str_replace('\\', '.', $class), fn () => $this->build($class));
+    }
+
+    /**
+     * @param class-string $class
+     *
+     * @throws \ReflectionException
+     * @throws NotAGraphqlEntityException  when the class has no #[GraphqlEntity] attribute
+     * @throws TooManyIdentifiersException when several fields are marked as identifier
+     */
+    private function build(string $class): GraphqlEntityMetadata
+    {
         $reflection = new \ReflectionClass($class);
 
         $entityAttr = $reflection->getAttributes(GraphqlEntity::class)[0] ?? null;
@@ -89,7 +116,7 @@ class GraphqlEntityMetadataFactory
             $fields[] = $field;
         }
 
-        return $this->cache[$class] = new GraphqlEntityMetadata(
+        return new GraphqlEntityMetadata(
             $class,
             $entity->name,
             $entity->repositoryClass,

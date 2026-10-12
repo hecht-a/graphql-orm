@@ -8,6 +8,8 @@ use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Client\GraphqlClientInterface;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\GraphqlManager;
+use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Metadata\MetadataCacheWarmer;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -63,9 +65,18 @@ final class GraphqlOrmExtension extends Extension
             $container->getDefinition(GraphqlManager::class)->setArgument('$redactor', null);
         }
 
+        $debug = $container->hasParameter('kernel.debug') && $container->getParameter('kernel.debug');
+
         // The collector keeps every query in memory: only useful when the profiler can display it.
-        if (!$container->hasParameter('kernel.debug') || !$container->getParameter('kernel.debug')) {
+        if (!$debug) {
             $container->removeDefinition(GraphqlOrmDataCollector::class);
+        }
+
+        if (!$debug && $config['metadata_cache_pool'] !== null) {
+            $container->getDefinition(GraphqlEntityMetadataFactory::class)->setArgument('$cache', new Reference($config['metadata_cache_pool']));
+            $container->register(MetadataCacheWarmer::class, MetadataCacheWarmer::class)
+                ->setArguments([new Reference(GraphqlEntityMetadataFactory::class), '%graphql_orm.schema_validation.entity_classes%'])
+                ->addTag('kernel.cache_warmer');
         }
 
         $container->setParameter('graphql_orm.endpoint', $config['endpoint']);

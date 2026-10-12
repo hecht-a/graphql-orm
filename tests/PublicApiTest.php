@@ -21,6 +21,7 @@ use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
+use GraphqlOrm\Metadata\MetadataCacheWarmer;
 use GraphqlOrm\Query\GraphqlQueryCompiler;
 use GraphqlOrm\Query\GraphqlQueryStringBuilder;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
@@ -62,6 +63,7 @@ final class PublicApiTest extends TestCase
             GraphqlEntityMetadataFactory::class,
             GraphqlEntityMetadata::class,
             GraphqlFieldMetadata::class,
+            MetadataCacheWarmer::class,
             QueryRedactor::class,
             RootArgumentTypeResolver::class,
             SchemaIntrospector::class,

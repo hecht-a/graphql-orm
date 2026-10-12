@@ -10,6 +10,8 @@ use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\DependencyInjection\GraphqlOrmExtension;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Logging\QueryRedactor;
+use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Metadata\MetadataCacheWarmer;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Tests\Fixtures\FakeHeadersProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -119,6 +121,40 @@ final class GraphqlOrmExtensionTest extends TestCase
     }
 
     #[Test]
+    public function itCachesMetadataAndWarmsItUpOutsideDebugMode(): void
+    {
+        $container = $this->createContainer(debug: false, config: ['metadata_cache_pool' => 'cache.graphql']);
+        $container->register('cache.graphql', ArrayAdapter::class);
+
+        $container->compile();
+
+        self::assertSame($container->get('cache.graphql'), $this->metadataFactoryCache($container));
+        self::assertTrue($container->getDefinition(MetadataCacheWarmer::class)->hasTag('kernel.cache_warmer'));
+    }
+
+    #[Test]
+    public function itDoesNotCacheMetadataInDebugMode(): void
+    {
+        $container = $this->createContainer(debug: true);
+
+        $container->compile();
+
+        self::assertNull($this->metadataFactoryCache($container));
+        self::assertFalse($container->hasDefinition(MetadataCacheWarmer::class));
+    }
+
+    #[Test]
+    public function itCanDisableTheMetadataCache(): void
+    {
+        $container = $this->createContainer(debug: false, config: ['metadata_cache_pool' => null]);
+
+        $container->compile();
+
+        self::assertNull($this->metadataFactoryCache($container));
+        self::assertFalse($container->hasDefinition(MetadataCacheWarmer::class));
+    }
+
+    #[Test]
     public function itDoesNotUseVariablesByDefault(): void
     {
         $container = $this->createContainer(debug: false);
@@ -142,6 +178,11 @@ final class GraphqlOrmExtensionTest extends TestCase
         self::assertSame(600, (new \ReflectionProperty(RootArgumentTypeResolver::class, 'ttl'))->getValue($resolver));
     }
 
+    private function metadataFactoryCache(ContainerBuilder $container): mixed
+    {
+        return (new \ReflectionProperty(GraphqlEntityMetadataFactory::class, 'cache'))->getValue($container->get(GraphqlEntityMetadataFactory::class));
+    }
+
     private function managerArgumentTypeResolver(ContainerBuilder $container): mixed
     {
         return (new \ReflectionProperty(GraphqlManager::class, 'argumentTypeResolver'))->getValue($container->get(GraphqlManager::class));
@@ -161,6 +202,7 @@ final class GraphqlOrmExtensionTest extends TestCase
         $container->setParameter('kernel.debug', $debug);
         $container->setParameter('kernel.project_dir', \dirname(__DIR__, 2));
         $container->register(HttpClientInterface::class, MockHttpClient::class);
+        $container->register('cache.system', ArrayAdapter::class);
 
         (new GraphqlOrmExtension())->load([['endpoint' => 'https://graphql.example.com/graphql', ...$config]], $container);
 
