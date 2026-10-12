@@ -20,6 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `GraphqlManager` dependencies are now private: use `getMetadataFactory()`, `getHydrator()`, `getMaxDepth()` and
+  `getDialect()` instead of the former public properties, and pass the dialect to the constructor instead of assigning
+  `$manager->dialect`.
+- `GraphqlClient`, `GraphqlQueryCompiler`, `GraphqlExecutionContext` and `GraphqlOrmDataCollector` are now `final`:
+  decorate `GraphqlClientInterface` instead of extending the client.
+- Implementation classes are marked `@internal` and are not covered by the backward compatibility promise: the query
+  compiler and string builder, the hydrator, the metadata classes, the schema tools, the query redactor, the commands,
+  the event listener, the data collector and the DependencyInjection classes. The public API is made of the
+  attributes, `GraphqlManager`, the repository, the query builder and query, the dialects, walkers and AST, the client
+  interface, the expressions and the exceptions.
 - `DefaultDialect` throws a `LogicException` on `orderBy()` and `paginate()`, which it used to silently ignore:
   standard GraphQL defines no ordering nor pagination arguments. Use a dialect matching your API.
 - `AbstractGraphqlWalker` now implements `walk()` and declares an abstract `walkRootField()`: a custom walker extending
