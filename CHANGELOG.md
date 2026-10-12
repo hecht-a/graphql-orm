@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `GraphqlEntityRepository::find($id)` and `findOneBy($criteria, $orderBy)`, returning the entity or `null`.
 - `http_client` option: id of the HTTP client service to use, e.g. a scoped client with a timeout and retries
 - `variables` option (disabled by default): root query arguments are sent as typed GraphQL variables, their types
   being introspected from the schema and cached (`variables.cache_pool`, `variables.ttl`). Values are sent inline when
@@ -20,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `GraphqlEntityRepository::findBy()` takes an optional ordering and limit (`findBy($criteria, $orderBy, $limit)`):
+  a repository overriding `findBy()` must update its signature.
+- `GraphqlQueryDialect` declares `applyCriteria()`, which turns the criteria of the repository find methods into root
+  arguments: custom dialects must implement it. `DataApiBuilderDialect` now sends them as an equality `filter`
+  (`isNull` for `null`) instead of plain root arguments, which Data API Builder rejected; `DefaultDialect` keeps plain
+  root arguments.
 - `GraphqlManager` dependencies are now private: use `getMetadataFactory()`, `getHydrator()`, `getMaxDepth()` and
   `getDialect()` instead of the former public properties, and pass the dialect to the constructor instead of assigning
   `$manager->dialect`.

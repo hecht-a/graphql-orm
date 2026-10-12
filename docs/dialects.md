@@ -68,5 +68,6 @@ final class MyDialect implements GraphqlQueryDialect
     public function createWalker(): GraphqlWalkerInterface { ... }
     public function applyQueryOptions(array $arguments, QueryOptions $options): array { ... }
     public function applyFilter(?FilterExpressionInterface $filter): array { ... }
+    public function applyCriteria(array $criteria): array { ... }
 }
 ```
