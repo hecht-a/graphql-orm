@@ -12,6 +12,7 @@ use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\EventListener\SchemaValidationListener;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
+use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Schema\SchemaIntrospector;
 use GraphqlOrm\Schema\SchemaValidationMode;
@@ -41,7 +42,10 @@ return static function (ContainerConfigurator $config) {
         ->arg('$collector', service(GraphqlOrmDataCollector::class)->nullOnInvalid())
         ->arg('$maxDepth', '%graphql_orm.max_depth%')
         ->arg('$dialect', service('graphql_orm.dialect'))
-        ->arg('$logger', service('monolog.logger.graphql_orm')->nullOnInvalid());
+        ->arg('$logger', service('monolog.logger.graphql_orm')->nullOnInvalid())
+        ->arg('$redactor', service(QueryRedactor::class));
+
+    $services->set(QueryRedactor::class);
 
     $services->set(GraphqlClientInterface::class);
 

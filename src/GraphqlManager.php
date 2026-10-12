@@ -10,9 +10,11 @@ use GraphqlOrm\Dialect\DefaultDialect;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\Hydrator\EntityHydrator;
+use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\GraphqlQueryCompiler;
+use GraphqlOrm\Query\GraphqlQueryTrace;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
 use GraphqlOrm\Query\QueryOptions;
 use Psr\Log\LoggerInterface;
@@ -37,6 +39,7 @@ class GraphqlManager
         public GraphqlQueryDialect $dialect = new DefaultDialect(),
         private ?GraphqlQueryCompiler $compiler = null,
         private ?LoggerInterface $logger = null,
+        private ?QueryRedactor $redactor = null,
     ) {
     }
 
@@ -67,8 +70,9 @@ class GraphqlManager
             $entities = $hydration($result, $context);
             $context->trace->hydratedCount = \count($entities instanceof PaginatedResult ? $entities->items : $entities);
         } finally {
-            $this->collector?->addQuery($context->trace);
-            $this->log($context);
+            $trace = $this->redact($context->trace);
+            $this->collector?->addQuery($trace);
+            $this->log($trace);
         }
 
         return $entities;
@@ -92,13 +96,28 @@ class GraphqlManager
         return $this->compiler;
     }
 
-    private function log(GraphqlExecutionContext $context): void
+    /**
+     * The query sent to the API keeps its values: only what is logged or shown in the profiler is redacted.
+     */
+    private function redact(GraphqlQueryTrace $trace): GraphqlQueryTrace
+    {
+        if ($this->redactor === null) {
+            return $trace;
+        }
+
+        $redacted = clone $trace;
+        $redacted->graphql = $this->redactor->redactQuery($trace->graphql);
+        $redacted->variables = $this->redactor->redactValues($trace->variables);
+        $redacted->ast = $trace->ast !== null ? $this->redactor->redactAst($trace->ast) : null;
+
+        return $redacted;
+    }
+
+    private function log(GraphqlQueryTrace $trace): void
     {
         if ($this->logger === null) {
             return;
         }
-
-        $trace = $context->trace;
 
         $context = [
             'endpoint' => $trace->endpoint,

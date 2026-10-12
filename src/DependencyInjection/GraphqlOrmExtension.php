@@ -6,6 +6,7 @@ namespace GraphqlOrm\DependencyInjection;
 
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
+use GraphqlOrm\GraphqlManager;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
@@ -33,6 +34,10 @@ final class GraphqlOrmExtension extends Extension
 
         if ($config['http_client'] !== null) {
             $container->getDefinition(GraphqlClient::class)->setArgument('$httpClient', new Reference($config['http_client']));
+        }
+
+        if (!$config['redact_query_values']) {
+            $container->getDefinition(GraphqlManager::class)->setArgument('$redactor', null);
         }
 
         // The collector keeps every query in memory: only useful when the profiler can display it.

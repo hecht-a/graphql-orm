@@ -35,6 +35,11 @@ final class Configuration implements ConfigurationInterface
             ->end()
             ->end()
 
+            ->booleanNode('redact_query_values')
+            ->defaultTrue()
+            ->info('Mask the values of GraphQL queries (strings, numbers, variables) in logs and in the profiler, as they may hold personal data. The query sent to the API is not affected.')
+            ->end()
+
             ->scalarNode('http_client')
             ->defaultNull()
             ->info('Id of the HTTP client service to use, e.g. a scoped client configured with a timeout and retries. Defaults to the autowired HttpClientInterface.')

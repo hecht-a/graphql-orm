@@ -9,6 +9,7 @@ use GraphqlOrm\Command\MakeGraphqlEntityCommand;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\DependencyInjection\GraphqlOrmExtension;
 use GraphqlOrm\GraphqlManager;
+use GraphqlOrm\Logging\QueryRedactor;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
@@ -92,6 +93,37 @@ final class GraphqlOrmExtensionTest extends TestCase
             $container->get(HttpClientInterface::class),
             (new \ReflectionProperty(GraphqlClient::class, 'httpClient'))->getValue($client),
         );
+    }
+
+    #[Test]
+    public function itRedactsQueryValuesByDefault(): void
+    {
+        // Arrange
+        $container = $this->createContainer(debug: false);
+
+        // Act
+        $container->compile();
+
+        // Assert
+        self::assertInstanceOf(QueryRedactor::class, $this->managerRedactor($container));
+    }
+
+    #[Test]
+    public function itCanKeepQueryValuesInLogsAndProfiler(): void
+    {
+        // Arrange
+        $container = $this->createContainer(debug: true, config: ['redact_query_values' => false]);
+
+        // Act
+        $container->compile();
+
+        // Assert
+        self::assertNull($this->managerRedactor($container));
+    }
+
+    private function managerRedactor(ContainerBuilder $container): mixed
+    {
+        return (new \ReflectionProperty(GraphqlManager::class, 'redactor'))->getValue($container->get(GraphqlManager::class));
     }
 
     /**
