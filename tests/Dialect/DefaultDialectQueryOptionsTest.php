@@ -16,25 +16,20 @@ final class DefaultDialectQueryOptionsTest extends TestCase
     #[Test]
     public function itAppliesTheLimitAsAFirstArgument(): void
     {
-        // Arrange
         $options = new QueryOptions();
         $options->limit = 10;
 
-        // Act
         $arguments = (new DefaultDialect())->applyQueryOptions([], $options);
 
-        // Assert
         self::assertSame(['first' => 10], $arguments);
     }
 
     #[Test]
     public function itRejectsOrderingInsteadOfSilentlyIgnoringIt(): void
     {
-        // Arrange
         $options = new QueryOptions();
         $options->orderBy = ['createdAt' => Direction::DESC];
 
-        // Act & Assert
         $this->expectException(LogicException::class);
         (new DefaultDialect())->applyQueryOptions([], $options);
     }
@@ -42,11 +37,9 @@ final class DefaultDialectQueryOptionsTest extends TestCase
     #[Test]
     public function itRejectsPaginationInsteadOfSilentlyIgnoringIt(): void
     {
-        // Arrange
         $options = new QueryOptions();
         $options->paginate = true;
 
-        // Act & Assert
         $this->expectException(LogicException::class);
         (new DefaultDialect())->applyQueryOptions([], $options);
     }

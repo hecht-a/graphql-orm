@@ -21,41 +21,32 @@ final class RootArgumentTypeResolverTest extends TestCase
     #[Test]
     public function itPrintsArgumentTypesWithTheirWrappers(): void
     {
-        // Arrange
         $resolver = $this->createResolver(new FakeGraphqlClient(self::introspectionResponse()));
 
-        // Act
         $types = $resolver->argumentTypes('tasks');
 
-        // Assert
         self::assertSame(['filter' => 'TaskFilterInput', 'ids' => '[ID!]!', 'first' => 'Int'], $types);
     }
 
     #[Test]
     public function itReturnsNullForAnUnknownRootField(): void
     {
-        // Arrange
         $resolver = $this->createResolver(new FakeGraphqlClient(self::introspectionResponse()));
 
-        // Act
         $types = $resolver->argumentTypes('unknown');
 
-        // Assert
         self::assertNull($types);
     }
 
     #[Test]
     public function itIntrospectsTheSchemaOnlyOnceThanksToTheCache(): void
     {
-        // Arrange
         $client = new FakeGraphqlClient(self::introspectionResponse());
         $resolver = $this->createResolver($client);
 
-        // Act
         $first = $resolver->argumentTypes('tasks');
         $second = $resolver->argumentTypes('tasks');
 
-        // Assert
         self::assertSame($first, $second);
         self::assertSame(1, $client->callCount);
     }
@@ -63,15 +54,12 @@ final class RootArgumentTypeResolverTest extends TestCase
     #[Test]
     public function itReturnsNullAndLogsAWarningWhenIntrospectionFails(): void
     {
-        // Arrange
         $logger = new FakeLogger();
         $client = new GraphqlClient(new MockHttpClient(new MockResponse('', ['http_code' => 500])), 'https://graphql.example.com/graphql');
         $resolver = $this->createResolver($client, $logger);
 
-        // Act
         $types = $resolver->argumentTypes('tasks');
 
-        // Assert
         self::assertNull($types);
         self::assertSame('warning', $logger->records[0]['level'] ?? null);
     }
@@ -79,15 +67,12 @@ final class RootArgumentTypeResolverTest extends TestCase
     #[Test]
     public function itDoesNotRetryAFailedIntrospectionBeforeTheCacheExpires(): void
     {
-        // Arrange
         $client = new FakeGraphqlClient(['data' => null], self::introspectionResponse());
         $resolver = $this->createResolver($client);
 
-        // Act
         $resolver->argumentTypes('tasks');
         $types = $resolver->argumentTypes('tasks');
 
-        // Assert
         self::assertNull($types);
         self::assertSame(1, $client->callCount);
     }

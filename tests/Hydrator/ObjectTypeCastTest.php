@@ -29,17 +29,14 @@ final class ObjectTypeCastTest extends TestCase
     #[Test]
     public function itCastsAValueToABackedEnum(): void
     {
-        // Act
         $entity = $this->hydrate(['status' => 'CLOSED']);
 
-        // Assert
         self::assertSame(FakeStatus::Closed, $entity->status);
     }
 
     #[Test]
     public function itThrowsACastExceptionForAnUnknownEnumValue(): void
     {
-        // Act & Assert
         $this->expectException(CastException::class);
         $this->hydrate(['status' => 'ARCHIVED']);
     }
@@ -47,10 +44,8 @@ final class ObjectTypeCastTest extends TestCase
     #[Test]
     public function itCastsAStringToAMutableDateTime(): void
     {
-        // Act
         $entity = $this->hydrate(['createdAt' => '2026-01-15T10:00:00+00:00']);
 
-        // Assert
         self::assertInstanceOf(\DateTime::class, $entity->createdAt);
         self::assertSame('2026-01-15', $entity->createdAt->format('Y-m-d'));
     }
@@ -58,17 +53,14 @@ final class ObjectTypeCastTest extends TestCase
     #[Test]
     public function itCastsAStringToADateTimeInterface(): void
     {
-        // Act
         $entity = $this->hydrate(['updatedAt' => '2026-01-15T10:00:00+00:00']);
 
-        // Assert
         self::assertInstanceOf(\DateTimeImmutable::class, $entity->updatedAt);
     }
 
     #[Test]
     public function itThrowsACastExceptionForAnInvalidDate(): void
     {
-        // Act & Assert
         $this->expectException(CastException::class);
         $this->hydrate(['createdAt' => 'not a date']);
     }
@@ -76,15 +68,12 @@ final class ObjectTypeCastTest extends TestCase
     #[Test]
     public function itCountsAnEntityReusedFromTheIdentityMapOnlyOnce(): void
     {
-        // Arrange
         $metadata = $this->metadataFactory->getMetadata(FakeTask::class);
         $context = new GraphqlExecutionContext();
 
-        // Act
         $this->hydrator->hydrate($metadata, ['id' => 1, 'title' => 'A'], $context);
         $this->hydrator->hydrate($metadata, ['id' => 1, 'title' => 'A'], $context);
 
-        // Assert
         self::assertSame(1, $context->trace->hydratedEntities);
     }
 

@@ -27,10 +27,8 @@ final class CollectionAndTypeDetectionTest extends TestCase
     #[Test]
     public function itDetectsACollectionFromAnArrayDocblockInTheSameNamespace(): void
     {
-        // Act
         $field = $this->field('books');
 
-        // Assert
         self::assertSame(Book::class, $field->relation);
         self::assertTrue($field->isCollection);
     }
@@ -38,10 +36,8 @@ final class CollectionAndTypeDetectionTest extends TestCase
     #[Test]
     public function itDetectsACollectionFromAListDocblockResolvingTheUseStatement(): void
     {
-        // Act
         $field = $this->field('tasks');
 
-        // Assert
         self::assertSame(FakeTask::class, $field->relation);
         self::assertTrue($field->isCollection);
     }
@@ -49,10 +45,8 @@ final class CollectionAndTypeDetectionTest extends TestCase
     #[Test]
     public function itKeepsAnArrayOfScalarsAsAPlainField(): void
     {
-        // Act
         $field = $this->field('tags');
 
-        // Assert
         self::assertNull($field->relation);
         self::assertFalse($field->isCollection);
     }
@@ -60,10 +54,8 @@ final class CollectionAndTypeDetectionTest extends TestCase
     #[Test]
     public function itKeepsAnArrayWithoutDocblockAsAPlainField(): void
     {
-        // Act
         $field = $this->field('raw');
 
-        // Assert
         self::assertNull($field->relation);
         self::assertFalse($field->isCollection);
     }
@@ -71,20 +63,16 @@ final class CollectionAndTypeDetectionTest extends TestCase
     #[Test]
     public function itKeepsAnUntypedMappedProperty(): void
     {
-        // Act
         $field = $this->field('legacy');
 
-        // Assert
         self::assertNull($field->relation);
     }
 
     #[Test]
     public function itAcceptsAnExplicitTargetEntityOnAUnionTypedProperty(): void
     {
-        // Act
         $field = $this->field('editor');
 
-        // Assert
         self::assertSame(FakeUser::class, $field->relation);
         self::assertFalse($field->isCollection);
     }
@@ -92,7 +80,6 @@ final class CollectionAndTypeDetectionTest extends TestCase
     #[Test]
     public function itHydratesADocblockCollectionAndAnUntypedProperty(): void
     {
-        // Arrange
         $hydrator = new EntityHydrator($this->metadataFactory);
         $data = [
             'id' => 1,
@@ -100,10 +87,8 @@ final class CollectionAndTypeDetectionTest extends TestCase
             'legacy' => 'as is',
         ];
 
-        // Act
         $author = $hydrator->hydrate($this->metadataFactory->getMetadata(Author::class), $data, new GraphqlExecutionContext());
 
-        // Assert
         self::assertInstanceOf(Author::class, $author);
         self::assertInstanceOf(Book::class, $author->books[0] ?? null);
         self::assertSame('Dune', $author->books[0]->title);

@@ -25,26 +25,20 @@ final class GraphqlOrmExtensionTest extends TestCase
     #[Test]
     public function itRegistersTheProfilerCollectorInDebugMode(): void
     {
-        // Arrange
         $container = $this->createContainer(debug: true);
 
-        // Act
         $container->compile();
 
-        // Assert
         self::assertTrue($container->has(GraphqlOrmDataCollector::class));
     }
 
     #[Test]
     public function itDoesNotRegisterTheProfilerCollectorOutsideDebugMode(): void
     {
-        // Arrange
         $container = $this->createContainer(debug: false);
 
-        // Act
         $container->compile();
 
-        // Assert
         self::assertFalse($container->has(GraphqlOrmDataCollector::class));
         self::assertInstanceOf(GraphqlManager::class, $container->get(GraphqlManager::class));
     }
@@ -52,27 +46,21 @@ final class GraphqlOrmExtensionTest extends TestCase
     #[Test]
     public function itCompilesWithoutAFilesystemServiceFromTheFramework(): void
     {
-        // Arrange
         $container = $this->createContainer(debug: true);
 
-        // Act
         $container->compile();
 
-        // Assert
         self::assertInstanceOf(MakeGraphqlEntityCommand::class, $container->get(MakeGraphqlEntityCommand::class));
     }
 
     #[Test]
     public function itUsesTheConfiguredHttpClientService(): void
     {
-        // Arrange
         $container = $this->createContainer(debug: false, config: ['http_client' => 'graphql.http_client']);
         $container->register('graphql.http_client', MockHttpClient::class);
 
-        // Act
         $container->compile();
 
-        // Assert
         $client = $container->get(GraphqlClient::class);
         self::assertSame(
             $container->get('graphql.http_client'),
@@ -83,13 +71,10 @@ final class GraphqlOrmExtensionTest extends TestCase
     #[Test]
     public function itUsesTheDefaultHttpClientWhenNoneIsConfigured(): void
     {
-        // Arrange
         $container = $this->createContainer(debug: false);
 
-        // Act
         $container->compile();
 
-        // Assert
         $client = $container->get(GraphqlClient::class);
         self::assertSame(
             $container->get(HttpClientInterface::class),
@@ -100,53 +85,41 @@ final class GraphqlOrmExtensionTest extends TestCase
     #[Test]
     public function itRedactsQueryValuesByDefault(): void
     {
-        // Arrange
         $container = $this->createContainer(debug: false);
 
-        // Act
         $container->compile();
 
-        // Assert
         self::assertInstanceOf(QueryRedactor::class, $this->managerRedactor($container));
     }
 
     #[Test]
     public function itCanKeepQueryValuesInLogsAndProfiler(): void
     {
-        // Arrange
         $container = $this->createContainer(debug: true, config: ['redact_query_values' => false]);
 
-        // Act
         $container->compile();
 
-        // Assert
         self::assertNull($this->managerRedactor($container));
     }
 
     #[Test]
     public function itDoesNotUseVariablesByDefault(): void
     {
-        // Arrange
         $container = $this->createContainer(debug: false);
 
-        // Act
         $container->compile();
 
-        // Assert
         self::assertNull($this->managerArgumentTypeResolver($container));
     }
 
     #[Test]
     public function itUsesVariablesWithTheConfiguredCachePool(): void
     {
-        // Arrange
         $container = $this->createContainer(debug: false, config: ['variables' => ['enabled' => true, 'cache_pool' => 'cache.graphql', 'ttl' => 600]]);
         $container->register('cache.graphql', ArrayAdapter::class);
 
-        // Act
         $container->compile();
 
-        // Assert
         $resolver = $this->managerArgumentTypeResolver($container);
         self::assertInstanceOf(RootArgumentTypeResolver::class, $resolver);
         self::assertSame($container->get('cache.graphql'), (new \ReflectionProperty(RootArgumentTypeResolver::class, 'cache'))->getValue($resolver));

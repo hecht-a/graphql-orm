@@ -19,13 +19,10 @@ final class MaxDepthTest extends TestCase
     #[Test]
     public function itOnlySelectsTheIdentifierOfRelationsBeyondTheMaxDepth(): void
     {
-        // Arrange
         $repository = $this->createRepository(maxDepth: 1);
 
-        // Act
         $graphql = $repository->createQueryBuilder()->getQuery()->getGraphQL();
 
-        // Assert
         self::assertSame(<<<'GRAPHQL'
             query {
               chainAs {
@@ -46,13 +43,10 @@ final class MaxDepthTest extends TestCase
     #[Test]
     public function itExpandsRelationsUpToTheMaxDepth(): void
     {
-        // Arrange
         $repository = $this->createRepository(maxDepth: 2);
 
-        // Act
         $graphql = $repository->createQueryBuilder()->getQuery()->getGraphQL();
 
-        // Assert
         self::assertSame(<<<'GRAPHQL'
             query {
               chainAs {
@@ -77,16 +71,13 @@ final class MaxDepthTest extends TestCase
     #[Test]
     public function itDoesNotLimitAnExplicitSelection(): void
     {
-        // Arrange
         $repository = $this->createRepository(maxDepth: 1);
 
-        // Act
         $graphql = $repository->createQueryBuilder()
             ->select('next.next.next.label')
             ->getQuery()
             ->getGraphQL();
 
-        // Assert
         self::assertMatchesRegularExpression('/next \{\s+next \{\s+next \{\s+label/', $graphql);
     }
 

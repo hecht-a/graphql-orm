@@ -25,48 +25,39 @@ final class NestedCollectionHydrationTest extends TestCase
     #[Test]
     public function itHydratesANestedCollectionWithTheDefaultDialect(): void
     {
-        // Arrange
         $client = new FakeGraphqlClient([
             'data' => ['users' => [['id' => 1, 'tasks' => [self::TASK_ROW]]]],
         ]);
         $repository = $this->createRepository($client, new DefaultDialect());
 
-        // Act
         $users = $repository->findAll();
 
-        // Assert
         $this->assertSingleTaskHydrated($users);
     }
 
     #[Test]
     public function itUnwrapsTheItemsEnvelopeOfANestedCollectionWithTheDataApiBuilderDialect(): void
     {
-        // Arrange
         $client = new FakeGraphqlClient([
             'data' => ['users' => ['items' => [['id' => 1, 'tasks' => ['items' => [self::TASK_ROW]]]]]],
         ]);
         $repository = $this->createRepository($client, new DataApiBuilderDialect());
 
-        // Act
         $users = $repository->findAll();
 
-        // Assert
         $this->assertSingleTaskHydrated($users);
     }
 
     #[Test]
     public function itHydratesAnEmptyNestedCollectionWithTheDataApiBuilderDialect(): void
     {
-        // Arrange
         $client = new FakeGraphqlClient([
             'data' => ['users' => ['items' => [['id' => 1, 'tasks' => ['items' => []]]]]],
         ]);
         $repository = $this->createRepository($client, new DataApiBuilderDialect());
 
-        // Act
         $users = $repository->findAll();
 
-        // Assert
         self::assertCount(1, $users);
         self::assertSame([], $users[0]->tasks);
     }

@@ -87,13 +87,10 @@ final class PublicApiTest extends TestCase
     #[DataProvider('implementationClasses')]
     public function itClosesImplementationClassesToInheritance(string $class): void
     {
-        // Arrange
         $reflection = new \ReflectionClass($class);
 
-        // Act
         $isFinal = $reflection->isFinal();
 
-        // Assert
         self::assertTrue($isFinal, $class . ' should be final.');
     }
 
@@ -104,29 +101,23 @@ final class PublicApiTest extends TestCase
     #[DataProvider('internalClasses')]
     public function itMarksImplementationDetailsAsInternal(string $class): void
     {
-        // Arrange
         $reflection = new \ReflectionClass($class);
 
-        // Act
         $docComment = (string) $reflection->getDocComment();
 
-        // Assert
         self::assertStringContainsString('@internal', $docComment, $class . ' should be marked @internal.');
     }
 
     #[Test]
     public function itDoesNotExposeTheManagerDependencies(): void
     {
-        // Arrange
         $reflection = new \ReflectionClass(GraphqlManager::class);
 
-        // Act
         $publicProperties = array_map(
             fn (\ReflectionProperty $property) => $property->getName(),
             $reflection->getProperties(\ReflectionProperty::IS_PUBLIC),
         );
 
-        // Assert
         self::assertSame([], $publicProperties);
     }
 }

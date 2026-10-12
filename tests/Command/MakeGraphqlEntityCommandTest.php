@@ -32,14 +32,11 @@ final class MakeGraphqlEntityCommandTest extends TestCase
     #[Test]
     public function itGeneratesAnEntityWithAValidField(): void
     {
-        // Arrange
         $tester = $this->createTester();
         $tester->setInputs(['yes', 'title', 'title', 'no', 'string', 'no', 'no']);
 
-        // Act
         $exitCode = $tester->execute(['name' => 'Task']);
 
-        // Assert
         self::assertSame(Command::SUCCESS, $exitCode);
         self::assertStringContainsString("#[GraphqlField(mappedFrom: 'title')]", $this->entityCode());
     }
@@ -47,14 +44,11 @@ final class MakeGraphqlEntityCommandTest extends TestCase
     #[Test]
     public function itRejectsAGraphqlFieldNameThatWouldBreakTheGeneratedCode(): void
     {
-        // Arrange
         $tester = $this->createTester();
         $tester->setInputs(['yes', 'title', "ti'tle", 'no']);
 
-        // Act
         $exitCode = $tester->execute(['name' => 'Task']);
 
-        // Assert
         self::assertSame(Command::SUCCESS, $exitCode);
         self::assertStringNotContainsString("ti'tle", $this->entityCode());
     }
@@ -62,14 +56,11 @@ final class MakeGraphqlEntityCommandTest extends TestCase
     #[Test]
     public function itRejectsAPropertyNameThatIsNotAValidPhpIdentifier(): void
     {
-        // Arrange
         $tester = $this->createTester();
         $tester->setInputs(['yes', 'due-date', 'no']);
 
-        // Act
         $exitCode = $tester->execute(['name' => 'Task']);
 
-        // Assert
         self::assertSame(Command::SUCCESS, $exitCode);
         self::assertStringNotContainsString('due-date', $this->entityCode());
     }

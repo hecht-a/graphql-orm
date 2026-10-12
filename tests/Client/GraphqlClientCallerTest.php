@@ -16,7 +16,6 @@ final class GraphqlClientCallerTest extends TestCase
     #[Test]
     public function itRecordsTheCallerRelativeToTheProjectDirectory(): void
     {
-        // Arrange
         $client = new GraphqlClient(
             new MockHttpClient(new MockResponse('{"data":{}}')),
             'https://graphql.example.com/graphql',
@@ -24,10 +23,8 @@ final class GraphqlClientCallerTest extends TestCase
         );
         $context = new GraphqlExecutionContext();
 
-        // Act
         $client->query('query { tasks { id } }', $context);
 
-        // Assert
         self::assertSame('tests/Client/GraphqlClientCallerTest.php', $context->trace->caller['file'] ?? null);
         self::assertSame(__CLASS__, $context->trace->caller['class'] ?? null);
     }

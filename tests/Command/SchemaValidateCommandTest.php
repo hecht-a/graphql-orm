@@ -20,26 +20,20 @@ final class SchemaValidateCommandTest extends TestCase
     #[Test]
     public function itSucceedsWhenTheMappingMatchesTheSchema(): void
     {
-        // Arrange
         $tester = $this->createTester(new FakeGraphqlClient($this->schemaResponse(['id', 'city'])));
 
-        // Act
         $exitCode = $tester->execute([]);
 
-        // Assert
         self::assertSame(Command::SUCCESS, $exitCode);
     }
 
     #[Test]
     public function itFailsAndListsTheViolations(): void
     {
-        // Arrange
         $tester = $this->createTester(new FakeGraphqlClient($this->schemaResponse(['id'])));
 
-        // Act
         $exitCode = $tester->execute([]);
 
-        // Assert
         self::assertSame(Command::FAILURE, $exitCode);
         self::assertStringContainsString('city', $tester->getDisplay());
     }
@@ -47,13 +41,10 @@ final class SchemaValidateCommandTest extends TestCase
     #[Test]
     public function itFailsWhenTheSchemaCannotBeIntrospected(): void
     {
-        // Arrange
         $tester = $this->createTester(new FakeGraphqlClient(['data' => null]));
 
-        // Act
         $exitCode = $tester->execute([]);
 
-        // Assert
         self::assertSame(Command::FAILURE, $exitCode);
         self::assertStringContainsString('introspection', strtolower($tester->getDisplay()));
     }

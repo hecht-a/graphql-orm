@@ -36,20 +36,16 @@ final class RedactedTraceTest extends TestCase
     #[Test]
     public function itSendsTheRealValuesToTheApi(): void
     {
-        // Act
         $this->findByEmail(new QueryRedactor());
 
-        // Assert
         self::assertStringContainsString(self::EMAIL, $this->client->lastQuery);
     }
 
     #[Test]
     public function itMasksValuesInTheLogs(): void
     {
-        // Act
         $this->findByEmail(new QueryRedactor());
 
-        // Assert
         $query = $this->logger->records[0]['context']['query'] ?? '';
         self::assertIsString($query);
         self::assertStringNotContainsString(self::EMAIL, $query);
@@ -59,10 +55,8 @@ final class RedactedTraceTest extends TestCase
     #[Test]
     public function itMasksValuesInTheProfiler(): void
     {
-        // Act
         $this->findByEmail(new QueryRedactor());
 
-        // Assert
         $recorded = $this->collector->getQueries()[0];
         self::assertStringNotContainsString(self::EMAIL, (string) json_encode($recorded));
     }
@@ -70,10 +64,8 @@ final class RedactedTraceTest extends TestCase
     #[Test]
     public function itKeepsTheValuesWithoutRedactor(): void
     {
-        // Act
         $this->findByEmail(null);
 
-        // Assert
         $query = $this->logger->records[0]['context']['query'] ?? '';
         self::assertIsString($query);
         self::assertStringContainsString(self::EMAIL, $query);

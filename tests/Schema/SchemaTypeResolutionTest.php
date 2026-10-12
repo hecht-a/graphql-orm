@@ -31,23 +31,19 @@ final class SchemaTypeResolutionTest extends TestCase
     #[Test]
     public function itResolvesTheEntityTypeFromTheRootQueryField(): void
     {
-        // Arrange
         $schemaTypes = [
             'Query' => ['kind' => 'OBJECT', 'fields' => ['addresses' => ['kind' => 'OBJECT', 'name' => 'PostalAddress']]],
             'PostalAddress' => self::POSTAL_ADDRESS,
         ];
 
-        // Act
         $violations = $this->validator->validate([FakeAddress::class], $schemaTypes);
 
-        // Assert
         self::assertSame([], $violations);
     }
 
     #[Test]
     public function itResolvesTheItemTypeOfAConnectionRootField(): void
     {
-        // Arrange
         $schemaTypes = [
             'Query' => ['kind' => 'OBJECT', 'fields' => ['addresses' => ['kind' => 'OBJECT', 'name' => 'PostalAddressConnection']]],
             'PostalAddressConnection' => [
@@ -61,42 +57,34 @@ final class SchemaTypeResolutionTest extends TestCase
             'PostalAddress' => self::POSTAL_ADDRESS,
         ];
 
-        // Act
         $violations = $this->validator->validate([FakeAddress::class], $schemaTypes);
 
-        // Assert
         self::assertSame([], $violations);
     }
 
     #[Test]
     public function itUsesTheGivenQueryTypeName(): void
     {
-        // Arrange
         $schemaTypes = [
             'query_root' => ['kind' => 'OBJECT', 'fields' => ['addresses' => ['kind' => 'OBJECT', 'name' => 'PostalAddress']]],
             'PostalAddress' => self::POSTAL_ADDRESS,
         ];
 
-        // Act
         $violations = $this->validator->validate([FakeAddress::class], $schemaTypes, 'query_root');
 
-        // Assert
         self::assertSame([], $violations);
     }
 
     #[Test]
     public function itReportsAnUnknownFieldOnTheResolvedType(): void
     {
-        // Arrange
         $schemaTypes = [
             'Query' => ['kind' => 'OBJECT', 'fields' => ['addresses' => ['kind' => 'OBJECT', 'name' => 'PostalAddress']]],
             'PostalAddress' => ['kind' => 'OBJECT', 'fields' => ['id' => ['kind' => 'SCALAR', 'name' => 'Int']]],
         ];
 
-        // Act
         $violations = $this->validator->validate([FakeAddress::class], $schemaTypes);
 
-        // Assert
         self::assertCount(1, $violations);
         self::assertStringContainsString('"city"', $violations[0]);
         self::assertStringContainsString('"PostalAddress"', $violations[0]);
@@ -105,7 +93,6 @@ final class SchemaTypeResolutionTest extends TestCase
     #[Test]
     public function itAcceptsDataApiBuilderScalars(): void
     {
-        // Arrange
         $schemaTypes = [
             'Query' => ['kind' => 'OBJECT', 'fields' => ['scalars' => ['kind' => 'OBJECT', 'name' => 'Measure']]],
             'Measure' => [
@@ -119,10 +106,8 @@ final class SchemaTypeResolutionTest extends TestCase
             ],
         ];
 
-        // Act
         $violations = $this->validator->validate([FakeEntityWithScalars::class], $schemaTypes);
 
-        // Assert
         self::assertSame([], $violations);
     }
 }

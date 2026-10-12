@@ -31,7 +31,6 @@ final class QueryResultTest extends TestCase
     #[Test]
     public function itDoesNotAlterTheOriginalQueryWhenFetchingTheNextPage(): void
     {
-        // Arrange
         $client = new FakeGraphqlClient(
             ['data' => ['tasks' => ['items' => [['id' => 1, 'title' => 'A']], 'hasNextPage' => true, 'endCursor' => 'c1']]],
             ['data' => ['tasks' => ['items' => [['id' => 2, 'title' => 'B']], 'hasNextPage' => false, 'endCursor' => 'c2']]],
@@ -44,27 +43,22 @@ final class QueryResultTest extends TestCase
         $firstPage = $query->getResult();
         self::assertInstanceOf(PaginatedResult::class, $firstPage);
 
-        // Act
         $firstPage->next();
 
-        // Assert
         self::assertStringNotContainsString('after', $query->getGraphQL());
     }
 
     #[Test]
     public function itReturnsAnEmptyPaginatedResultWhenTheRootIsNull(): void
     {
-        // Arrange
         $client = new FakeGraphqlClient(['data' => ['tasks' => null]]);
         $query = $this->createRepository($client, new DataApiBuilderDialect(), FakeTask::class)
             ->createQueryBuilder()
             ->paginate()
             ->getQuery();
 
-        // Act
         $result = $query->getResult();
 
-        // Assert
         self::assertInstanceOf(PaginatedResult::class, $result);
         self::assertSame([], $result->items);
         self::assertFalse($result->hasNextPage);
@@ -73,16 +67,13 @@ final class QueryResultTest extends TestCase
     #[Test]
     public function itLimitsTheRequestToOneResultForGetOneOrNullResult(): void
     {
-        // Arrange
         $client = new FakeGraphqlClient(['data' => ['tasks' => [['id' => 1, 'title' => 'A']]]]);
         $query = $this->createRepository($client, new DefaultDialect(), FakeTask::class)
             ->createQueryBuilder()
             ->getQuery();
 
-        // Act
         $task = $query->getOneOrNullResult();
 
-        // Assert
         self::assertInstanceOf(FakeTask::class, $task);
         self::assertStringContainsString('tasks(first: 1)', $client->lastQuery);
         self::assertStringNotContainsString('first', $query->getGraphQL());
@@ -91,48 +82,39 @@ final class QueryResultTest extends TestCase
     #[Test]
     public function itKeepsAnExplicitLimitForGetOneOrNullResult(): void
     {
-        // Arrange
         $client = new FakeGraphqlClient(['data' => ['tasks' => [['id' => 1, 'title' => 'A']]]]);
         $query = $this->createRepository($client, new DefaultDialect(), FakeTask::class)
             ->createQueryBuilder()
             ->limit(5)
             ->getQuery();
 
-        // Act
         $query->getOneOrNullResult();
 
-        // Assert
         self::assertStringContainsString('tasks(first: 5)', $client->lastQuery);
     }
 
     #[Test]
     public function itRecordsVariablesInTheProfiler(): void
     {
-        // Arrange
         $client = new FakeGraphqlClient(['data' => []]);
         $manager = $this->createManager($client, new DefaultDialect());
 
-        // Act
         $manager->execute('query($id: Int) { tasks(id: $id) { id } }', fn () => [], variables: ['id' => 1]);
 
-        // Assert
         self::assertSame(['id' => 1], $this->collector->getQueries()[0]['variables']);
     }
 
     #[Test]
     public function itRecordsTheRootResultCountAndTheHydrationDepthInTheProfiler(): void
     {
-        // Arrange
         $client = new FakeGraphqlClient(['data' => ['tasks' => [
             ['id' => 1, 'title' => 'A', 'user' => ['id' => 10, 'name' => 'User A']],
             ['id' => 2, 'title' => 'B', 'user' => ['id' => 10, 'name' => 'User A']],
         ]]]);
         $repository = $this->createRepository($client, new DefaultDialect(), Task::class);
 
-        // Act
         $repository->findAll();
 
-        // Assert
         $recorded = $this->collector->getQueries()[0];
         self::assertSame(2, $recorded['hydrated_count']);
         self::assertSame(1, $recorded['depth_used']);

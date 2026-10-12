@@ -37,43 +37,34 @@ line two""")', 'tasks(note: "***")'];
     #[DataProvider('queries')]
     public function itMasksLiteralValues(string $query, string $expected): void
     {
-        // Act
         $redacted = $this->redactor->redactQuery($query);
 
-        // Assert
         self::assertSame($expected, $redacted);
     }
 
     #[Test]
     public function itKeepsNamesEnumsKeywordsAndVariableReferences(): void
     {
-        // Arrange
         $query = 'query($v0: String) { tasks2(orderBy: { title: ASC }, done: true, owner: null, title: $v0) { id field2 } }';
 
-        // Act
         $redacted = $this->redactor->redactQuery($query);
 
-        // Assert
         self::assertSame($query, $redacted);
     }
 
     #[Test]
     public function itMasksVariableValuesAndKeepsTheirKeys(): void
     {
-        // Arrange
         $variables = ['email' => 'user@example.com', 'filter' => ['age' => 42, 'tags' => ['a', 'b']], 'active' => null];
 
-        // Act
         $redacted = $this->redactor->redactValues($variables);
 
-        // Assert
         self::assertSame(['email' => '***', 'filter' => ['age' => '***', 'tags' => ['***', '***']], 'active' => null], $redacted);
     }
 
     #[Test]
     public function itMasksArgumentsInTheAstAndKeepsTheStructure(): void
     {
-        // Arrange
         $ast = ['fields' => [[
             'name' => 'tasks',
             'arguments' => ['filter' => ['email' => ['eq' => 'user@example.com']]],
@@ -81,10 +72,8 @@ line two""")', 'tasks(note: "***")'];
             'isCollection' => false,
         ]]];
 
-        // Act
         $redacted = $this->redactor->redactAst($ast);
 
-        // Assert
         self::assertSame(['filter' => ['email' => ['eq' => '***']]], $redacted['fields'][0]['arguments']);
         self::assertSame('id', $redacted['fields'][0]['selectionSet']['fields'][0]['name']);
     }

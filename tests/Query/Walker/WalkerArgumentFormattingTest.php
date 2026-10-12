@@ -31,13 +31,10 @@ final class WalkerArgumentFormattingTest extends TestCase
     #[DataProvider('walkers')]
     public function itEscapesDoubleQuotesInStringValues(GraphqlWalkerInterface $walker): void
     {
-        // Arrange
         $query = $this->queryWithArguments(['name' => 'O"Brien']);
 
-        // Act
         $graphql = $walker->walk($query, new QueryOptions());
 
-        // Assert
         self::assertStringContainsString('things(name: "O\"Brien")', $graphql);
     }
 
@@ -45,13 +42,10 @@ final class WalkerArgumentFormattingTest extends TestCase
     #[DataProvider('walkers')]
     public function itEscapesBackslashesAndLineBreaksInStringValues(GraphqlWalkerInterface $walker): void
     {
-        // Arrange
         $query = $this->queryWithArguments(['name' => "a\\b\nc"]);
 
-        // Act
         $graphql = $walker->walk($query, new QueryOptions());
 
-        // Assert
         self::assertStringContainsString('things(name: "a\\\\b\nc")', $graphql);
     }
 
@@ -59,13 +53,10 @@ final class WalkerArgumentFormattingTest extends TestCase
     #[DataProvider('walkers')]
     public function itKeepsACraftedValueInsideItsStringLiteral(GraphqlWalkerInterface $walker): void
     {
-        // Arrange
         $query = $this->queryWithArguments(['name' => 'x") { id } secrets(where: "']);
 
-        // Act
         $graphql = $walker->walk($query, new QueryOptions());
 
-        // Assert
         self::assertStringContainsString('things(name: "x\") { id } secrets(where: \"")', $graphql);
     }
 
@@ -73,10 +64,8 @@ final class WalkerArgumentFormattingTest extends TestCase
     #[DataProvider('walkers')]
     public function itRejectsAnArgumentNameThatIsNotAValidGraphqlName(GraphqlWalkerInterface $walker): void
     {
-        // Arrange
         $query = $this->queryWithArguments(['name) { id } secrets(x' => 'value']);
 
-        // Act & Assert
         $this->expectException(InvalidArgumentException::class);
         $walker->walk($query, new QueryOptions());
     }
@@ -85,10 +74,8 @@ final class WalkerArgumentFormattingTest extends TestCase
     #[DataProvider('walkers')]
     public function itRejectsAnInputObjectKeyThatIsNotAValidGraphqlName(GraphqlWalkerInterface $walker): void
     {
-        // Arrange
         $query = $this->queryWithArguments(['filter' => ['name: "a" }, secret: { eq' => 'x']]);
 
-        // Act & Assert
         $this->expectException(InvalidArgumentException::class);
         $walker->walk($query, new QueryOptions());
     }
@@ -97,13 +84,10 @@ final class WalkerArgumentFormattingTest extends TestCase
     #[DataProvider('walkers')]
     public function itPrintsAnAssociativeArrayAsAnInputObject(GraphqlWalkerInterface $walker): void
     {
-        // Arrange
         $query = $this->queryWithArguments(['status' => ['eq' => 'active']]);
 
-        // Act
         $graphql = $walker->walk($query, new QueryOptions());
 
-        // Assert
         self::assertStringContainsString('things(status: { eq: "active" })', $graphql);
     }
 
@@ -111,13 +95,10 @@ final class WalkerArgumentFormattingTest extends TestCase
     #[DataProvider('walkers')]
     public function itPrintsAListAsAGraphqlList(GraphqlWalkerInterface $walker): void
     {
-        // Arrange
         $query = $this->queryWithArguments(['ids' => [1, 2]]);
 
-        // Act
         $graphql = $walker->walk($query, new QueryOptions());
 
-        // Assert
         self::assertStringContainsString('things(ids: [1, 2])', $graphql);
     }
 
@@ -125,10 +106,8 @@ final class WalkerArgumentFormattingTest extends TestCase
     #[DataProvider('walkers')]
     public function itRejectsANonFiniteFloat(GraphqlWalkerInterface $walker): void
     {
-        // Arrange
         $query = $this->queryWithArguments(['ratio' => NAN]);
 
-        // Act & Assert
         $this->expectException(InvalidArgumentException::class);
         $walker->walk($query, new QueryOptions());
     }

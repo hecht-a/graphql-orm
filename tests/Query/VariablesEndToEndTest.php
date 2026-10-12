@@ -37,13 +37,10 @@ final class VariablesEndToEndTest extends TestCase
     #[Test]
     public function itSendsTypedArgumentsAsVariables(): void
     {
-        // Arrange
         $client = new FakeGraphqlClient(self::INTROSPECTION, self::TASKS);
 
-        // Act
         $tasks = $this->createRepository($client, withVariables: true)->findBy(['email' => self::EMAIL]);
 
-        // Assert
         self::assertStringStartsWith('query($email: String) {', $client->lastQuery);
         self::assertStringContainsString('tasks(email: $email)', $client->lastQuery);
         self::assertSame(['email' => self::EMAIL], $client->lastVariables);
@@ -53,13 +50,10 @@ final class VariablesEndToEndTest extends TestCase
     #[Test]
     public function itFallsBackToInlineValuesAndWarnsWhenAnArgumentIsNotInTheSchema(): void
     {
-        // Arrange
         $client = new FakeGraphqlClient(self::INTROSPECTION, self::TASKS);
 
-        // Act
         $this->createRepository($client, withVariables: true)->findBy(['owner' => self::EMAIL]);
 
-        // Assert
         self::assertStringContainsString('tasks(owner: "' . self::EMAIL . '")', $client->lastQuery);
         self::assertSame([], $client->lastVariables);
         self::assertContains('warning', array_column($this->logger->records, 'level'));
@@ -68,13 +62,10 @@ final class VariablesEndToEndTest extends TestCase
     #[Test]
     public function itKeepsInlineValuesWhenVariablesAreDisabled(): void
     {
-        // Arrange
         $client = new FakeGraphqlClient(self::TASKS);
 
-        // Act
         $this->createRepository($client, withVariables: false)->findBy(['email' => self::EMAIL]);
 
-        // Assert
         self::assertStringContainsString('tasks(email: "' . self::EMAIL . '")', $client->lastQuery);
         self::assertSame(1, $client->callCount);
     }
