@@ -13,10 +13,12 @@ use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Query\Ast\QueryNode;
+use GraphqlOrm\Query\CompiledQuery;
 use GraphqlOrm\Query\GraphqlQueryCompiler;
 use GraphqlOrm\Query\GraphqlQueryTrace;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
 use GraphqlOrm\Query\QueryOptions;
+use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -40,6 +42,7 @@ class GraphqlManager
         private ?GraphqlQueryCompiler $compiler = null,
         private ?LoggerInterface $logger = null,
         private ?QueryRedactor $redactor = null,
+        private ?RootArgumentTypeResolver $argumentTypeResolver = null,
     ) {
     }
 
@@ -53,7 +56,9 @@ class GraphqlManager
         $context = new GraphqlExecutionContext(dialect: $this->dialect);
 
         if ($graphql instanceof QueryNode) {
-            $compiled = $this->getQueryCompiler()->compile($graphql, $options);
+            $compiledQuery = $this->compile($graphql, $options);
+            $compiled = $compiledQuery->graphql;
+            $variables = [...$variables, ...$compiledQuery->variables];
             /** @var array<string|int, mixed> $ast */
             $ast = json_decode(json_encode($graphql, JSON_THROW_ON_ERROR), true);
             $context->trace->ast = $ast;
@@ -94,6 +99,27 @@ class GraphqlManager
         $this->compiler = new GraphqlQueryCompiler($walker);
 
         return $this->compiler;
+    }
+
+    private function compile(QueryNode $query, QueryOptions $options): CompiledQuery
+    {
+        $rootField = \count($query->fields) === 1 ? $query->fields[0]->name : null;
+        $argumentTypes = $rootField !== null ? $this->argumentTypeResolver?->argumentTypes($rootField) : null;
+
+        if ($argumentTypes === null) {
+            return new CompiledQuery($this->getQueryCompiler()->compile($query, $options));
+        }
+
+        $compiled = $this->getQueryCompiler()->compileWithVariables($query, $options, $argumentTypes);
+
+        if ($compiled->untypedArguments !== []) {
+            $this->logger?->warning('GraphQL ORM: arguments missing from the schema, values are sent inline', [
+                'root_field' => $rootField,
+                'arguments' => $compiled->untypedArguments,
+            ]);
+        }
+
+        return $compiled;
     }
 
     /**

@@ -6,39 +6,14 @@ namespace GraphqlOrm\Query\Walker;
 
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Query\Ast\FieldNode;
-use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\Direction;
-use GraphqlOrm\Query\Printer\GraphqlPrinter;
-use GraphqlOrm\Query\QueryOptions;
 
 final class DABGraphqlWalker extends AbstractGraphqlWalker
 {
-    private QueryOptions $options;
-
-    public function walk(QueryNode $query, QueryOptions $options): string
+    protected function walkRootField(FieldNode $field): void
     {
-        $this->options = $options;
-
-        $this->printer = new GraphqlPrinter();
-
-        $this->printer->line($query->operation . ' {');
-
-        $this->printer->indent();
-
-        foreach ($query->fields as $field) {
-            $this->walkRootField($field);
-        }
-
-        $this->printer->outdent();
-
-        $this->printer->line('}');
-
-        return $this->printer->get();
-    }
-
-    private function walkRootField(FieldNode $field): void
-    {
-        $args = $this->formatArguments($this->applyPaginationArguments($field->arguments));
+        $arguments = array_filter($this->applyPaginationArguments($field->arguments), fn ($value) => $value !== null);
+        $args = $this->formatRootArguments($arguments);
 
         $this->printer->line($field->name . $args . ' {');
 

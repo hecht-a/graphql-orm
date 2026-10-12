@@ -40,6 +40,16 @@ final class Configuration implements ConfigurationInterface
             ->info('Mask the values of GraphQL queries (strings, numbers, variables) in logs and in the profiler, as they may hold personal data. The query sent to the API is not affected.')
             ->end()
 
+            ->arrayNode('variables')
+            ->addDefaultsIfNotSet()
+            ->info('Send root query arguments as typed GraphQL variables; their types come from a cached introspection of the schema.')
+            ->children()
+            ->booleanNode('enabled')->defaultFalse()->end()
+            ->scalarNode('cache_pool')->defaultValue('cache.app')->cannotBeEmpty()->end()
+            ->integerNode('ttl')->defaultValue(3600)->min(0)->info('Seconds before the schema is introspected again.')->end()
+            ->end()
+            ->end()
+
             ->scalarNode('http_client')
             ->defaultNull()
             ->info('Id of the HTTP client service to use, e.g. a scoped client configured with a timeout and retries. Defaults to the autowired HttpClientInterface.')

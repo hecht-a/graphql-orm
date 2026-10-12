@@ -5,29 +5,13 @@ declare(strict_types=1);
 namespace GraphqlOrm\Query\Walker;
 
 use GraphqlOrm\Exception\InvalidArgumentException;
-use GraphqlOrm\Query\Ast\QueryNode;
-use GraphqlOrm\Query\Printer\GraphqlPrinter;
-use GraphqlOrm\Query\QueryOptions;
+use GraphqlOrm\Query\Ast\FieldNode;
 
 final class DefaultGraphqlWalker extends AbstractGraphqlWalker
 {
-    public function walk(QueryNode $query, QueryOptions $options): string
+    protected function walkRootField(FieldNode $field): void
     {
-        $this->printer = new GraphqlPrinter();
-
-        $this->printer->line($query->operation . ' {');
-
-        $this->printer->indent();
-
-        foreach ($query->fields as $field) {
-            $this->walkField($field);
-        }
-
-        $this->printer->outdent();
-
-        $this->printer->line('}');
-
-        return $this->printer->get();
+        $this->walkField($field, isRoot: true);
     }
 
     protected function formatValue(mixed $value): string

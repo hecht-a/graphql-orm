@@ -10,7 +10,9 @@ use GraphqlOrm\Execution\GraphqlExecutionContext;
 final class FakeGraphqlClient implements GraphqlClientInterface
 {
     public string $lastQuery = '';
-    private int $callCount = 0;
+    /** @var array<string, mixed> */
+    public array $lastVariables = [];
+    public int $callCount = 0;
     private array $responses;
 
     public function __construct(array ...$responses)
@@ -21,6 +23,7 @@ final class FakeGraphqlClient implements GraphqlClientInterface
     public function query(string $query, GraphqlExecutionContext $context, array $variables = []): array
     {
         $this->lastQuery = $query;
+        $this->lastVariables = $variables;
 
         return $this->responses[$this->callCount++] ?? [];
     }

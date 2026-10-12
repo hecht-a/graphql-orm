@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace GraphqlOrm\DependencyInjection;
 
 use GraphqlOrm\Client\GraphqlClient;
+use GraphqlOrm\Client\GraphqlClientInterface;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\GraphqlManager;
+use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
@@ -34,6 +37,19 @@ final class GraphqlOrmExtension extends Extension
 
         if ($config['http_client'] !== null) {
             $container->getDefinition(GraphqlClient::class)->setArgument('$httpClient', new Reference($config['http_client']));
+        }
+
+        if ($config['variables']['enabled']) {
+            $container->register(RootArgumentTypeResolver::class, RootArgumentTypeResolver::class)
+                ->setArguments([
+                    new Reference(GraphqlClientInterface::class),
+                    new Reference($config['variables']['cache_pool']),
+                    $config['variables']['ttl'],
+                    new Reference('monolog.logger.graphql_orm', ContainerInterface::NULL_ON_INVALID_REFERENCE),
+                ]);
+
+            $container->getDefinition(GraphqlManager::class)
+                ->setArgument('$argumentTypeResolver', new Reference(RootArgumentTypeResolver::class));
         }
 
         if (!$config['redact_query_values']) {

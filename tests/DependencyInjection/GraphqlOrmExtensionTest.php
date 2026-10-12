@@ -10,8 +10,10 @@ use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\DependencyInjection\GraphqlOrmExtension;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Logging\QueryRedactor;
+use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -119,6 +121,41 @@ final class GraphqlOrmExtensionTest extends TestCase
 
         // Assert
         self::assertNull($this->managerRedactor($container));
+    }
+
+    #[Test]
+    public function itDoesNotUseVariablesByDefault(): void
+    {
+        // Arrange
+        $container = $this->createContainer(debug: false);
+
+        // Act
+        $container->compile();
+
+        // Assert
+        self::assertNull($this->managerArgumentTypeResolver($container));
+    }
+
+    #[Test]
+    public function itUsesVariablesWithTheConfiguredCachePool(): void
+    {
+        // Arrange
+        $container = $this->createContainer(debug: false, config: ['variables' => ['enabled' => true, 'cache_pool' => 'cache.graphql', 'ttl' => 600]]);
+        $container->register('cache.graphql', ArrayAdapter::class);
+
+        // Act
+        $container->compile();
+
+        // Assert
+        $resolver = $this->managerArgumentTypeResolver($container);
+        self::assertInstanceOf(RootArgumentTypeResolver::class, $resolver);
+        self::assertSame($container->get('cache.graphql'), (new \ReflectionProperty(RootArgumentTypeResolver::class, 'cache'))->getValue($resolver));
+        self::assertSame(600, (new \ReflectionProperty(RootArgumentTypeResolver::class, 'ttl'))->getValue($resolver));
+    }
+
+    private function managerArgumentTypeResolver(ContainerBuilder $container): mixed
+    {
+        return (new \ReflectionProperty(GraphqlManager::class, 'argumentTypeResolver'))->getValue($container->get(GraphqlManager::class));
     }
 
     private function managerRedactor(ContainerBuilder $container): mixed
