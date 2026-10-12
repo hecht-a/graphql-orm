@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `GraphqlManager`, and the `#[GraphqlEntity]` attribute, are no longer generic: a repository constructor can type
+  `GraphqlManager $manager` without PHPStan asking for a type parameter. `GraphqlManager::execute()` takes the entity
+  type from its hydration callable.
 - Requires PHP 8.3+ and Symfony 7.4 or 8.x (was PHP 8.2+ and Symfony 7.1+): Symfony 8 is now supported, and the
   Symfony versions no longer maintained are dropped.
 - `GraphqlEntityRepository::findBy()` takes an optional ordering and limit (`findBy($criteria, $orderBy, $limit)`):
@@ -50,6 +53,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   just do not support variables).
 - Logs and profiler show `***` instead of query values by default; set `redact_query_values: false` (e.g. under
   `when@dev`) to see them.
+
+### Fixed
+
+- `PaginatedResult::next()` returns `null` when the API reports a next page without an end cursor, instead of loading
+  the first page again (which made a loop over `next()` endless).
+- A collection row that is not an object throws an `InvalidGraphqlResponseException` instead of a PHP `TypeError`.
 
 ---
 
