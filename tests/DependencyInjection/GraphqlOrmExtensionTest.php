@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\DependencyInjection;
 
+use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Command\MakeGraphqlEntityCommand;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\DependencyInjection\GraphqlOrmExtension;
@@ -58,14 +59,52 @@ final class GraphqlOrmExtensionTest extends TestCase
         self::assertInstanceOf(MakeGraphqlEntityCommand::class, $container->get(MakeGraphqlEntityCommand::class));
     }
 
-    private function createContainer(bool $debug): ContainerBuilder
+    #[Test]
+    public function itUsesTheConfiguredHttpClientService(): void
+    {
+        // Arrange
+        $container = $this->createContainer(debug: false, config: ['http_client' => 'graphql.http_client']);
+        $container->register('graphql.http_client', MockHttpClient::class);
+
+        // Act
+        $container->compile();
+
+        // Assert
+        $client = $container->get(GraphqlClient::class);
+        self::assertSame(
+            $container->get('graphql.http_client'),
+            (new \ReflectionProperty(GraphqlClient::class, 'httpClient'))->getValue($client),
+        );
+    }
+
+    #[Test]
+    public function itUsesTheDefaultHttpClientWhenNoneIsConfigured(): void
+    {
+        // Arrange
+        $container = $this->createContainer(debug: false);
+
+        // Act
+        $container->compile();
+
+        // Assert
+        $client = $container->get(GraphqlClient::class);
+        self::assertSame(
+            $container->get(HttpClientInterface::class),
+            (new \ReflectionProperty(GraphqlClient::class, 'httpClient'))->getValue($client),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     */
+    private function createContainer(bool $debug, array $config = []): ContainerBuilder
     {
         $container = new ContainerBuilder();
         $container->setParameter('kernel.debug', $debug);
         $container->setParameter('kernel.project_dir', \dirname(__DIR__, 2));
         $container->register(HttpClientInterface::class, MockHttpClient::class);
 
-        (new GraphqlOrmExtension())->load([['endpoint' => 'https://graphql.example.com/graphql']], $container);
+        (new GraphqlOrmExtension())->load([['endpoint' => 'https://graphql.example.com/graphql', ...$config]], $container);
 
         $container->addCompilerPass(new class implements CompilerPassInterface {
             public function process(ContainerBuilder $container): void

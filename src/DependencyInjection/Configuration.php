@@ -35,6 +35,11 @@ final class Configuration implements ConfigurationInterface
             ->end()
             ->end()
 
+            ->scalarNode('http_client')
+            ->defaultNull()
+            ->info('Id of the HTTP client service to use, e.g. a scoped client configured with a timeout and retries. Defaults to the autowired HttpClientInterface.')
+            ->end()
+
             ->scalarNode('dialect')
             ->defaultValue(DefaultDialect::class)
             ->end()
