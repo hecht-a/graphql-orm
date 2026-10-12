@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Entity metadata is cached between requests outside debug mode (`metadata_cache_pool` option, `cache.system` by
+  default) and warmed up by `cache:warmup`.
 - `headers_provider` option: id of a service implementing `HeadersProviderInterface`, whose headers are computed
   before every request (e.g. an OAuth access token) and override the static `headers`.
 - `GraphqlEntityRepository::find($id)` and `findOneBy($criteria, $orderBy)`, returning the entity or `null`.

@@ -56,6 +56,7 @@ graphql_orm:
 | `http_client`                     | `null`                   | HTTP client service id; defaults to the autowired `HttpClientInterface` |
 | `dialect`                         | `DefaultDialect`         | GraphQL dialect to use                  |
 | `headers`                         | `[]`                     | HTTP headers sent with every request    |
+| `metadata_cache_pool`             | `cache.system`           | Cache pool for entity metadata outside debug mode (see [metadata cache](#metadata-cache)); `null` disables it |
 | `headers_provider`                | `null`                   | Service id computing headers per request (see [dynamic headers](#dynamic-headers)) |
 | `http_client_options.verify_host` | `true`                   | TLS host verification                   |
 | `http_client_options.verify_peer` | `true`                   | TLS peer verification                   |
@@ -87,6 +88,13 @@ graphql_orm:
     endpoint: 'https://api.example.com/graphql'
     http_client: graphql.client
 ```
+
+## Metadata cache
+
+Entity metadata comes from attributes and docblocks. Outside debug mode it is kept in the `metadata_cache_pool`
+(`cache.system` by default) and built for every entity of `mapping.entity.dir` by `cache:warmup`, so that no request
+pays for it. In debug mode it is only kept for the current request, so mapping changes are seen without clearing the
+cache. After a deployment, `cache:clear` (or `cache:warmup`) refreshes it, as for the rest of the Symfony cache.
 
 ## Dynamic headers
 
