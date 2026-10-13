@@ -8,12 +8,16 @@ use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Command\MakeGraphqlEntityCommand;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\DependencyInjection\GraphqlOrmExtension;
+use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\Form\GraphqlEntityType;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\MetadataCacheWarmer;
+use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
+use GraphqlOrm\Test\MockGraphqlServer;
+use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use GraphqlOrm\Tests\Fixtures\FakeEventDispatcher;
 use GraphqlOrm\Tests\Fixtures\FakeHeadersProvider;
 use GraphqlOrm\ValueResolver\GraphqlEntityValueResolver;
@@ -65,6 +69,33 @@ final class GraphqlOrmExtensionTest extends TestCase
         $container = $this->createContainer(debug: false);
 
         self::assertTrue($container->getDefinition(GraphqlEntityType::class)->hasTag('form.type'));
+    }
+
+    #[Test]
+    public function itSendsTheQueriesToTheMockServerOfTheTests(): void
+    {
+        $container = $this->createContainer(debug: false, config: ['http_client' => MockGraphqlServer::class, 'dialect' => DataApiBuilderDialect::class]);
+        self::assertTrue($container->getDefinition(MockGraphqlServer::class)->isPublic());
+        $container->compile();
+
+        $server = $container->get(MockGraphqlServer::class);
+        self::assertInstanceOf(MockGraphqlServer::class, $server);
+        $server->respond(['tasks' => ['items' => [['id' => 1, 'title' => 'A']]]]);
+        $manager = $container->get(GraphqlManager::class);
+        self::assertInstanceOf(GraphqlManager::class, $manager);
+
+        $task = (new GraphqlEntityRepository($manager, FakeTask::class))->find(1);
+
+        self::assertSame('A', $task?->title);
+        self::assertCount(1, $server->requests());
+    }
+
+    #[Test]
+    public function itDoesNotRegisterTheMockServerOutsideTheTests(): void
+    {
+        $container = $this->createContainer(debug: false);
+
+        self::assertFalse($container->hasDefinition(MockGraphqlServer::class));
     }
 
     #[Test]

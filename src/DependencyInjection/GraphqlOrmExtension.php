@@ -11,6 +11,7 @@ use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\MetadataCacheWarmer;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
+use GraphqlOrm\Test\MockGraphqlServer;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -59,6 +60,11 @@ final class GraphqlOrmExtension extends Extension
         );
 
         $loader->load('services.php');
+
+        // The mock server of the tests is fetched by them from the container.
+        if ($config['http_client'] === MockGraphqlServer::class) {
+            $container->register(MockGraphqlServer::class, MockGraphqlServer::class)->setPublic(true);
+        }
 
         if ($config['http_client'] !== null) {
             $container->getDefinition(GraphqlClient::class)->setArgument('$httpClient', new Reference($config['http_client']));
