@@ -7,6 +7,7 @@ namespace GraphqlOrm\Query;
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\GraphqlManager;
+use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
@@ -86,6 +87,71 @@ final readonly class GraphqlQuery
             },
             $this->options
         );
+    }
+
+    /**
+     * Returns the rows as the API sent them, keyed by GraphQL field names and without hydration: lighter for an export
+     * or a JSON response. The collection envelopes of the dialect (e.g. Data API Builder `items`) are removed, nested
+     * collections included. A paginated query returns the rows of the requested page.
+     *
+     * @return list<array<mixed>>
+     *
+     * @throws InvalidGraphqlResponseException when the response does not hold rows
+     */
+    public function getArrayResult(): array
+    {
+        $metadata = $this->manager
+            ->getMetadataFactory()
+            ->getMetadata($this->entityClass);
+
+        return $this->manager->execute(
+            $this->graphql,
+            function (array $result) use ($metadata): array {
+                $data = $result['data'] ?? null;
+                $root = \is_array($data) ? ($data[$metadata->name] ?? null) : null;
+
+                if ($root === null) {
+                    return [];
+                }
+
+                if (!\is_array($root)) {
+                    throw InvalidGraphqlResponseException::expectedArray($root);
+                }
+
+                return array_map(
+                    fn (array $row) => $this->withoutEnvelopes($metadata, $row),
+                    $this->rows($root)
+                );
+            },
+            $this->options
+        );
+    }
+
+    /**
+     * @param array<mixed> $row
+     *
+     * @return array<mixed>
+     */
+    private function withoutEnvelopes(GraphqlEntityMetadata $metadata, array $row): array
+    {
+        foreach ($metadata->fields as $field) {
+            $value = $row[$field->mappedFrom] ?? null;
+
+            if ($field->relation === null || !\is_array($value)) {
+                continue;
+            }
+
+            $relationMetadata = $this->manager->getMetadataFactory()->getMetadata($field->relation);
+
+            $row[$field->mappedFrom] = $field->isCollection
+                ? array_map(
+                    fn (array $item) => $this->withoutEnvelopes($relationMetadata, $item),
+                    $this->rows($value)
+                )
+                : $this->withoutEnvelopes($relationMetadata, $value);
+        }
+
+        return $row;
     }
 
     /**

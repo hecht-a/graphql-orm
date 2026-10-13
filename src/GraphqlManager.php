@@ -40,12 +40,12 @@ class GraphqlManager
     }
 
     /**
-     * @template E of object
+     * @template R of array<mixed>|PaginatedResult<object>
      *
-     * @param callable(array<string, mixed>, GraphqlExecutionContext): (E[]|PaginatedResult<E>) $hydration
-     * @param array<string, mixed>                                                              $variables
+     * @param callable(array<string, mixed>, GraphqlExecutionContext): R $hydration turns the response into the result
+     * @param array<string, mixed>                                       $variables
      *
-     * @return E[]|PaginatedResult<E>
+     * @return R
      */
     public function execute(QueryNode|string $graphql, callable $hydration, QueryOptions $options = new QueryOptions(), array $variables = []): array|PaginatedResult
     {
