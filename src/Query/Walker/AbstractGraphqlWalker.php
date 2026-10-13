@@ -111,15 +111,9 @@ abstract class AbstractGraphqlWalker implements VariableAwareWalkerInterface
         $this->printer->indent();
 
         if ($field->isCollection) {
-            $this->printer->line('items {');
-            $this->printer->indent();
-        }
-
-        $this->walkSelectionSet($field->selectionSet);
-
-        if ($field->isCollection) {
-            $this->printer->outdent();
-            $this->printer->line('}');
+            $this->walkCollection($field->selectionSet);
+        } else {
+            $this->walkSelectionSet($field->selectionSet);
         }
 
         $this->printer->outdent();
@@ -193,6 +187,18 @@ abstract class AbstractGraphqlWalker implements VariableAwareWalkerInterface
             \is_float($value) => is_finite($value) ? $value : throw new InvalidArgumentException('Non-finite floats (INF, NAN) cannot be sent as GraphQL arguments.'),
             default => $value,
         };
+    }
+
+    /**
+     * Prints the selection of the entities of a nested collection, inside the dialect envelope.
+     */
+    protected function walkCollection(SelectionSetNode $selectionSet): void
+    {
+        $this->printer->line('items {');
+        $this->printer->indent();
+        $this->walkSelectionSet($selectionSet);
+        $this->printer->outdent();
+        $this->printer->line('}');
     }
 
     protected function walkSelectionSet(SelectionSetNode $selectionSet): void

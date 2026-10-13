@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Query;
 
+use GraphqlOrm\Dialect\CursorPaginationDialect;
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\GraphqlManager;
@@ -74,13 +75,21 @@ final readonly class GraphqlQuery
                     return $items;
                 }
 
-                $endCursor = $root['endCursor'] ?? null;
+                $dialect = $this->manager->getDialect();
+
+                if ($dialect instanceof CursorPaginationDialect) {
+                    $hasNextPage = $dialect->hasNextPage($root);
+                    $endCursor = $dialect->endCursor($root);
+                } else {
+                    $hasNextPage = ($root['hasNextPage'] ?? false) === true;
+                    $endCursor = \is_string($root['endCursor'] ?? null) ? $root['endCursor'] : null;
+                }
 
                 return new PaginatedResult(
                     $items,
-                    ($root['hasNextPage'] ?? false) === true,
+                    $hasNextPage,
                     \count($this->options->cursorStack) > 0,
-                    \is_string($endCursor) ? $endCursor : null,
+                    $endCursor,
                     $this->options->cursorStack,
                     $this->fetchPage(...)
                 );

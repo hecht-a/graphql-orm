@@ -9,7 +9,7 @@ use GraphqlOrm\Query\QueryOptions;
 use GraphqlOrm\Query\Walker\DABGraphqlWalker;
 use GraphqlOrm\Query\Walker\GraphqlWalkerInterface;
 
-final class DataApiBuilderDialect implements GraphqlQueryDialect
+final class DataApiBuilderDialect implements GraphqlQueryDialect, CursorPaginationDialect
 {
     public function extractCollection(array $data): array
     {
@@ -65,5 +65,17 @@ final class DataApiBuilderDialect implements GraphqlQueryDialect
             fn (mixed $value) => $value === null ? ['isNull' => true] : ['eq' => $value],
             $criteria,
         )];
+    }
+
+    public function hasNextPage(array $root): bool
+    {
+        return ($root['hasNextPage'] ?? false) === true;
+    }
+
+    public function endCursor(array $root): ?string
+    {
+        $cursor = $root['endCursor'] ?? null;
+
+        return \is_string($cursor) ? $cursor : null;
     }
 }

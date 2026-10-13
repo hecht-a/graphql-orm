@@ -17,9 +17,16 @@ final readonly class GraphqlSchema
     public const DEFAULT_QUERY_TYPE = 'Query';
 
     /**
-     * Field wrapping the entities of a paginated field (e.g. Data API Builder connections).
+     * Field wrapping the entities of a Data API Builder connection.
      */
     private const CONNECTION_ITEMS_FIELD = 'items';
+
+    /**
+     * Fields wrapping the entities of a Relay connection: `edges { node }`.
+     */
+    private const RELAY_EDGES_FIELD = 'edges';
+
+    private const RELAY_NODE_FIELD = 'node';
 
     /**
      * @param array<string, SchemaType> $types
@@ -52,11 +59,17 @@ final readonly class GraphqlSchema
     }
 
     /**
-     * The type of the `items` of a connection type, or null when the type is not a connection.
+     * The type of the entities of a connection type (`items` or Relay `edges { node }`), or null when the type is not
+     * a connection.
      */
     public function connectionItemType(string $typeName): ?string
     {
-        $itemType = $this->types[$typeName]['fields'][self::CONNECTION_ITEMS_FIELD]['name'] ?? null;
+        $fields = $this->types[$typeName]['fields'] ?? [];
+        $itemType = $fields[self::CONNECTION_ITEMS_FIELD]['name'] ?? null;
+
+        if ($itemType === null && ($edgeType = $fields[self::RELAY_EDGES_FIELD]['name'] ?? null) !== null) {
+            $itemType = $this->types[$edgeType]['fields'][self::RELAY_NODE_FIELD]['name'] ?? null;
+        }
 
         return $itemType !== null && $this->isObject($itemType) ? $itemType : null;
     }

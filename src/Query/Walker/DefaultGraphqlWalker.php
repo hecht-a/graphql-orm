@@ -7,7 +7,7 @@ namespace GraphqlOrm\Query\Walker;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Query\Ast\FieldNode;
 
-final class DefaultGraphqlWalker extends AbstractGraphqlWalker
+class DefaultGraphqlWalker extends AbstractGraphqlWalker
 {
     protected function walkRootField(FieldNode $field): void
     {

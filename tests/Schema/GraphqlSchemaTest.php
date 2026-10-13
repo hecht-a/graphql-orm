@@ -36,6 +36,19 @@ final class GraphqlSchemaTest extends TestCase
     }
 
     #[Test]
+    public function itUnwrapsARelayConnectionReturnedByTheRootField(): void
+    {
+        $schema = new GraphqlSchema([
+            'Query' => ['kind' => 'OBJECT', 'fields' => ['tasks' => ['kind' => 'OBJECT', 'name' => 'TaskConnection']]],
+            'TaskConnection' => ['kind' => 'OBJECT', 'fields' => ['edges' => ['kind' => 'OBJECT', 'name' => 'TaskEdge']]],
+            'TaskEdge' => ['kind' => 'OBJECT', 'fields' => ['node' => ['kind' => 'OBJECT', 'name' => 'Task']]],
+            'Task' => self::TASK,
+        ]);
+
+        self::assertSame('Task', $schema->entityTypeOfRoot('tasks'));
+    }
+
+    #[Test]
     public function itGuessesTheTypeFromTheRootNameWhenTheRootFieldIsUnknown(): void
     {
         $schema = new GraphqlSchema(['Task' => self::TASK]);
