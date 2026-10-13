@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\PHPStan;
 
+use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Metadata\Naming\DefaultNamingStrategy;
+use GraphqlOrm\Metadata\Naming\NamingStrategy;
 use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\RuleErrorBuilder;
 
@@ -19,10 +22,22 @@ final class FieldNameChecker
     /** @var array<string, GraphqlEntityMetadata|null> */
     private array $metadata = [];
 
+    private readonly GraphqlEntityMetadataFactory $metadataFactory;
+
+    /**
+     * @param string $namingStrategy class of the NamingStrategy of the application, built without argument
+     *
+     * @throws InvalidArgumentException when the class is not a naming strategy
+     */
     public function __construct(
         private readonly bool $reportUnmappedFields,
-        private readonly GraphqlEntityMetadataFactory $metadataFactory = new GraphqlEntityMetadataFactory(),
+        string $namingStrategy = DefaultNamingStrategy::class,
     ) {
+        if (!is_subclass_of($namingStrategy, NamingStrategy::class)) {
+            throw new InvalidArgumentException(\sprintf('The graphqlOrm.namingStrategy parameter must be a class implementing %s, "%s" given.', NamingStrategy::class, $namingStrategy));
+        }
+
+        $this->metadataFactory = new GraphqlEntityMetadataFactory(namingStrategy: new $namingStrategy());
     }
 
     /**

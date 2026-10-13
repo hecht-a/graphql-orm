@@ -11,6 +11,7 @@ use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\Exception\GraphqlRequestException;
 use GraphqlOrm\Exception\NonUniqueResultException;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Metadata\Naming\SnakeCaseNamingStrategy;
 use GraphqlOrm\Query\Direction;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
@@ -19,6 +20,7 @@ use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Schema\SchemaIntrospector;
 use GraphqlOrm\Schema\SchemaValidator;
 use GraphqlOrm\Tests\Integration\Entity\BrokenTask;
+use GraphqlOrm\Tests\Integration\Entity\SnakeCaseTask;
 use GraphqlOrm\Tests\Integration\Entity\Task;
 use GraphqlOrm\Tests\Integration\Entity\User;
 use GraphqlOrm\Tests\Integration\IntegrationTestCase;
@@ -179,6 +181,20 @@ final class DataApiBuilderTest extends IntegrationTestCase
         self::assertSame(3, $task->id);
         $this->expectException(NonUniqueResultException::class);
         $open->where($open->expr()->eq('done', false))->getQuery()->getSingleResult();
+    }
+
+    #[Test]
+    public function itNamesTheFieldsWithTheSnakeCaseStrategy(): void
+    {
+        $tasks = $this->repository(SnakeCaseTask::class, namingStrategy: new SnakeCaseNamingStrategy());
+
+        $task = $tasks->find(1);
+        $withoutDueDate = $tasks->findBy(['dueDate' => null], ['id' => Direction::ASC]);
+
+        self::assertInstanceOf(SnakeCaseTask::class, $task);
+        self::assertSame('2026-01-15', $task->dueDate?->format('Y-m-d'));
+        self::assertSame('User A', $task->user?->name);
+        self::assertSame([2, 4], self::ids($withoutDueDate));
     }
 
     #[Test]

@@ -15,6 +15,8 @@ use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Metadata\Naming\DefaultNamingStrategy;
+use GraphqlOrm\Metadata\Naming\SnakeCaseNamingStrategy;
 use GraphqlOrm\Schema\SchemaIntrospector;
 use GraphqlOrm\Schema\SchemaValidationMode;
 use GraphqlOrm\Schema\SchemaValidator;
@@ -34,6 +36,8 @@ return static function (ContainerConfigurator $config) {
         ->autoconfigure();
 
     $services->set(GraphqlEntityMetadataFactory::class);
+    $services->set(DefaultNamingStrategy::class);
+    $services->set(SnakeCaseNamingStrategy::class);
     $services->set(EntityHydrator::class);
 
     $services

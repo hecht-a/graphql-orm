@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GraphqlOrm\DependencyInjection;
 
 use GraphqlOrm\Dialect\DefaultDialect;
+use GraphqlOrm\Metadata\Naming\DefaultNamingStrategy;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 
@@ -65,6 +66,10 @@ final class Configuration implements ConfigurationInterface
             ->arrayNode('headers')
             ->scalarPrototype()->end()
             ->defaultValue([])
+            ->end()
+            ->scalarNode('naming_strategy')
+            ->defaultValue(DefaultNamingStrategy::class)
+            ->info('Id of a service implementing NamingStrategy, naming the fields whose #[GraphqlField] has no "mappedFrom" from their property: DefaultNamingStrategy keeps the property name, SnakeCaseNamingStrategy turns dueDate into due_date.')
             ->end()
             ->scalarNode('metadata_cache_pool')
             ->defaultValue('cache.system')

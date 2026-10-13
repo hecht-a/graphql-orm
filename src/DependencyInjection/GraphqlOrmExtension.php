@@ -39,6 +39,7 @@ final class GraphqlOrmExtension extends Extension
          *   dialect: string,
          *   headers: array<string, string>,
          *   metadata_cache_pool: string|null,
+         *   naming_strategy: string,
          *   headers_provider: string|null,
          *   lazy_loading: bool,
          *   max_depth: int,
@@ -101,6 +102,8 @@ final class GraphqlOrmExtension extends Extension
         if (!$debug) {
             $container->removeDefinition(GraphqlOrmDataCollector::class);
         }
+
+        $container->getDefinition(GraphqlEntityMetadataFactory::class)->setArgument('$namingStrategy', new Reference($config['naming_strategy']));
 
         if (!$debug && $config['metadata_cache_pool'] !== null) {
             $container->getDefinition(GraphqlEntityMetadataFactory::class)->setArgument('$cache', new Reference($config['metadata_cache_pool']));

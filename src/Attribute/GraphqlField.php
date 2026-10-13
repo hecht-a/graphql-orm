@@ -8,7 +8,8 @@ namespace GraphqlOrm\Attribute;
 final readonly class GraphqlField
 {
     public function __construct(
-        public string $mappedFrom,
+        /** GraphQL name of the field; named by the naming strategy from the property when null */
+        public ?string $mappedFrom = null,
         /** @var class-string|null */
         public ?string $targetEntity = null,
         public bool $identifier = false,

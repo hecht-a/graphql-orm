@@ -4,10 +4,13 @@ parameters:
     graphqlOrm:
         # Report field names that the entity does not map; false only reports what is certainly wrong.
         reportUnmappedFields: true
+        # Class of the naming strategy of the bundle configuration (graphql_orm.naming_strategy).
+        namingStrategy: GraphqlOrm\Metadata\Naming\DefaultNamingStrategy
 
 parametersSchema:
     graphqlOrm: structure([
-        reportUnmappedFields: bool()
+        reportUnmappedFields: bool(),
+        namingStrategy: string()
     ])
 
 services:
@@ -15,6 +18,7 @@ services:
         class: GraphqlOrm\PHPStan\FieldNameChecker
         arguments:
             reportUnmappedFields: %graphqlOrm.reportUnmappedFields%
+            namingStrategy: %graphqlOrm.namingStrategy%
     -
         class: GraphqlOrm\PHPStan\RepositoryFieldNamesRule
         tags: [phpstan.rules.rule]

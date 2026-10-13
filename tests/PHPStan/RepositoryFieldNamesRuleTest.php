@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\PHPStan;
 
+use GraphqlOrm\Metadata\Naming\DefaultNamingStrategy;
+use GraphqlOrm\Metadata\Naming\NamingStrategy;
+use GraphqlOrm\Metadata\Naming\SnakeCaseNamingStrategy;
 use GraphqlOrm\PHPStan\FieldNameChecker;
 use GraphqlOrm\PHPStan\RepositoryFieldNamesRule;
+use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntityNamedByStrategy;
 use GraphqlOrm\Tests\Integration\Entity\Task;
 use PHPStan\Rules\Rule;
 use PHPStan\Testing\RuleTestCase;
@@ -20,9 +24,12 @@ final class RepositoryFieldNamesRuleTest extends RuleTestCase
 
     private bool $reportUnmappedFields = true;
 
+    /** @var class-string<NamingStrategy> */
+    private string $namingStrategy = DefaultNamingStrategy::class;
+
     protected function getRule(): Rule
     {
-        return new RepositoryFieldNamesRule(new FieldNameChecker($this->reportUnmappedFields));
+        return new RepositoryFieldNamesRule(new FieldNameChecker($this->reportUnmappedFields, $this->namingStrategy));
     }
 
     #[Test]
@@ -40,5 +47,15 @@ final class RepositoryFieldNamesRuleTest extends RuleTestCase
         $this->reportUnmappedFields = false;
 
         $this->analyse([__DIR__ . '/data/repository-field-names.php'], []);
+    }
+
+    #[Test]
+    public function itNamesTheFieldsWithTheConfiguredStrategy(): void
+    {
+        $this->namingStrategy = SnakeCaseNamingStrategy::class;
+
+        $this->analyse([__DIR__ . '/data/repository-field-names-snake-case.php'], [
+            [\sprintf('Field "due_dat" is not mapped on %s. Did you mean "due_date"?', FakeEntityNamedByStrategy::class), 16, self::UNMAPPED_TIP],
+        ]);
     }
 }

@@ -8,6 +8,8 @@ use GraphqlOrm\Attribute\GraphqlEntity;
 use GraphqlOrm\Attribute\GraphqlField;
 use GraphqlOrm\Exception\NotAGraphqlEntityException;
 use GraphqlOrm\Exception\TooManyIdentifiersException;
+use GraphqlOrm\Metadata\Naming\DefaultNamingStrategy;
+use GraphqlOrm\Metadata\Naming\NamingStrategy;
 use Symfony\Component\TypeInfo\Exception\UnsupportedException;
 use Symfony\Component\TypeInfo\Type\CollectionType;
 use Symfony\Component\TypeInfo\Type\ObjectType;
@@ -35,6 +37,7 @@ class GraphqlEntityMetadataFactory
     public function __construct(
         ?TypeResolverInterface $typeResolver = null,
         private readonly ?CacheInterface $cache = null,
+        private readonly NamingStrategy $namingStrategy = new DefaultNamingStrategy(),
     ) {
         $this->typeResolver = $typeResolver ?? TypeResolver::create();
     }
@@ -95,7 +98,7 @@ class GraphqlEntityMetadataFactory
 
             $field = new GraphqlFieldMetadata(
                 property: $property->getName(),
-                mappedFrom: $instance->mappedFrom,
+                mappedFrom: $instance->mappedFrom ?? $this->namingStrategy->fieldName($property->getName()),
                 relation: $relation,
                 isCollection: $isCollection,
                 isIdentifier: $instance->identifier,

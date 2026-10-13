@@ -14,9 +14,11 @@ use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\MetadataCacheWarmer;
+use GraphqlOrm\Metadata\Naming\SnakeCaseNamingStrategy;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Test\MockGraphqlServer;
+use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntityNamedByStrategy;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use GraphqlOrm\Tests\Fixtures\FakeEventDispatcher;
 use GraphqlOrm\Tests\Fixtures\FakeHeadersProvider;
@@ -96,6 +98,18 @@ final class GraphqlOrmExtensionTest extends TestCase
         $container = $this->createContainer(debug: false);
 
         self::assertFalse($container->hasDefinition(MockGraphqlServer::class));
+    }
+
+    #[Test]
+    public function itNamesTheFieldsWithTheConfiguredStrategy(): void
+    {
+        $container = $this->createContainer(debug: false, config: ['naming_strategy' => SnakeCaseNamingStrategy::class]);
+        $container->compile();
+
+        $factory = $container->get(GraphqlEntityMetadataFactory::class);
+        self::assertInstanceOf(GraphqlEntityMetadataFactory::class, $factory);
+
+        self::assertSame('due_date', $factory->getMetadata(FakeEntityNamedByStrategy::class)->fields[2]->mappedFrom);
     }
 
     #[Test]

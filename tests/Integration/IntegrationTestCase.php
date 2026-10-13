@@ -10,6 +10,8 @@ use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Metadata\Naming\DefaultNamingStrategy;
+use GraphqlOrm\Metadata\Naming\NamingStrategy;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Schema\GraphqlSchema;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
@@ -54,8 +56,9 @@ abstract class IntegrationTestCase extends TestCase
         int $maxDepth = 2,
         bool $lazyLoading = false,
         ?GraphqlOrmDataCollector $collector = null,
+        NamingStrategy $namingStrategy = new DefaultNamingStrategy(),
     ): GraphqlEntityRepository {
-        $metadataFactory = new GraphqlEntityMetadataFactory();
+        $metadataFactory = new GraphqlEntityMetadataFactory(namingStrategy: $namingStrategy);
         $manager = new GraphqlManager(
             $metadataFactory,
             $this->client,
