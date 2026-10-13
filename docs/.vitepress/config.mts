@@ -40,6 +40,7 @@ export default defineConfig({
                 text: 'Going further',
                 items: [
                     { text: 'Hydration hooks', link: '/hydration-hooks' },
+                    { text: 'Forms', link: '/forms' },
                     { text: 'Events', link: '/events' },
                     { text: 'Schema validation', link: '/schema-validation' },
                     { text: 'Console commands', link: '/commands' },

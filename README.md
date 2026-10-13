@@ -66,6 +66,7 @@ The documentation is published at **https://hecht-a.github.io/graphql-orm/**, an
 - [Profiler](docs/profiler.md)
 - [Events](docs/events.md) — metrics, tracing
 - [Hydration hooks](docs/hydration-hooks.md) — `#[BeforeHydrate]`, `#[AfterHydrate]`
+- [Forms](docs/forms.md) — `GraphqlEntityType`, a choice among entities
 - [Console commands](docs/commands.md)
 - [PHPStan rules](docs/phpstan.md) — field names checked at analysis time
 

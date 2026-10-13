@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   404 response when it does not exist, or `null` for a nullable argument.
   `#[MapGraphqlEntity]` reads the identifier from another route parameter (`id`), finds the entity by other fields
   (`mapping`) or disables the resolution (`disabled`), as Doctrine `#[MapEntity]` does.
+- `GraphqlEntityType`, a form field whose choices are entities, loaded with `findAll()` or the `query_builder` option,
+  as Doctrine `EntityType`. Registered when symfony/form is installed.
 
 ---
 
