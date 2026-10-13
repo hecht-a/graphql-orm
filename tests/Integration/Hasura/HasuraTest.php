@@ -179,6 +179,12 @@ final class HasuraTest extends IntegrationTestCase
     }
 
     #[Test]
+    public function itAcceptsAnEmptyOrdering(): void
+    {
+        self::assertCount(2, $this->repository(Task::class)->findBy([], [], 2));
+    }
+
+    #[Test]
     public function itCountsEntities(): void
     {
         self::assertSame(4, $this->repository(Task::class)->count());

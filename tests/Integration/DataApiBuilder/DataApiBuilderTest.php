@@ -245,6 +245,12 @@ final class DataApiBuilderTest extends IntegrationTestCase
     }
 
     #[Test]
+    public function itAcceptsAnEmptyOrdering(): void
+    {
+        self::assertCount(2, $this->tasks()->findBy([], [], 2));
+    }
+
+    #[Test]
     public function itNavigatesBetweenPages(): void
     {
         $firstPage = $this->tasks()->createQueryBuilder()->orderBy('id', Direction::ASC)->limit(3)->paginate()->getQuery()->getResult();

@@ -74,6 +74,16 @@ final class PropertyNamesTest extends TestCase
     }
 
     #[Test]
+    public function itSendsNoOrderingForAnEmptyOne(): void
+    {
+        $client = new FakeGraphqlClient(self::NO_TASK);
+
+        $this->tasks($client)->findBy([], [], 1);
+
+        self::assertStringNotContainsString('orderBy', $client->lastQuery);
+    }
+
+    #[Test]
     public function itPrefersTheGraphqlNameWhenAPropertyHasTheNameOfAnotherField(): void
     {
         $client = new FakeGraphqlClient(['data' => ['items' => ['items' => []]]]);

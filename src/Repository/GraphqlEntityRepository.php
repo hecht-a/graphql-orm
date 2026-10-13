@@ -95,7 +95,8 @@ class GraphqlEntityRepository
         $metadata = $this->manager->getMetadataFactory()->getMetadata($this->entityClass);
 
         $options = new QueryOptions();
-        $options->orderBy = $orderBy !== null ? $metadata->withGraphqlNames($orderBy) : null;
+        // An empty ordering, accepted by Doctrine, would be sent as an empty argument that servers reject.
+        $options->orderBy = $orderBy !== null && $orderBy !== [] ? $metadata->withGraphqlNames($orderBy) : null;
         $options->limit = $limit;
 
         $query = (new GraphqlQueryStringBuilder($this->manager))
