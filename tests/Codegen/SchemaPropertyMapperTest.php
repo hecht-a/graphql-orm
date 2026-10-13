@@ -80,6 +80,28 @@ final class SchemaPropertyMapperTest extends TestCase
     }
 
     #[Test]
+    public function itNamesTheTargetsOfTableNamedTypesAsClasses(): void
+    {
+        $schema = $this->schema([
+            'owner' => self::field('OBJECT', 'users'),
+            'categories' => self::field('OBJECT', 'task_categories', list: true),
+            'tag' => self::field('OBJECT', 'Tag'),
+        ], [
+            'users' => ['kind' => 'OBJECT', 'fields' => []],
+            'task_categories' => ['kind' => 'OBJECT', 'fields' => []],
+            'Tag' => ['kind' => 'OBJECT', 'fields' => []],
+        ]);
+
+        $properties = $this->byName($this->mapper->map($schema, 'Task'));
+
+        self::assertSame(['User', 'TaskCategory', 'Tag'], [
+            $properties['owner']->targetEntity,
+            $properties['categories']->targetEntity,
+            $properties['tag']->targetEntity,
+        ]);
+    }
+
+    #[Test]
     public function itMapsAConnectionToACollectionOfItsItems(): void
     {
         $schema = $this->schema(['comments' => self::field('OBJECT', 'CommentConnection')], [

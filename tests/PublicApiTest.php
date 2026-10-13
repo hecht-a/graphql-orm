@@ -31,6 +31,7 @@ use GraphqlOrm\Query\GraphqlQueryCompiler;
 use GraphqlOrm\Query\GraphqlQueryStringBuilder;
 use GraphqlOrm\Schema\GraphqlSchema;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
+use GraphqlOrm\Schema\ScalarTypes;
 use GraphqlOrm\Schema\SchemaIntrospector;
 use GraphqlOrm\Schema\SchemaValidator;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -74,6 +75,7 @@ final class PublicApiTest extends TestCase
             RootArgumentTypeResolver::class,
             SchemaIntrospector::class,
             GraphqlSchema::class,
+            ScalarTypes::class,
             SchemaValidator::class,
             SchemaValidationListener::class,
             StubRenderer::class,

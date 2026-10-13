@@ -12,18 +12,6 @@ use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
  */
 final readonly class SchemaValidator
 {
-    /**
-     * @var array<string, string[]>
-     */
-    private const SCALAR_MAP = [
-        // Byte, Short, Long, Single and Decimal are emitted by Data API Builder.
-        'int' => ['Int', 'ID', 'Byte', 'Short', 'Long'],
-        'float' => ['Float', 'Single', 'Decimal'],
-        'string' => ['String', 'ID', 'Date', 'DateTime', 'Time', 'JSON', 'UUID'],
-        'bool' => ['Boolean'],
-        'DateTimeImmutable' => ['DateTime', 'Date', 'Time', 'String'],
-    ];
-
     public function __construct(
         private GraphqlEntityMetadataFactory $metadataFactory,
     ) {
@@ -146,7 +134,7 @@ final readonly class SchemaValidator
             ? $typeName
             : (new \ReflectionClass($typeName))->getShortName();
 
-        $accepted = self::SCALAR_MAP[$phpType] ?? null;
+        $accepted = ScalarTypes::acceptedBy($phpType);
 
         if ($accepted === null) {
             return [];

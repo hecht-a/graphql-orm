@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace GraphqlOrm\Codegen;
 
 use GraphqlOrm\Schema\GraphqlSchema;
+use GraphqlOrm\Schema\ScalarTypes;
+use Symfony\Component\String\Inflector\EnglishInflector;
 
 /**
  * Turns the fields of a GraphQL object type into the properties of the entity to generate.
@@ -18,25 +20,6 @@ final readonly class SchemaPropertyMapper
     private const IDENTIFIER_FIELD = 'id';
 
     private const IDENTIFIER_SCALAR = 'ID';
-
-    /**
-     * GraphQL scalar => PHP type; any other scalar or enum is generated as a string. Byte, Short, Long, Single and
-     * Decimal are emitted by Data API Builder.
-     */
-    private const PHP_TYPES = [
-        'Int' => 'int',
-        'Byte' => 'int',
-        'Short' => 'int',
-        'Long' => 'int',
-        'Float' => 'float',
-        'Single' => 'float',
-        'Decimal' => 'float',
-        'Boolean' => 'bool',
-        'DateTime' => '\DateTimeImmutable',
-        'Date' => '\DateTimeImmutable',
-    ];
-
-    private const DEFAULT_PHP_TYPE = 'string';
 
     /**
      * @return PropertyDefinition[] in the order of the schema; interface and union fields are skipped
@@ -93,7 +76,7 @@ final readonly class SchemaPropertyMapper
 
         return new PropertyDefinition(
             name: $name,
-            phpType: $list ? 'array' : (self::PHP_TYPES[$field['name'] ?? ''] ?? self::DEFAULT_PHP_TYPE),
+            phpType: $list ? 'array' : ScalarTypes::phpTypeOf($field['name']),
             mappedFrom: $name,
             nullable: !$identifier && ($field['nullable'] ?? true),
             identifier: $identifier,
@@ -115,7 +98,7 @@ final readonly class SchemaPropertyMapper
 
         $itemType = $schema->connectionItemType($typeName);
         $collection = ($field['list'] ?? false) || $itemType !== null;
-        $target = $itemType ?? $typeName;
+        $target = $this->className($itemType ?? $typeName);
 
         return new PropertyDefinition(
             name: $name,
@@ -126,5 +109,22 @@ final readonly class SchemaPropertyMapper
             collection: $collection,
             targetEntity: $target,
         );
+    }
+
+    /**
+     * Types named after their table (Hasura: `users`, `task_categories`) become singular PascalCase class names; types
+     * already named as classes (`Task`) are kept.
+     */
+    private function className(string $typeName): string
+    {
+        if (!ctype_lower($typeName[0])) {
+            return $typeName;
+        }
+
+        $words = explode('_', $typeName);
+        $last = array_pop($words);
+        $words[] = (new EnglishInflector())->singularize($last)[0] ?? $last;
+
+        return implode('', array_map(ucfirst(...), $words));
     }
 }
