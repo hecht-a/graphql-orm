@@ -6,6 +6,7 @@ namespace GraphqlOrm;
 
 use GraphqlOrm\Client\GraphqlClientInterface;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
+use GraphqlOrm\Dialect\BatchLoadingDialect;
 use GraphqlOrm\Dialect\DefaultDialect;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\Event\QueryExecutedEvent;
@@ -30,6 +31,11 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('graphql.manager')]
 class GraphqlManager
 {
+    /**
+     * Identifiers loaded by one lazy loading query.
+     */
+    private const LAZY_LOADING_BATCH_SIZE = 100;
+
     public function __construct(
         private GraphqlEntityMetadataFactory $metadataFactory,
         private GraphqlClientInterface $client,
@@ -100,13 +106,32 @@ class GraphqlManager
     }
 
     /**
-     * Loads the entity behind a lazy ghost, with a query of its own (recorded in the profiler and the logs).
+     * Loads the entities behind lazy ghosts, with queries of their own (recorded in the profiler and the logs): one per
+     * batch of identifiers when the dialect filters on a list, one per entity otherwise.
      *
-     * @param class-string $class
+     * @param class-string     $class
+     * @param list<int|string> $identifiers
+     *
+     * @return list<object> the entities found
      */
-    private function loadLazily(string $class, int|string $identifier): ?object
+    private function loadLazily(string $class, array $identifiers): array
     {
-        return (new GraphqlEntityRepository($this, $class))->find($identifier);
+        $repository = new GraphqlEntityRepository($this, $class);
+        $identifier = $this->metadataFactory->getMetadata($class)->identifier;
+
+        if ($identifier === null || \count($identifiers) === 1 || !$this->dialect instanceof BatchLoadingDialect) {
+            return array_values(array_filter(array_map($repository->find(...), $identifiers)));
+        }
+
+        $entities = [];
+
+        foreach (array_chunk($identifiers, self::LAZY_LOADING_BATCH_SIZE) as $batch) {
+            $qb = $repository->createQueryBuilder();
+            $result = $qb->where($qb->expr()->in($identifier->mappedFrom, $batch))->limit(\count($batch))->getQuery()->getResult();
+            $entities = [...$entities, ...array_values($result instanceof PaginatedResult ? $result->items : $result)];
+        }
+
+        return $entities;
     }
 
     public function getDialect(): GraphqlQueryDialect

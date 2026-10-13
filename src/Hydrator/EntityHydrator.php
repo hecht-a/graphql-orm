@@ -92,7 +92,7 @@ class EntityHydrator
         ++$context->trace->hydratedEntities;
 
         if ($identifier !== null && $uniqueField !== null && $context->lazyLoader !== null && $this->isReducedToIdentifier($metadata, $data, $identifier->mappedFrom)) {
-            $ghost = $this->lazyGhost($metadata, $identifier, $uniqueField, $context->lazyLoader);
+            $ghost = $this->lazyGhost($metadata, $identifier, $uniqueField, $context);
             $property = $this->property($metadata->class, $identifier->property);
             $property->setRawValueWithoutLazyInitialization($ghost, $this->normalizeValue($data[$identifier->mappedFrom], $property));
 
@@ -177,25 +177,61 @@ class EntityHydrator
     }
 
     /**
-     * An entity of which only the identifier is set: its other properties are loaded on first access.
-     *
-     * @param \Closure(class-string, int|string): ?object $loader
+     * An entity of which only the identifier is set: its other properties are loaded on first access. The other ghosts
+     * of its class met in the same response are loaded by the same query when the dialect allows it.
      */
-    private function lazyGhost(GraphqlEntityMetadata $metadata, GraphqlFieldMetadata $identifierField, int|string $identifier, \Closure $loader): object
+    private function lazyGhost(GraphqlEntityMetadata $metadata, GraphqlFieldMetadata $identifierField, int|string $identifier, GraphqlExecutionContext $context): object
     {
         $class = $metadata->class;
 
-        // PHP gives the properties of the ghost their default values before calling the initializer: every property but
-        // the identifier, already set, is copied from the loaded entity.
-        return $this->classReflection($class)->newLazyGhost(function (object $ghost) use ($class, $identifierField, $identifier, $loader): void {
-            $loaded = $loader($class, $identifier) ?? throw EntityNotFoundException::forIdentifier($class, $identifier);
+        return $this->classReflection($class)->newLazyGhost(function (object $ghost) use ($class, $identifierField, $identifier, $context): void {
+            $pending = [$identifier => $ghost];
 
-            foreach ($this->classReflection($class)->getProperties() as $property) {
-                if (!$property->isStatic() && $property->getName() !== $identifierField->property && $property->isInitialized($loaded)) {
-                    $property->setValue($ghost, $property->getValue($loaded));
+            foreach ($context->identityMap[$class] ?? [] as $key => $entity) {
+                if ($entity !== $ghost && $this->isUninitializedGhost($entity)) {
+                    $pending[$key] = $entity;
+                }
+            }
+
+            $loader = $context->lazyLoader ?? throw EntityNotFoundException::forIdentifier($class, $identifier);
+            $identifierProperty = $this->property($class, $identifierField->property);
+            $loaded = [];
+
+            foreach ($loader($class, array_keys($pending)) as $entity) {
+                $key = $identifierProperty->getValue($entity);
+
+                if (\is_int($key) || \is_string($key)) {
+                    $loaded[(string) $key] = $entity;
+                }
+            }
+
+            $this->copyLoaded($loaded[(string) $identifier] ?? throw EntityNotFoundException::forIdentifier($class, $identifier), $ghost, $identifierField, raw: false);
+
+            // The other ghosts are completed without their initializer; one missing from the result stays a ghost.
+            foreach ($pending as $key => $other) {
+                if ($other !== $ghost && isset($loaded[(string) $key])) {
+                    $this->copyLoaded($loaded[(string) $key], $other, $identifierField, raw: true);
+                    $this->classReflection($class)->markLazyObjectAsInitialized($other);
                 }
             }
         });
+    }
+
+    /**
+     * PHP gives the properties of a ghost being initialized their default values: every property but the identifier,
+     * already set, is copied from the loaded entity.
+     */
+    private function copyLoaded(object $loaded, object $ghost, GraphqlFieldMetadata $identifierField, bool $raw): void
+    {
+        foreach ($this->classReflection($ghost::class)->getProperties() as $property) {
+            if ($property->isStatic() || $property->getName() === $identifierField->property || !$property->isInitialized($loaded)) {
+                continue;
+            }
+
+            $raw
+                ? $property->setRawValueWithoutLazyInitialization($ghost, $property->getValue($loaded))
+                : $property->setValue($ghost, $property->getValue($loaded));
+        }
     }
 
     private function isUninitializedGhost(object $entity): bool

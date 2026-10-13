@@ -11,10 +11,12 @@ use GraphqlOrm\Query\GraphqlQueryTrace;
 final class GraphqlExecutionContext
 {
     /**
-     * Loads an entity by its identifier, set when lazy loading is enabled: relations reduced to their identifier are
+     * Loads entities by their identifiers, set when lazy loading is enabled: relations reduced to their identifier are
      * then hydrated as lazy ghosts, loaded on first access.
      *
-     * @var (\Closure(class-string, int|string): ?object)|null
+     * @internal set by GraphqlManager
+     *
+     * @var (\Closure(class-string, list<int|string>): list<object>)|null
      */
     public ?\Closure $lazyLoader = null;
 

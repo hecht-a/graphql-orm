@@ -6,6 +6,7 @@ namespace GraphqlOrm\Tests\Integration\DataApiBuilder;
 
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Codegen\SchemaPropertyMapper;
+use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
@@ -152,6 +153,18 @@ final class DataApiBuilderTest extends TestCase
     }
 
     #[Test]
+    public function itLoadsTheLazyRelationsOfAResponseWithOneQuery(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $tasks = $this->repository(Task::class, maxDepth: 0, lazyLoading: true, collector: $collector)->findBy([], ['id' => Direction::ASC]);
+
+        $names = array_map(fn (Task $task) => $task->user?->name, $tasks);
+
+        self::assertSame(['User A', 'User A', 'User B', null], $names);
+        self::assertSame(2, $collector->getQueryCount());
+    }
+
+    #[Test]
     public function itValidatesTheMappingAgainstTheSchema(): void
     {
         $schema = (new SchemaIntrospector($this->client))->introspectSchema();
@@ -200,14 +213,14 @@ final class DataApiBuilderTest extends TestCase
      *
      * @return GraphqlEntityRepository<T>
      */
-    private function repository(string $entityClass, ?RootArgumentTypeResolver $argumentTypeResolver = null, int $maxDepth = 2, bool $lazyLoading = false): GraphqlEntityRepository
+    private function repository(string $entityClass, ?RootArgumentTypeResolver $argumentTypeResolver = null, int $maxDepth = 2, bool $lazyLoading = false, ?GraphqlOrmDataCollector $collector = null): GraphqlEntityRepository
     {
         $metadataFactory = new GraphqlEntityMetadataFactory();
         $manager = new GraphqlManager(
             $metadataFactory,
             $this->client,
             new EntityHydrator($metadataFactory),
-            null,
+            $collector,
             $maxDepth,
             new DataApiBuilderDialect(),
             argumentTypeResolver: $argumentTypeResolver,

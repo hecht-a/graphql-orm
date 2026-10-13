@@ -9,7 +9,7 @@ use GraphqlOrm\Query\QueryOptions;
 use GraphqlOrm\Query\Walker\DABGraphqlWalker;
 use GraphqlOrm\Query\Walker\GraphqlWalkerInterface;
 
-final class DataApiBuilderDialect implements GraphqlQueryDialect, CursorPaginationDialect
+final class DataApiBuilderDialect implements GraphqlQueryDialect, CursorPaginationDialect, BatchLoadingDialect
 {
     public function extractCollection(array $data): array
     {

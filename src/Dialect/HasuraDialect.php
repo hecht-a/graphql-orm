@@ -16,7 +16,7 @@ use GraphqlOrm\Query\Walker\HasuraGraphqlWalker;
  *
  * Hasura paginates with an offset, not a cursor: `paginate()` is rejected.
  */
-final class HasuraDialect implements GraphqlQueryDialect
+final class HasuraDialect implements GraphqlQueryDialect, BatchLoadingDialect
 {
     private const OPERATORS = [
         'eq' => '_eq',
