@@ -16,6 +16,7 @@ use GraphqlOrm\Metadata\Naming\SnakeCaseNamingStrategy;
 use GraphqlOrm\Query\Direction;
 use GraphqlOrm\Query\GraphqlQuery;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
+use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Schema\SchemaValidator;
 use GraphqlOrm\Tests\Integration\Entity\BrokenTask;
@@ -217,6 +218,25 @@ final class HasuraTest extends IntegrationTestCase
         self::assertSame(['Write the docs', 'Review the tests'], array_map(fn (Task $task) => $task->title, $users[0]->tasks));
         // One query for both users, one for both tasks: the ghosts of a response are loaded together.
         self::assertSame(4, $collector->getQueryCount());
+    }
+
+    #[Test]
+    public function itSendsQueriesInOneDocument(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $manager = $this->manager($collector);
+        $tasks = (new GraphqlEntityRepository($manager, Task::class))->createQueryBuilder();
+
+        [$open, $users] = GraphqlQuery::batch(
+            $tasks->where($tasks->expr()->eq('done', false))->orderBy('id', Direction::ASC)->getQuery(),
+            (new GraphqlEntityRepository($manager, User::class))->createQueryBuilder()->orderBy('id', Direction::ASC)->getQuery(),
+        );
+
+        self::assertSame(1, $collector->getQueryCount());
+        self::assertIsArray($open);
+        self::assertSame([1, 3, 4], self::ids($open));
+        self::assertIsArray($users);
+        self::assertSame([1, 2], self::ids($users));
     }
 
     #[Test]

@@ -76,6 +76,16 @@ abstract class IntegrationTestCase extends TestCase
         return new GraphqlEntityRepository($manager, $entityClass);
     }
 
+    /**
+     * A manager of the API under test, to share between repositories as the bundle does.
+     */
+    protected function manager(?GraphqlOrmDataCollector $collector = null): GraphqlManager
+    {
+        $metadataFactory = new GraphqlEntityMetadataFactory();
+
+        return new GraphqlManager($metadataFactory, $this->client, new EntityHydrator($metadataFactory), $collector, 2, $this->dialect());
+    }
+
     protected function schema(): GraphqlSchema
     {
         $introspection = (new SchemaIntrospector($this->client))->introspectSchema();

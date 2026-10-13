@@ -94,68 +94,169 @@ final readonly class GraphqlQuery
     }
 
     /**
+     * Sends the queries in one GraphQL document, one HTTP request, and returns their results (as getResult()) in the
+     * same order. They must select different root fields, not be paginated, and share a manager; their values are sent
+     * inline. A root field in error fails its query only, once the others are hydrated.
+     *
+     * @param GraphqlQuery<object> ...$queries
+     *
+     * @return list<array<object>|PaginatedResult<object>>
+     *
+     * @throws LogicException          when the queries cannot share a document
+     * @throws GraphqlRequestException the first query failing
+     */
+    public static function batch(self ...$queries): array
+    {
+        $queries = array_values($queries);
+
+        if ($queries === []) {
+            return [];
+        }
+
+        $manager = $queries[0]->manager;
+        $document = new QueryNode();
+        $roots = [];
+
+        foreach ($queries as $index => $query) {
+            if (!$query->graphql instanceof QueryNode || $query->options->paginate || $query->manager !== $manager) {
+                throw new LogicException('Only queries built with a query builder or the find methods, not paginated, of a same manager can be batched: run the others with GraphqlQuery::concurrently().');
+            }
+
+            foreach ($query->graphql->fields as $field) {
+                if (\in_array($field->name, array_merge([], ...$roots), true)) {
+                    throw new LogicException(\sprintf('Two batched queries select "%s": run them with GraphqlQuery::concurrently().', $field->name));
+                }
+
+                $roots[$index][] = $field->name;
+                $document->fields[] = $field;
+            }
+        }
+
+        $hydrated = false;
+
+        try {
+            return $manager->execute($document, function (array $result, GraphqlExecutionContext $context) use ($queries, $roots, &$hydrated): array {
+                $hydrated = true;
+
+                return self::hydrateBatch($queries, $roots, $result, $context);
+            });
+        } catch (GraphqlRequestException $exception) {
+            // A failure of the whole document (no data at all) may come from any query.
+            throw $hydrated ? $exception : $exception->withHints(array_values(array_unique(array_merge(...array_map(fn (self $query) => $query->unmappedFieldHints, $queries)))));
+        }
+    }
+
+    /**
+     * @param list<GraphqlQuery<object>> $queries
+     * @param array<int, list<string>>   $roots   the root fields of each query
+     * @param array<string, mixed>       $result
+     *
+     * @return list<array<object>|PaginatedResult<object>>
+     *
+     * @throws GraphqlRequestException the first query whose root fields are in error
+     */
+    private static function hydrateBatch(array $queries, array $roots, array $result, GraphqlExecutionContext $context): array
+    {
+        $data = \is_array($result['data'] ?? null) ? $result['data'] : [];
+        $errors = \is_array($result['errors'] ?? null) ? $result['errors'] : [];
+        $results = [];
+        $failure = null;
+
+        foreach ($queries as $index => $query) {
+            $names = $roots[$index] ?? [];
+            $queryErrors = array_values(array_filter(
+                $errors,
+                fn (mixed $error) => \is_array($error) && \is_array($error['path'] ?? null) && \in_array($error['path'][0] ?? null, $names, true),
+            ));
+            $queryData = array_intersect_key($data, array_flip($names));
+
+            if ($queryErrors !== [] && array_filter($queryData, fn (mixed $value) => $value !== null) === []) {
+                $failure ??= GraphqlRequestException::graphqlErrors($queryErrors)->withHints($query->unmappedFieldHints);
+
+                continue;
+            }
+
+            $results[] = ($query->resultHydration())(['data' => $queryData], $context);
+        }
+
+        if ($failure !== null) {
+            throw $failure;
+        }
+
+        return $results;
+    }
+
+    /**
      * Sends the query and returns a function completing it.
      *
      * @return \Closure(): (T[]|PaginatedResult<T>)
      */
     private function pendingResult(): \Closure
     {
+        return $this->pending($this->resultHydration());
+    }
+
+    /**
+     * Turns the response into the result of getResult().
+     *
+     * @return \Closure(array<string, mixed>, GraphqlExecutionContext): (T[]|PaginatedResult<T>)
+     */
+    private function resultHydration(): \Closure
+    {
         $metadata = $this->manager
             ->getMetadataFactory()
             ->getMetadata($this->entityClass);
 
-        return $this->pending(
-            function (array $result, GraphqlExecutionContext $context) use ($metadata) {
-                $data = $result['data'] ?? null;
-                $root = \is_array($data) ? ($data[$metadata->name] ?? null) : null;
+        return function (array $result, GraphqlExecutionContext $context) use ($metadata) {
+            $data = $result['data'] ?? null;
+            $root = \is_array($data) ? ($data[$metadata->name] ?? null) : null;
 
-                if ($root === null) {
-                    return $this->options->paginate
-                        ? new PaginatedResult([], false, false, null, [], fn () => null)
-                        : [];
-                }
+            if ($root === null) {
+                return $this->options->paginate
+                    ? new PaginatedResult([], false, false, null, [], fn () => null)
+                    : [];
+            }
 
-                if (!\is_array($root)) {
-                    throw InvalidGraphqlResponseException::expectedArray($root);
-                }
+            if (!\is_array($root)) {
+                throw InvalidGraphqlResponseException::expectedArray($root);
+            }
 
-                $rows = $this->rows($root);
-                $hasNextPage = $this->trimExtraRow($rows);
+            $rows = $this->rows($root);
+            $hasNextPage = $this->trimExtraRow($rows);
 
-                /** @var T[] $items the rows are hydrated as instances of the queried entity */
-                $items = array_map(
-                    fn (array $row) => $this->manager
-                        ->getHydrator()
-                        ->hydrate($metadata, $row, $context),
-                    $rows
-                );
+            /** @var T[] $items the rows are hydrated as instances of the queried entity */
+            $items = array_map(
+                fn (array $row) => $this->manager
+                    ->getHydrator()
+                    ->hydrate($metadata, $row, $context),
+                $rows
+            );
 
-                if (!$this->options->paginate) {
-                    return $items;
-                }
+            if (!$this->options->paginate) {
+                return $items;
+            }
 
-                $dialect = $this->manager->getDialect();
+            $dialect = $this->manager->getDialect();
 
-                if ($dialect instanceof OffsetPaginationDialect) {
-                    $endCursor = $hasNextPage ? (string) ((int) $this->options->cursor + (int) $this->options->limit) : null;
-                } elseif ($dialect instanceof CursorPaginationDialect) {
-                    $hasNextPage = $dialect->hasNextPage($root);
-                    $endCursor = $dialect->endCursor($root);
-                } else {
-                    $hasNextPage = ($root['hasNextPage'] ?? false) === true;
-                    $endCursor = \is_string($root['endCursor'] ?? null) ? $root['endCursor'] : null;
-                }
+            if ($dialect instanceof OffsetPaginationDialect) {
+                $endCursor = $hasNextPage ? (string) ((int) $this->options->cursor + (int) $this->options->limit) : null;
+            } elseif ($dialect instanceof CursorPaginationDialect) {
+                $hasNextPage = $dialect->hasNextPage($root);
+                $endCursor = $dialect->endCursor($root);
+            } else {
+                $hasNextPage = ($root['hasNextPage'] ?? false) === true;
+                $endCursor = \is_string($root['endCursor'] ?? null) ? $root['endCursor'] : null;
+            }
 
-                return new PaginatedResult(
-                    $items,
-                    $hasNextPage,
-                    \count($this->options->cursorStack) > 0,
-                    $endCursor,
-                    $this->options->cursorStack,
-                    $this->fetchPage(...)
-                );
-            },
-        );
+            return new PaginatedResult(
+                $items,
+                $hasNextPage,
+                \count($this->options->cursorStack) > 0,
+                $endCursor,
+                $this->options->cursorStack,
+                $this->fetchPage(...)
+            );
+        };
     }
 
     /**

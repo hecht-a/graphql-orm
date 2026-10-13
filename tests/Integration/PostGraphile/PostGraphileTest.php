@@ -10,10 +10,13 @@ use GraphqlOrm\Dialect\PostGraphileDialect;
 use GraphqlOrm\Exception\GraphqlRequestException;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\Query\Direction;
+use GraphqlOrm\Query\GraphqlQuery;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
+use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Tests\Integration\IntegrationTestCase;
 use GraphqlOrm\Tests\Integration\PostGraphile\Entity\RelayTask;
+use GraphqlOrm\Tests\Integration\PostGraphile\Entity\RelayUser;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -91,6 +94,24 @@ final class PostGraphileTest extends IntegrationTestCase
         $this->expectException(LogicException::class);
 
         $this->repository(RelayTask::class)->findBy(['id' => [1, 3]]);
+    }
+
+    #[Test]
+    public function itSendsQueriesInOneDocument(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $manager = $this->manager($collector);
+
+        [$tasks, $users] = GraphqlQuery::batch(
+            (new GraphqlEntityRepository($manager, RelayTask::class))->createQueryBuilder()->orderBy('id', Direction::DESC)->getQuery(),
+            (new GraphqlEntityRepository($manager, RelayUser::class))->createQueryBuilder()->getQuery(),
+        );
+
+        self::assertSame(1, $collector->getQueryCount());
+        self::assertIsArray($tasks);
+        self::assertSame([4, 3, 2, 1], self::ids($tasks));
+        self::assertIsArray($users);
+        self::assertCount(2, $users);
     }
 
     #[Test]

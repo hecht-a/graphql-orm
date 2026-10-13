@@ -286,6 +286,25 @@ final class DataApiBuilderTest extends IntegrationTestCase
     }
 
     #[Test]
+    public function itSendsQueriesInOneDocument(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $manager = $this->manager($collector);
+        $tasks = (new GraphqlEntityRepository($manager, Task::class))->createQueryBuilder();
+
+        [$open, $users] = GraphqlQuery::batch(
+            $tasks->where($tasks->expr()->eq('done', false))->orderBy('id', Direction::ASC)->getQuery(),
+            (new GraphqlEntityRepository($manager, User::class))->createQueryBuilder()->orderBy('id', Direction::ASC)->getQuery(),
+        );
+
+        self::assertSame(1, $collector->getQueryCount());
+        self::assertIsArray($open);
+        self::assertSame([1, 3, 4], self::ids($open));
+        self::assertIsArray($users);
+        self::assertSame([1, 2], self::ids($users));
+    }
+
+    #[Test]
     public function itNavigatesBetweenPages(): void
     {
         $firstPage = $this->tasks()->createQueryBuilder()->orderBy('id', Direction::ASC)->limit(3)->paginate()->getQuery()->getResult();
