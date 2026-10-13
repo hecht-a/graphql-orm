@@ -49,6 +49,7 @@ graphql_orm:
 |-----------------------------------|--------------------------|-----------------------------------------|
 | `endpoint`                        | *(required)*             | GraphQL API endpoint                    |
 | `max_depth`                       | `2`                      | Relation levels loaded by the automatic selection; deeper relations only get their identifier (an explicit `select()` is not limited) |
+| `lazy_loading`                    | `false`                  | Load the relations reduced to their identifier on first access (see [lazy loading](#lazy-loading)) |
 | `variables.enabled`               | `false`                  | Send root arguments as typed GraphQL variables |
 | `variables.cache_pool`            | `cache.app`              | Cache pool storing the introspected argument types |
 | `variables.ttl`                   | `3600`                   | Seconds before the schema is introspected again |
@@ -65,6 +66,33 @@ graphql_orm:
 | `mapping.entity.namespace`        | `App\GraphQL\Entity`     | Namespace for entities                  |
 | `mapping.repository.dir`          | `src/GraphQL/Repository` | Directory where repositories are stored |
 | `mapping.repository.namespace`    | `App\GraphQL\Repository` | Namespace for repositories              |
+
+## Lazy loading
+
+Beyond `max_depth`, relations only get their identifier selected. With `lazy_loading`, they are hydrated as PHP lazy
+ghosts instead: reading the identifier costs nothing, and the first access to another property loads the entity with
+a query of its own, through its repository `find()`.
+
+```yaml
+graphql_orm:
+    max_depth: 1
+    lazy_loading: true
+```
+
+```php
+$task = $taskRepository->find(1);   // tasks { id title user { id } }
+$task->user->id;                    // no query: the identifier is known
+$task->user->name;                  // users(...) { id name ... }: the user is loaded now
+```
+
+- Each load is a query of its own, shown in the profiler, the logs and the [events](events.md): accessing a lazy
+  relation in a loop sends one query per entity (the N+1 problem). Raise `max_depth`, or select the fields you need,
+  when you know they will be read.
+- An entity whose complete row comes later in the same response is completed from it, without query.
+- An entity deleted in the meantime throws an `EntityNotFoundException` on first access.
+- The relations of a lazily loaded entity are lazy as well.
+
+Lazy ghosts are a PHP 8.4 feature: they need no proxy class, and work with `final` entity classes.
 
 ## HTTP client
 

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- `lazy_loading` option (disabled by default): the relations reduced to their identifier beyond `max_depth` are
+  hydrated as PHP 8.4 lazy ghosts, loaded with a query of their own on first access; `EntityNotFoundException` when
+  the entity no longer exists.
+
+### Changed
+
+- Requires PHP 8.4+ (was PHP 8.3+).
+
+---
+
 ## [3.2.0] — 2026-10-13
 
 ### Added
