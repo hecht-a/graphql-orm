@@ -56,6 +56,26 @@ $qb->where($expr->andX($expr->isNotNull('dueDate'), $expr->lt('dueDate', new \Da
 `notIn()` needs at least one value. Data API Builder has no "not in" operator, hence one inequality per value; like
 SQL `NOT IN`, it does not match `null`.
 
+### Through relations
+
+A path filters on the fields of a relation, each segment being a GraphQL name or a PHP property. On a collection, it
+matches the entities having at least one related entity that matches:
+
+```php
+// The tasks of User B
+$qb->where($expr->eq('user.name', 'User B'));
+
+// The users having at least one task done
+$users->where($users->expr()->eq('tasks.done', true));
+```
+
+```graphql
+tasks(filter: { user: { name: { eq: "User B" } } })   # Data API Builder
+tasks(where: { user: { name: { _eq: "User B" } } })   # Hasura
+```
+
+PostGraphile needs a plugin for filters (see [dialects.md](dialects.md)).
+
 ## Ordering and limit
 
 ```php

@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `naming_strategy` in the configuration, as Doctrine does for columns. `DefaultNamingStrategy` (the default) keeps the
   property name, `SnakeCaseNamingStrategy` turns `dueDate` into `due_date`; implement `NamingStrategy` for another
   convention. The PHPStan rules take the same class in the `graphqlOrm.namingStrategy` parameter.
+- Query builder filters through relations: `$expr->eq('user.name', 'User B')` is sent nested, as
+  `{user: {name: {eq: ...}}}`; on a collection (`tasks.done`), it matches the entities having at least one related
+  entity that matches. Data API Builder and Hasura.
 
 ---
 
