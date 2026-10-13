@@ -25,6 +25,10 @@ final class HasuraDialect implements GraphqlQueryDialect, BatchLoadingDialect, O
     private const OPERATORS = [
         'eq' => '_eq',
         'neq' => '_neq',
+        'gt' => '_gt',
+        'gte' => '_gte',
+        'lt' => '_lt',
+        'lte' => '_lte',
         'in' => '_in',
         'isNull' => '_is_null',
         'contains' => '_like',

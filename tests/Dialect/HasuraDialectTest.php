@@ -45,6 +45,26 @@ final class HasuraDialectTest extends TestCase
     }
 
     #[Test]
+    public function itTranslatesOrderingComparisonsToHasuraOperators(): void
+    {
+        $filter = $this->expr->andX(
+            $this->expr->gt('priority', 1),
+            $this->expr->gte('priority', 2),
+            $this->expr->lt('priority', 5),
+            $this->expr->lte('priority', 4),
+            $this->expr->isNotNull('due_date'),
+        );
+
+        self::assertSame(['where' => ['_and' => [
+            ['priority' => ['_gt' => 1]],
+            ['priority' => ['_gte' => 2]],
+            ['priority' => ['_lt' => 5]],
+            ['priority' => ['_lte' => 4]],
+            ['due_date' => ['_is_null' => false]],
+        ]]], $this->dialect->applyFilter($filter));
+    }
+
+    #[Test]
     public function itTranslatesTextSearchesToLikePatterns(): void
     {
         $filter = $this->expr->orX(

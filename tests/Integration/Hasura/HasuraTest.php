@@ -35,6 +35,34 @@ final class HasuraTest extends IntegrationTestCase
     }
 
     #[Test]
+    public function itComparesValuesWithTheQueryBuilder(): void
+    {
+        $qb = $this->repository(Task::class)->createQueryBuilder();
+        $expr = $qb->expr();
+
+        $before = $qb
+            ->where($expr->andX($expr->isNotNull('due_date'), $expr->lt('due_date', new \DateTimeImmutable('2026-01-20T00:00:00+00:00'))))
+            ->getQuery()
+            ->getResult();
+        $from = $this->repository(Task::class)->createQueryBuilder()
+            ->where($expr->gte('due_date', new \DateTimeImmutable('2026-01-20T00:00:00+00:00')))
+            ->getQuery()
+            ->getResult();
+        $others = $this->repository(Task::class)->createQueryBuilder()
+            ->where($expr->notIn('id', [1, 2]))
+            ->orderBy('id', Direction::ASC)
+            ->getQuery()
+            ->getResult();
+
+        self::assertIsArray($before);
+        self::assertSame([1], self::ids($before));
+        self::assertIsArray($from);
+        self::assertSame([3], self::ids($from));
+        self::assertIsArray($others);
+        self::assertSame([3, 4], self::ids($others));
+    }
+
+    #[Test]
     public function itCountsEntities(): void
     {
         self::assertSame(4, $this->repository(Task::class)->count());
