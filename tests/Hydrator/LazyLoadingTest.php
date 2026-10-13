@@ -86,6 +86,22 @@ final class LazyLoadingTest extends TestCase
     }
 
     #[Test]
+    public function itStillLoadsAGhostReferencedTwiceInTheResponse(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['chainAs' => [
+            ['id' => 1, 'label' => 'A', 'next' => ['id' => 2]],
+            ['id' => 5, 'label' => 'E', 'next' => ['id' => 2]],
+        ]]], self::CHAIN_B);
+        $chainAs = $this->repository($client, lazyLoading: true)->findAll();
+
+        $label = $chainAs[0]->next?->label;
+
+        self::assertSame($chainAs[0]->next, $chainAs[1]->next);
+        self::assertSame('B', $label);
+        self::assertSame(2, $client->callCount);
+    }
+
+    #[Test]
     public function itCompletesALazyEntityFoundLaterInTheSameResponseWithoutQuery(): void
     {
         $client = new FakeGraphqlClient(['data' => ['chainAs' => [

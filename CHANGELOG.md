@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- Lazy loading: a ghost referenced twice in the same response (two entities pointing to the same relation) was marked
+  as loaded with its default values, without query. A ghost is now only completed by a row holding every mapped field;
+  otherwise it is loaded on first access.
+
+---
+
 ## [4.0.0] — 2026-10-13
 
 ### Upgrading from 3.x

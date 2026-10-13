@@ -74,10 +74,13 @@ class EntityHydrator
         $known = $uniqueField !== null ? ($context->identityMap[$metadata->class][$uniqueField] ?? null) : null;
 
         // An entity met again, e.g. first as a nested relation reduced to its identifier, gets the fields of this row.
+        if ($known !== null && $this->isUninitializedGhost($known)) {
+            return $this->completeGhost($known, $metadata, $data, $context, $depth);
+        }
+
         if ($known !== null) {
             $wasComplete = $this->areMappedFieldsInitialized($known, $metadata);
             $this->hydrateFields($known, $metadata, $data, $context, $depth);
-            $this->markCompletedGhostAsInitialized($known, $metadata);
 
             if (!$wasComplete) {
                 $this->callAfterHydrateMethods($known, $metadata);
@@ -201,13 +204,26 @@ class EntityHydrator
     }
 
     /**
-     * A ghost whose mapped fields were all hydrated from a later row needs no query anymore.
+     * A ghost met again: the fields of this row are set without loading it, and a row holding every mapped field makes
+     * the query needless. PHP reports the properties of a ghost having a default value as initialized, so completeness
+     * is read from the row, not from the object.
+     *
+     * @param array<string|int, mixed> $data
      */
-    private function markCompletedGhostAsInitialized(object $entity, GraphqlEntityMetadata $metadata): void
+    private function completeGhost(object $ghost, GraphqlEntityMetadata $metadata, array $data, GraphqlExecutionContext $context, int $depth): object
     {
-        if ($this->isUninitializedGhost($entity) && $this->areMappedFieldsInitialized($entity, $metadata)) {
-            $this->classReflection($entity::class)->markLazyObjectAsInitialized($entity);
+        $this->hydrateFields($ghost, $metadata, $data, $context, $depth);
+
+        foreach ($metadata->fields as $field) {
+            if (!\array_key_exists($field->mappedFrom, $data)) {
+                return $ghost;
+            }
         }
+
+        $this->classReflection($ghost::class)->markLazyObjectAsInitialized($ghost);
+        $this->callAfterHydrateMethods($ghost, $metadata);
+
+        return $ghost;
     }
 
     /**
