@@ -114,6 +114,43 @@ final class GraphqlOrmDataCollectorTest extends TestCase
     }
 
     #[Test]
+    public function itGivesEachQueryAsACurlCommand(): void
+    {
+        $trace = self::traceOf("query (\$id: Int) {\n  tasks(id: \$id) { title }\n}");
+        $trace->endpoint = 'https://graphql.example.com/graphql';
+        $trace->variables = ['id' => 3];
+
+        $this->collector->addQuery($trace);
+
+        self::assertSame(
+            "curl -X POST 'https://graphql.example.com/graphql' -H 'Content-Type: application/json' --data-raw '{\"query\":\"query (\$id: Int) {\\n  tasks(id: \$id) { title }\\n}\",\"variables\":{\"id\":3}}'",
+            $this->collector->getQueries()[0]['curl'],
+        );
+    }
+
+    #[Test]
+    public function itQuotesTheCurlCommandForTheShell(): void
+    {
+        $trace = self::traceOf('query { users(name: "O\'Brien") { id } }');
+        $trace->endpoint = 'https://graphql.example.com/graphql';
+
+        $this->collector->addQuery($trace);
+
+        self::assertSame(
+            "curl -X POST 'https://graphql.example.com/graphql' -H 'Content-Type: application/json' --data-raw '{\"query\":\"query { users(name: \\\"O'\\''Brien\\\") { id } }\",\"variables\":{}}'",
+            $this->collector->getQueries()[0]['curl'],
+        );
+    }
+
+    #[Test]
+    public function itHasNoCurlCommandForAQueryWithoutEndpoint(): void
+    {
+        $this->collector->addQuery(self::traceOf('query { tasks { id } }'));
+
+        self::assertNull($this->collector->getQueries()[0]['curl']);
+    }
+
+    #[Test]
     public function itIsNamedForTheProfilerPanel(): void
     {
         self::assertSame('graphql_orm', $this->collector->getName());

@@ -204,7 +204,7 @@ border-radius:4px;
 border:1px solid #444;
 background:#2d2d2d;
 color:white;
-" onclick="copyGraphql(this)" data-graphql="{{ query.graphql|e('html_attr') }}">
+" onclick="copyToClipboard(this)" data-copy="{{ query.graphql|e('html_attr') }}">
                         Copy
                     </button>
                     <pre style="
@@ -219,6 +219,15 @@ border-radius:6px;
 {{ query.graphql }}
 </pre>
                 </div>
+
+                {% if query.curl is defined and query.curl %}
+                    <p>
+                        <button class="btn btn-sm" onclick="copyToClipboard(this)" data-copy="{{ query.curl|e('html_attr') }}"
+                                title="Values are masked unless redact_query_values is false; headers such as Authorization are not included.">
+                            Copy as cURL
+                        </button>
+                    </p>
+                {% endif %}
 
                 {% if query.ast %}
                     <h4>GraphQL AST</h4>
@@ -312,9 +321,8 @@ border-radius:6px;
     </style>
 
     <script>
-        function copyGraphql(button) {
-            const query = button.dataset.graphql;
-            navigator.clipboard.writeText(query)
+        function copyToClipboard(button) {
+            navigator.clipboard.writeText(button.dataset.copy)
                 .then(() => {
                     const original = button.innerText;
                     button.innerText = "Copied ✓";

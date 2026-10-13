@@ -36,6 +36,7 @@ final class GraphqlOrmDataCollector extends DataCollector
             'ast' => $trace->ast,
             'variables' => $trace->variables,
             'endpoint' => $trace->endpoint,
+            'curl' => $trace->endpoint !== null ? self::curl($trace->endpoint, $trace->graphql, $trace->variables) : null,
             'caller' => $trace->caller,
             'response_size' => $trace->responseSize,
             'errors' => $trace->errors,
@@ -47,6 +48,26 @@ final class GraphqlOrmDataCollector extends DataCollector
             'duration' => $trace->duration,
         ];
         $this->data['queries'] = $queries;
+    }
+
+    /**
+     * The query as a cURL command, to replay it from a terminal. Headers are not recorded: authentication is to be added.
+     *
+     * @param array<mixed> $variables
+     */
+    private static function curl(string $endpoint, string $graphql, array $variables): string
+    {
+        $body = json_encode(
+            ['query' => $graphql, 'variables' => $variables === [] ? new \stdClass() : $variables],
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE,
+        );
+
+        return \sprintf('curl -X POST %s -H %s --data-raw %s', self::shellQuote($endpoint), self::shellQuote('Content-Type: application/json'), self::shellQuote($body));
+    }
+
+    private static function shellQuote(string $value): string
+    {
+        return "'" . str_replace("'", "'\\''", $value) . "'";
     }
 
     public function collect(

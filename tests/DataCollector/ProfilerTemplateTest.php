@@ -31,6 +31,21 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itCopiesAQueryAsACurlCommand(): void
+    {
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { tasks { id } }';
+        $trace->endpoint = 'https://graphql.example.com/graphql';
+        $collector = new GraphqlOrmDataCollector();
+        $collector->addQuery($trace);
+
+        $html = $this->render($collector);
+
+        self::assertStringContainsString('Copy as cURL', $html);
+        self::assertStringContainsString('data-copy="curl&#x20;-X&#x20;POST&#x20;&#x27;https&#x3A;&#x2F;&#x2F;graphql.example.com&#x2F;graphql&#x27;', $html);
+    }
+
+    #[Test]
     public function itRendersTheAstOfAQuery(): void
     {
         $trace = new GraphqlQueryTrace();
