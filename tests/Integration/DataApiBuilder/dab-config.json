@@ -1,0 +1,82 @@
+{
+    "$schema": "https://github.com/Azure/data-api-builder/releases/download/v2.0.12/dab.draft.schema.json",
+    "data-source": {
+        "database-type": "postgresql",
+        "connection-string": "@env('DAB_CONNECTION_STRING')"
+    },
+    "runtime": {
+        "rest": {
+            "enabled": false
+        },
+        "graphql": {
+            "enabled": true,
+            "path": "/graphql",
+            "allow-introspection": true
+        },
+        "host": {
+            "mode": "development"
+        }
+    },
+    "entities": {
+        "User": {
+            "source": {
+                "object": "public.users",
+                "type": "table"
+            },
+            "graphql": {
+                "enabled": true,
+                "type": {
+                    "singular": "User",
+                    "plural": "users"
+                }
+            },
+            "rest": {
+                "enabled": false
+            },
+            "permissions": [
+                {
+                    "role": "anonymous",
+                    "actions": [{ "action": "read" }]
+                }
+            ],
+            "relationships": {
+                "tasks": {
+                    "cardinality": "many",
+                    "target.entity": "Task",
+                    "source.fields": ["id"],
+                    "target.fields": ["user_id"]
+                }
+            }
+        },
+        "Task": {
+            "source": {
+                "object": "public.tasks",
+                "type": "table"
+            },
+            "graphql": {
+                "enabled": true,
+                "type": {
+                    "singular": "Task",
+                    "plural": "tasks"
+                }
+            },
+            "rest": {
+                "enabled": false
+            },
+            "permissions": [
+                {
+                    "role": "anonymous",
+                    "actions": [{ "action": "read" }]
+                }
+            ],
+            "relationships": {
+                "user": {
+                    "cardinality": "one",
+                    "target.entity": "User",
+                    "source.fields": ["user_id"],
+                    "target.fields": ["id"]
+                }
+            }
+        }
+    }
+}

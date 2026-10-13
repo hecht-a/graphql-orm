@@ -57,3 +57,25 @@ jobs:
         run: composer update --prefer-stable ${{ matrix.dependencies == 'lowest' && '--prefer-lowest' || '' }}
       - name: tests
         run: vendor/bin/phpunit
+  integration:
+    runs-on: ubuntu-latest
+    name: 'integration (Data API Builder)'
+    steps:
+      - name: checkout
+        uses: actions/checkout@master
+      - name: setup
+        uses: shivammathur/setup-php@2.36.0
+        with:
+          php-version: 8.3
+          coverage: none
+      - name: composer install
+        run: composer update --prefer-stable
+      - name: start Data API Builder
+        run: docker compose -f tests/Integration/DataApiBuilder/compose.yaml up -d --wait
+      - name: tests
+        run: vendor/bin/phpunit --group integration
+        env:
+          GRAPHQL_ORM_DAB_ENDPOINT: http://localhost:5000/graphql
+      - name: Data API Builder logs
+        if: failure()
+        run: docker compose -f tests/Integration/DataApiBuilder/compose.yaml logs

@@ -20,6 +20,13 @@
         </testsuite>
     </testsuites>
 
+    <!-- Needs a running Data API Builder: see CONTRIBUTING.md -->
+    <groups>
+        <exclude>
+            <group>integration</group>
+        </exclude>
+    </groups>
+
     <source>
         <include>
             <directory>src</directory>
