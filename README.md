@@ -68,3 +68,7 @@ The documentation is published at **https://hecht-a.github.io/graphql-orm/**, an
 - [Hydration hooks](docs/hydration-hooks.md) — `#[BeforeHydrate]`, `#[AfterHydrate]`
 - [Console commands](docs/commands.md)
 - [PHPStan rules](docs/phpstan.md) — field names checked at analysis time
+
+## License
+
+MIT, see [LICENSE](LICENSE).
