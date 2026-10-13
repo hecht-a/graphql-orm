@@ -49,7 +49,8 @@ foreach ($tasks as $task) {
 ```
 
 The query must be paginated, otherwise `toIterable()` throws a `LogicException`. Each page has its own identity map: an
-entity met on two pages is hydrated twice. Order the query on a unique field, so that the pages do not overlap.
+entity met on two pages is hydrated twice, and the pages are kept out of the
+[shared identity map](configuration.md#shared-identity-map). Order the query on a unique field, so that the pages do not overlap.
 
 ## Dialects
 

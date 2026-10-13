@@ -53,6 +53,7 @@ graphql_orm:
 | `variables.enabled`               | `false`                  | Send root arguments as typed GraphQL variables |
 | `variables.cache_pool`            | `cache.app`              | Cache pool storing the introspected argument types |
 | `variables.ttl`                   | `3600`                   | Seconds before the schema is introspected again |
+| `identity_map`                    | `false`                  | Share the entities between the queries of a request (see [shared identity map](#shared-identity-map)) |
 | `slow_query_threshold`            | `null`                   | Milliseconds from which a query is logged as a warning and highlighted in the profiler (see [slow queries](logging.md#slow-queries)) |
 | `redact_query_values`             | `true`                   | Mask query values in logs and profiler (see [logging.md](logging.md#masked-values)) |
 | `http_client`                     | `null`                   | HTTP client service id; defaults to the autowired `HttpClientInterface` |
@@ -98,6 +99,26 @@ $task->user->name;                  // users(...) { id name ... }: the user is l
 - The relations of a lazily loaded entity are lazy as well.
 
 Lazy ghosts are a PHP 8.4 feature: they need no proxy class, and work with `final` entity classes.
+
+## Shared identity map
+
+By default each query has its own identity map: two `find(1)` send two queries and give two instances. With
+`identity_map`, the queries of a request share their entities, as Doctrine does:
+
+```yaml
+graphql_orm:
+    identity_map: true
+```
+
+- An entity is one instance, updated by each query returning it.
+- `find()` returns an entity known in full without a query: one met in a previous query, nested relations included.
+  An entity known only in part (a `select()` of some fields) or a lazy ghost not loaded yet is still queried.
+- The map is reset between requests and between Messenger messages (`kernel.reset`), so that no data outlives them.
+  A long-running script calls `GraphqlManager::clear()`.
+- `toIterable()` keeps its pages out of it, so that going through a large result set still holds a single page.
+
+It is disabled by default as it changes the behavior: the same instance everywhere, and `find()` not always sending a
+query.
 
 ## HTTP client
 
