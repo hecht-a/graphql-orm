@@ -7,6 +7,7 @@ namespace GraphqlOrm\Query\Walker;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Ast\SelectionSetNode;
+use GraphqlOrm\Query\EnumLiteral;
 
 class DefaultGraphqlWalker extends AbstractGraphqlWalker
 {
@@ -25,6 +26,10 @@ class DefaultGraphqlWalker extends AbstractGraphqlWalker
 
     protected function formatValue(mixed $value): string
     {
+        if ($value instanceof EnumLiteral) {
+            return $value->name;
+        }
+
         if (\is_string($value)) {
             return $this->formatString($value);
         }

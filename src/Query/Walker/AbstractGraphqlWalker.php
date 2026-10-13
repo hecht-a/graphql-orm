@@ -9,6 +9,7 @@ use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\Ast\SelectionSetNode;
 use GraphqlOrm\Query\CompiledQuery;
+use GraphqlOrm\Query\EnumLiteral;
 use GraphqlOrm\Query\GraphqlName;
 use GraphqlOrm\Query\Printer\GraphqlPrinter;
 use GraphqlOrm\Query\QueryOptions;
@@ -183,6 +184,7 @@ abstract class AbstractGraphqlWalker implements VariableAwareWalkerInterface
         return match (true) {
             \is_array($value) => array_map(fn (mixed $item) => $this->toVariableValue($item), $value),
             $value instanceof \BackedEnum => $value->value,
+            $value instanceof EnumLiteral => $value->name,
             $value instanceof \DateTimeInterface => $value->format(DATE_ATOM),
             \is_float($value) => is_finite($value) ? $value : throw new InvalidArgumentException('Non-finite floats (INF, NAN) cannot be sent as GraphQL arguments.'),
             default => $value,

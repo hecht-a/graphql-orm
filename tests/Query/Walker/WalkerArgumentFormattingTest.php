@@ -8,6 +8,7 @@ use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\Ast\SelectionSetNode;
+use GraphqlOrm\Query\EnumLiteral;
 use GraphqlOrm\Query\QueryOptions;
 use GraphqlOrm\Query\Walker\DABGraphqlWalker;
 use GraphqlOrm\Query\Walker\DefaultGraphqlWalker;
@@ -110,6 +111,24 @@ final class WalkerArgumentFormattingTest extends TestCase
 
         $this->expectException(InvalidArgumentException::class);
         $walker->walk($query, new QueryOptions());
+    }
+
+    #[Test]
+    #[DataProvider('walkers')]
+    public function itPrintsEnumLiteralsWithoutQuotes(GraphqlWalkerInterface $walker): void
+    {
+        $query = $this->queryWithArguments(['orderBy' => [new EnumLiteral('TITLE_DESC'), new EnumLiteral('ID_ASC')]]);
+
+        $graphql = $walker->walk($query, new QueryOptions());
+
+        self::assertStringContainsString('things(orderBy: [TITLE_DESC, ID_ASC])', $graphql);
+    }
+
+    #[Test]
+    public function itRejectsAnEnumLiteralThatIsNotAGraphqlName(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        new EnumLiteral('TITLE_DESC) { secret');
     }
 
     /**

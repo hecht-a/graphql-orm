@@ -8,6 +8,7 @@ use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\Ast\SelectionSetNode;
 use GraphqlOrm\Query\Direction;
+use GraphqlOrm\Query\EnumLiteral;
 use GraphqlOrm\Query\QueryOptions;
 use GraphqlOrm\Query\Walker\DABGraphqlWalker;
 use GraphqlOrm\Query\Walker\DefaultGraphqlWalker;
@@ -107,6 +108,17 @@ final class WalkerVariablesTest extends TestCase
 
         self::assertStringContainsString('things(first: $first, after: $after)', $compiled->graphql);
         self::assertSame(['first' => 5, 'after' => 'c1'], $compiled->variables);
+    }
+
+    #[Test]
+    #[DataProvider('walkers')]
+    public function itSendsEnumLiteralsAsStringVariables(VariableAwareWalkerInterface $walker): void
+    {
+        $query = $this->queryWithArguments(['orderBy' => [new EnumLiteral('TITLE_DESC')]]);
+
+        $compiled = $walker->walkWithVariables($query, new QueryOptions(), ['orderBy' => '[TasksOrderBy!]']);
+
+        self::assertSame(['orderBy' => ['TITLE_DESC']], $compiled->variables);
     }
 
     /**
