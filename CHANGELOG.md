@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Messenger messages (`kernel.reset`); `GraphqlManager::clear()` for a long-running script. `toIterable()` keeps its
   pages out of it. Disabled by default.
 
+### Changed
+
+- The AST of each query is exported for the trace without a JSON round trip: about a quarter less of the time the
+  bundle spends on a small query, measured by the new benchmarks (`tests/Benchmark`, PHPBench).
+
 ---
 
 ## [4.7.0] — 2026-10-13

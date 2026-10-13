@@ -10,6 +10,18 @@ castor qa:cs:check          # coding standards (castor qa:cs:fix to fix them)
 castor qa:phpstan           # static analysis, level max on src/ and tests/
 ```
 
+## Benchmarks
+
+`tests/Benchmark` measures what the bundle costs, the network left aside: the overhead of a query and the hydration of
+a large response. To tell whether a change makes a difference, tag a run on the base branch and compare to it:
+
+```bash
+vendor/bin/phpbench run --report=summary --tag=before   # on the base branch
+vendor/bin/phpbench run --report=summary --ref=before   # with the change
+```
+
+The runs disable Xdebug and enable OPcache (`phpbench.json`), so that the figures are close to production.
+
 ## Integration tests
 
 The `integration` group runs every dialect against a real GraphQL server, all backed by the same PostgreSQL database
