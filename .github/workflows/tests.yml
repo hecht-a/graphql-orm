@@ -76,7 +76,7 @@ jobs:
         run: |
           for endpoint in http://127.0.0.1:5000/graphql http://127.0.0.1:8080/v1/graphql http://127.0.0.1:5001/graphql; do
             ready=false
-            for attempt in $(seq 1 60); do
+            for _ in $(seq 1 60); do
               if curl -sf -X POST "$endpoint" -H 'Content-Type: application/json' -d '{"query":"{ __typename }"}' > /dev/null; then
                 ready=true
                 break

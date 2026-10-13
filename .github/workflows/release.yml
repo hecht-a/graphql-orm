@@ -1,0 +1,25 @@
+name: Release
+on:
+  push:
+    tags: [ 'v*' ]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v5
+      - name: release notes from the changelog
+        run: .github/scripts/changelog-section.sh "${TAG#v}" > release-notes.md
+      # A release created by hand is kept as is.
+      - name: create the GitHub release
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "The release $TAG already exists: nothing to do."
+            exit 0
+          fi
+          gh release create "$TAG" --title "$TAG" --notes-file release-notes.md --verify-tag

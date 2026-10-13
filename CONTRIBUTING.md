@@ -44,3 +44,18 @@ docker compose -f tests/Integration/compose.yaml down
 
 Commit messages follow `type: message` (`feat`, `fix`, `docs`, `refactor`, `test`, `build`, `chore`), and user-facing
 changes are recorded in `CHANGELOG.md`, under `[Unreleased]`.
+
+## Releasing
+
+1. Rename the `[Unreleased]` section of `CHANGELOG.md` to the version and the date, e.g. `## [4.2.0] — 2026-10-13`,
+   with an `Upgrading from x.y` section for a major version, and commit it as `chore: release 4.2.0`.
+2. Tag the commit and push the tag:
+
+   ```bash
+   git tag -a v4.2.0 -m "4.2.0"
+   git push origin main v4.2.0
+   ```
+
+The `Release` workflow then creates the GitHub release, named after the tag, with the changelog section of the
+version as notes (`.github/scripts/changelog-section.sh`). It fails when the version has no section, and leaves a
+release already created by hand untouched.
