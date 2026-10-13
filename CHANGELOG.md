@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   criteria, with the dialects implementing the new `AggregatingDialect` interface: `DataApiBuilderDialect` (numeric
   fields) and `HasuraDialect`. The PHPStan rules check their field and criteria. A repository already declaring a
   method of the same name must give it the same signature, or rename it.
+- `GraphqlQuery::concurrently()`, running several queries at once: every request is sent before any response is read.
+  `GraphqlClient` implements the new `ConcurrentGraphqlClientInterface`; other clients run the queries one after the
+  other. `GraphqlQuery` and `PaginatedResult` are covariant in their entity type: a `GraphqlQuery<Task>` is a
+  `GraphqlQuery<object>`.
 
 ---
 

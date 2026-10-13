@@ -118,6 +118,25 @@ $task = $qb->where($qb->expr()->eq('id', 3))->getQuery()->getSingleResult();    
 requests two, to tell the result is unique, and throws a `NoResultException` when there is none, a
 `NonUniqueResultException` when there are several. Both keep an explicit `limit()`.
 
+## Concurrent queries
+
+`GraphqlQuery::concurrently()` runs several queries at once: every request is sent before any response is read, so
+that a page loading independent lists waits for the slowest query rather than for their sum. It returns the results,
+as `getResult()` returns them, in the same order:
+
+```php
+use GraphqlOrm\Query\GraphqlQuery;
+
+[$tasks, $users] = GraphqlQuery::concurrently(
+    $taskRepository->createQueryBuilder()->where($expr->eq('done', false))->getQuery(),
+    $userRepository->createQueryBuilder()->getQuery(),
+);
+```
+
+Each query is recorded in the profiler, the logs and the events as usual. When some fail, the others still complete,
+then the first failure is thrown. The concurrency is the one of the Symfony HTTP client (curl): a client implementing
+only `GraphqlClientInterface` runs the queries one after the other.
+
 ## Array results
 
 `getArrayResult()` returns the rows as the API sent them, without creating entities: lighter for an export or a JSON
