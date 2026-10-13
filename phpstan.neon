@@ -5,5 +5,7 @@ parameters:
 		- tests/
 	excludePaths:
 		- src/Resources/stubs/*
+		# Code analysed by the tests of the bundle rules, with deliberate errors
+		- tests/PHPStan/data/*
 
 	tmpDir: cache

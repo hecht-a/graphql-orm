@@ -23,6 +23,10 @@ use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Metadata\MetadataCacheWarmer;
+use GraphqlOrm\PHPStan\EntityClassResolver;
+use GraphqlOrm\PHPStan\FieldNameChecker;
+use GraphqlOrm\PHPStan\QueryBuilderFieldNamesRule;
+use GraphqlOrm\PHPStan\RepositoryFieldNamesRule;
 use GraphqlOrm\Query\GraphqlQueryCompiler;
 use GraphqlOrm\Query\GraphqlQueryStringBuilder;
 use GraphqlOrm\Schema\GraphqlSchema;
@@ -81,6 +85,10 @@ final class PublicApiTest extends TestCase
             GraphqlOrmDataCollector::class,
             Configuration::class,
             GraphqlOrmExtension::class,
+            FieldNameChecker::class,
+            EntityClassResolver::class,
+            RepositoryFieldNamesRule::class,
+            QueryBuilderFieldNamesRule::class,
         ] as $class) {
             yield $class => [$class];
         }

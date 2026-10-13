@@ -1,0 +1,23 @@
+# PHPStan rules of the bundle: included automatically with phpstan/extension-installer, otherwise add
+# "vendor/hecht-a/graphql-orm/extension.neon" to the includes of your PHPStan configuration.
+parameters:
+    graphqlOrm:
+        # Report field names that the entity does not map; false only reports what is certainly wrong.
+        reportUnmappedFields: true
+
+parametersSchema:
+    graphqlOrm: structure([
+        reportUnmappedFields: bool()
+    ])
+
+services:
+    -
+        class: GraphqlOrm\PHPStan\FieldNameChecker
+        arguments:
+            reportUnmappedFields: %graphqlOrm.reportUnmappedFields%
+    -
+        class: GraphqlOrm\PHPStan\RepositoryFieldNamesRule
+        tags: [phpstan.rules.rule]
+    -
+        class: GraphqlOrm\PHPStan\QueryBuilderFieldNamesRule
+        tags: [phpstan.rules.rule]
