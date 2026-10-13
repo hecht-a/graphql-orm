@@ -11,6 +11,7 @@ use GraphqlOrm\Query\Ast\SelectionSetNode;
 use GraphqlOrm\Query\GraphqlQueryCompiler;
 use GraphqlOrm\Query\QueryOptions;
 use GraphqlOrm\Query\Walker\DefaultGraphqlWalker;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 final class DefaultGraphqlWalkerTest extends TestCase
@@ -134,5 +135,30 @@ GQL,
         $graphql = $compiler->compile($query, new QueryOptions());
 
         self::assertStringContainsString('tasks', $graphql);
+    }
+
+    #[Test]
+    public function itSelectsNestedCollectionsWithoutEnvelope(): void
+    {
+        $taskFields = new SelectionSetNode();
+        $taskFields->add(new FieldNode('id'));
+        $userFields = new SelectionSetNode();
+        $userFields->add(new FieldNode('id'));
+        $userFields->add(new FieldNode('tasks', [], $taskFields, isCollection: true));
+        $query = new QueryNode();
+        $query->fields[] = new FieldNode('users', [], $userFields);
+
+        $graphql = (new DefaultGraphqlWalker())->walk($query, new QueryOptions());
+
+        self::assertSame(<<<'GQL'
+            query {
+              users {
+                id
+                tasks {
+                  id
+                }
+              }
+            }
+            GQL, $graphql);
     }
 }
