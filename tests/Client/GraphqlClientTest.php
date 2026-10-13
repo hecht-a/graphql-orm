@@ -75,6 +75,19 @@ final class GraphqlClientTest extends TestCase
         self::assertInstanceOf(GraphqlOrmException::class, $exception);
     }
 
+    #[Test]
+    public function itSendsVariablesAsAJsonObjectEvenWhenThereIsNone(): void
+    {
+        $response = new MockResponse('{"data":{"tasks":[]}}');
+        $client = $this->createClient($response);
+
+        $client->query(self::QUERY, new GraphqlExecutionContext());
+
+        $body = $response->getRequestOptions()['body'] ?? null;
+        self::assertIsString($body);
+        self::assertStringContainsString('"variables":{}', $body);
+    }
+
     private function createClient(MockResponse $response): GraphqlClient
     {
         return new GraphqlClient(new MockHttpClient($response), self::ENDPOINT);

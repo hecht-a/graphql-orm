@@ -58,7 +58,9 @@ final readonly class GraphqlClient implements GraphqlClientInterface
                         'headers' => $this->headers(),
                         'json' => [
                             'query' => $query,
-                            'variables' => $variables,
+                            // An empty PHP array is encoded as a JSON list, which servers such as Hot Chocolate
+                            // (Data API Builder) reject: variables must be a JSON object.
+                            'variables' => $variables === [] ? new \stdClass() : $variables,
                         ],
                         ...$this->httpClientOptions,
                     ]
