@@ -6,7 +6,7 @@ namespace GraphqlOrm\Tests\PHPStan\data;
 
 use GraphqlOrm\Query\Direction;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
-use GraphqlOrm\Tests\Integration\DataApiBuilder\Entity\Task;
+use GraphqlOrm\Tests\Integration\Entity\Task;
 
 /**
  * @param GraphqlEntityRepository<Task> $tasks

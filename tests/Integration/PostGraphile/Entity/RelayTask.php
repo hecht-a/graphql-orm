@@ -2,13 +2,16 @@
 
 declare(strict_types=1);
 
-namespace GraphqlOrm\Tests\Integration\DataApiBuilder\Entity;
+namespace GraphqlOrm\Tests\Integration\PostGraphile\Entity;
 
 use GraphqlOrm\Attribute\GraphqlEntity;
 use GraphqlOrm\Attribute\GraphqlField;
 
-#[GraphqlEntity(name: 'tasks')]
-class Task
+/**
+ * PostGraphile Relay connections (RelayDialect).
+ */
+#[GraphqlEntity(name: 'allTasks')]
+class RelayTask
 {
     #[GraphqlField(mappedFrom: 'id', identifier: true)]
     public int $id;
@@ -19,9 +22,9 @@ class Task
     #[GraphqlField(mappedFrom: 'done')]
     public bool $done;
 
-    #[GraphqlField(mappedFrom: 'due_date')]
+    #[GraphqlField(mappedFrom: 'dueDate')]
     public ?\DateTimeImmutable $dueDate = null;
 
-    #[GraphqlField(mappedFrom: 'user')]
-    public ?User $user = null;
+    #[GraphqlField(mappedFrom: 'userByUserId')]
+    public ?RelayUser $user = null;
 }

@@ -6,8 +6,8 @@ namespace GraphqlOrm\Tests\PHPStan;
 
 use GraphqlOrm\PHPStan\FieldNameChecker;
 use GraphqlOrm\PHPStan\QueryBuilderFieldNamesRule;
-use GraphqlOrm\Tests\Integration\DataApiBuilder\Entity\Task;
-use GraphqlOrm\Tests\Integration\DataApiBuilder\Entity\User;
+use GraphqlOrm\Tests\Integration\Entity\Task;
+use GraphqlOrm\Tests\Integration\Entity\User;
 use PHPStan\Rules\Rule;
 use PHPStan\Testing\RuleTestCase;
 use PHPUnit\Framework\Attributes\Test;

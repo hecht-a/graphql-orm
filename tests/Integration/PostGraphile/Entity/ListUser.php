@@ -2,13 +2,16 @@
 
 declare(strict_types=1);
 
-namespace GraphqlOrm\Tests\Integration\DataApiBuilder\Entity;
+namespace GraphqlOrm\Tests\Integration\PostGraphile\Entity;
 
 use GraphqlOrm\Attribute\GraphqlEntity;
 use GraphqlOrm\Attribute\GraphqlField;
 
-#[GraphqlEntity(name: 'users')]
-class User
+/**
+ * PostGraphile simple collections (DefaultDialect).
+ */
+#[GraphqlEntity(name: 'allUsersList')]
+class ListUser
 {
     #[GraphqlField(mappedFrom: 'id', identifier: true)]
     public int $id;
@@ -16,7 +19,7 @@ class User
     #[GraphqlField(mappedFrom: 'name')]
     public string $name;
 
-    /** @var Task[] */
-    #[GraphqlField(mappedFrom: 'tasks')]
+    /** @var ListTask[] */
+    #[GraphqlField(mappedFrom: 'tasksByUserIdList')]
     public array $tasks = [];
 }

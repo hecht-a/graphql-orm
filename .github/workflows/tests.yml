@@ -58,7 +58,7 @@ jobs:
         run: vendor/bin/phpunit
   integration:
     runs-on: ubuntu-latest
-    name: 'integration (Data API Builder)'
+    name: 'integration (Data API Builder, Hasura, PostGraphile)'
     steps:
       - name: checkout
         uses: actions/checkout@master
@@ -69,21 +69,28 @@ jobs:
           coverage: none
       - name: composer install
         run: composer update --prefer-stable
-      - name: start Data API Builder
-        run: docker compose -f tests/Integration/DataApiBuilder/compose.yaml up -d --wait
-      # The container health only tells the web server is up: wait until a GraphQL query is answered.
-      - name: wait for Data API Builder
+      - name: start the GraphQL servers
+        run: docker compose -f tests/Integration/compose.yaml up -d
+      # A started container is not a ready server: wait until each one answers a GraphQL query.
+      - name: wait for the GraphQL servers
         run: |
-          for attempt in $(seq 1 30); do
-            curl -sf -X POST http://127.0.0.1:5000/graphql -H 'Content-Type: application/json' \
-              -d '{"query":"{ __typename }"}' && exit 0
-            sleep 2
+          for endpoint in http://127.0.0.1:5000/graphql http://127.0.0.1:8080/v1/graphql http://127.0.0.1:5001/graphql; do
+            ready=false
+            for attempt in $(seq 1 60); do
+              if curl -sf -X POST "$endpoint" -H 'Content-Type: application/json' -d '{"query":"{ __typename }"}' > /dev/null; then
+                ready=true
+                break
+              fi
+              sleep 2
+            done
+            [ "$ready" = true ] || { echo "$endpoint is not ready"; exit 1; }
           done
-          exit 1
       - name: tests
         run: vendor/bin/phpunit --group integration
         env:
           GRAPHQL_ORM_DAB_ENDPOINT: http://127.0.0.1:5000/graphql
-      - name: Data API Builder logs
+          GRAPHQL_ORM_HASURA_ENDPOINT: http://127.0.0.1:8080/v1/graphql
+          GRAPHQL_ORM_POSTGRAPHILE_ENDPOINT: http://127.0.0.1:5001/graphql
+      - name: GraphQL servers logs
         if: failure()
-        run: docker compose -f tests/Integration/DataApiBuilder/compose.yaml logs
+        run: docker compose -f tests/Integration/compose.yaml logs

@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Integration\DataApiBuilder;
 
-use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Codegen\SchemaPropertyMapper;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
-use GraphqlOrm\GraphqlManager;
-use GraphqlOrm\Hydrator\EntityHydrator;
+use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Query\Direction;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
@@ -18,34 +16,24 @@ use GraphqlOrm\Schema\GraphqlSchema;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Schema\SchemaIntrospector;
 use GraphqlOrm\Schema\SchemaValidator;
-use GraphqlOrm\Tests\Integration\DataApiBuilder\Entity\Task;
-use GraphqlOrm\Tests\Integration\DataApiBuilder\Entity\User;
+use GraphqlOrm\Tests\Integration\Entity\Task;
+use GraphqlOrm\Tests\Integration\Entity\User;
+use GraphqlOrm\Tests\Integration\IntegrationTestCase;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
-use Symfony\Component\HttpClient\HttpClient;
 
-/**
- * Runs the bundle against a real Data API Builder (tests/Integration/DataApiBuilder/compose.yaml), whose endpoint is
- * given by the GRAPHQL_ORM_DAB_ENDPOINT environment variable.
- */
 #[Group('integration')]
-final class DataApiBuilderTest extends TestCase
+final class DataApiBuilderTest extends IntegrationTestCase
 {
-    private const ENDPOINT_VARIABLE = 'GRAPHQL_ORM_DAB_ENDPOINT';
-
-    private GraphqlClient $client;
-
-    protected function setUp(): void
+    protected static function endpointVariable(): string
     {
-        $endpoint = getenv(self::ENDPOINT_VARIABLE);
+        return 'GRAPHQL_ORM_DAB_ENDPOINT';
+    }
 
-        if (!\is_string($endpoint) || $endpoint === '') {
-            self::markTestSkipped(\sprintf('Set %s to run the Data API Builder integration tests.', self::ENDPOINT_VARIABLE));
-        }
-
-        $this->client = new GraphqlClient(HttpClient::create(), $endpoint);
+    protected function dialect(): GraphqlQueryDialect
+    {
+        return new DataApiBuilderDialect();
     }
 
     #[Test]
@@ -204,29 +192,5 @@ final class DataApiBuilderTest extends TestCase
     private function users(): GraphqlEntityRepository
     {
         return $this->repository(User::class);
-    }
-
-    /**
-     * @template T of object
-     *
-     * @param class-string<T> $entityClass
-     *
-     * @return GraphqlEntityRepository<T>
-     */
-    private function repository(string $entityClass, ?RootArgumentTypeResolver $argumentTypeResolver = null, int $maxDepth = 2, bool $lazyLoading = false, ?GraphqlOrmDataCollector $collector = null): GraphqlEntityRepository
-    {
-        $metadataFactory = new GraphqlEntityMetadataFactory();
-        $manager = new GraphqlManager(
-            $metadataFactory,
-            $this->client,
-            new EntityHydrator($metadataFactory),
-            $collector,
-            $maxDepth,
-            new DataApiBuilderDialect(),
-            argumentTypeResolver: $argumentTypeResolver,
-            lazyLoading: $lazyLoading,
-        );
-
-        return new GraphqlEntityRepository($manager, $entityClass);
     }
 }
