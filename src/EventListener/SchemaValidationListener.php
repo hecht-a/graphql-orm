@@ -19,7 +19,10 @@ use Symfony\Component\HttpKernel\KernelEvents;
 #[AsEventListener(event: KernelEvents::REQUEST, priority: 255)]
 final class SchemaValidationListener
 {
-    private static bool $validated = false;
+    /**
+     * The listener is a shared service: the schema is validated once per container, i.e. once per worker in worker mode.
+     */
+    private bool $validated = false;
 
     /**
      * @param class-string[] $entityClasses
@@ -43,11 +46,11 @@ final class SchemaValidationListener
             return;
         }
 
-        if (self::$validated) {
+        if ($this->validated) {
             return;
         }
 
-        self::$validated = true;
+        $this->validated = true;
 
         if ($this->entityClasses === []) {
             return;
