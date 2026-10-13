@@ -86,6 +86,14 @@ final class PostGraphileTest extends IntegrationTestCase
     }
 
     #[Test]
+    public function itRejectsAListOfValues(): void
+    {
+        $this->expectException(LogicException::class);
+
+        $this->repository(RelayTask::class)->findBy(['id' => [1, 3]]);
+    }
+
+    #[Test]
     public function itNavigatesOrderedPages(): void
     {
         $firstPage = $this->repository(RelayTask::class)->createQueryBuilder()->orderBy('id', Direction::DESC)->limit(3)->paginate()->getQuery()->getResult();

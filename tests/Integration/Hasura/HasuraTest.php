@@ -171,6 +171,14 @@ final class HasuraTest extends IntegrationTestCase
     }
 
     #[Test]
+    public function itMatchesAListOfValues(): void
+    {
+        self::assertSame([1, 3], self::ids($this->repository(Task::class)->findBy(['id' => [1, 3]], ['id' => Direction::ASC])));
+        self::assertSame([], $this->repository(Task::class)->findBy(['id' => []]));
+        self::assertSame(2, $this->repository(Task::class)->count(['id' => [1, 3, 99]]));
+    }
+
+    #[Test]
     public function itCountsEntities(): void
     {
         self::assertSame(4, $this->repository(Task::class)->count());
@@ -256,8 +264,10 @@ final class HasuraTest extends IntegrationTestCase
         $resolver = new RootArgumentTypeResolver($this->client, new ArrayAdapter(), 60);
 
         $tasks = $this->repository(Task::class, $resolver)->findBy(['done' => false], ['id' => Direction::ASC], 2);
+        $listed = $this->repository(Task::class, $resolver)->findBy(['id' => [2, 4]], ['id' => Direction::ASC]);
 
         self::assertSame([1, 3], self::ids($tasks));
+        self::assertSame([2, 4], self::ids($listed));
         self::assertNotNull($resolver->argumentTypes('tasks'));
     }
 

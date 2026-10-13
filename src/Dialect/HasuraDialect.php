@@ -121,7 +121,12 @@ final class HasuraDialect implements GraphqlQueryDialect, BatchLoadingDialect, O
         }
 
         return ['where' => array_map(
-            fn (mixed $value) => $value === null ? ['_is_null' => true] : ['_eq' => $value],
+            // As with Doctrine, a list matches any of its values.
+            fn (mixed $value) => match (true) {
+                $value === null => ['_is_null' => true],
+                \is_array($value) && array_is_list($value) => ['_in' => $value],
+                default => ['_eq' => $value],
+            },
             $criteria,
         )];
     }

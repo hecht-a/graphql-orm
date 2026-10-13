@@ -68,7 +68,12 @@ final class DataApiBuilderDialect implements GraphqlQueryDialect, CursorPaginati
         }
 
         return ['filter' => array_map(
-            fn (mixed $value) => $value === null ? ['isNull' => true] : ['eq' => $value],
+            // As with Doctrine, a list matches any of its values.
+            fn (mixed $value) => match (true) {
+                $value === null => ['isNull' => true],
+                \is_array($value) && array_is_list($value) => ['in' => $value],
+                default => ['eq' => $value],
+            },
             $criteria,
         )];
     }

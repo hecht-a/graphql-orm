@@ -72,8 +72,17 @@ final class PostGraphileDialect implements GraphqlQueryDialect, CursorPagination
         throw new LogicException(\sprintf('The query builder filters need postgraphile-plugin-connection-filter, which "%s" does not support: use the find methods, sent as a condition.', self::class));
     }
 
+    /**
+     * @throws LogicException when a criterion is a list: a condition matches a single value
+     */
     public function applyCriteria(array $criteria): array
     {
+        foreach ($criteria as $field => $value) {
+            if (\is_array($value) && array_is_list($value)) {
+                throw new LogicException(\sprintf('PostGraphile conditions match a single value: "%s" cannot be matched against a list without postgraphile-plugin-connection-filter.', $field));
+            }
+        }
+
         return $criteria === [] ? [] : ['condition' => $criteria];
     }
 
