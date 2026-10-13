@@ -113,12 +113,34 @@ framework:
                 max_duration: 30
                 retry_failed:
                     max_retries: 2
+                    delay: 500
+                    multiplier: 2
+                    http_codes:
+                        0: ['POST']   # network errors and timeouts
+                        429: true
+                        500: ['POST']
+                        502: true
+                        503: true
+                        504: ['POST']
 
 # config/packages/graphql_orm.yaml
 graphql_orm:
     endpoint: 'https://api.example.com/graphql'
     http_client: graphql.client
 ```
+
+### Retrying temporary errors
+
+GraphQL queries are sent with `POST`, which Symfony does not retry by default on network errors, timeouts, `500` or
+`504`: its default strategy only retries those for idempotent methods (`GET`, `PUT`...), and `POST` only on `423`,
+`425`, `429`, `502` and `503`. The bundle only sends queries, which read data: listing `POST` for these codes, as
+above, makes them retried as well.
+
+- `delay` and `multiplier` space out the attempts (500 ms, then 1 s), and a `Retry-After` header sent by the server is
+  honoured.
+- An error reported in a `200` response (`{"errors": [...]}`) is not retried: the server answered.
+- `max_duration` bounds each attempt: a query may take up to `max_duration × (max_retries + 1)` plus the delays,
+  keep it below the time your users can wait.
 
 ## Metadata cache
 

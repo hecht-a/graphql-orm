@@ -22,6 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `MockGraphqlServer`, set as the `http_client` of the bundle in the tests of an application: it answers the queries
   with the responses queued (`respond()`, `respondWithErrors()`, `respondWithHttpStatus()`) and records them.
 
+### Changed
+
+- Documentation: retrying temporary errors. Symfony does not retry `POST` requests on network errors, timeouts, `500`
+  or `504` by default; the configuration of the "HTTP client" section now lists `POST` for these codes.
+
 ---
 
 ## [4.3.0] — 2026-10-13
