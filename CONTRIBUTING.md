@@ -16,7 +16,7 @@ job.
 
 ```bash
 docker compose -f tests/Integration/DataApiBuilder/compose.yaml up -d --wait
-GRAPHQL_ORM_DAB_ENDPOINT=http://localhost:5000/graphql vendor/bin/phpunit --group integration
+GRAPHQL_ORM_DAB_ENDPOINT=http://127.0.0.1:5000/graphql vendor/bin/phpunit --group integration
 docker compose -f tests/Integration/DataApiBuilder/compose.yaml down
 ```
 
