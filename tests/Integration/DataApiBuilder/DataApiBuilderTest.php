@@ -9,6 +9,7 @@ use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\Exception\GraphqlRequestException;
+use GraphqlOrm\Exception\NonUniqueResultException;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Query\Direction;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
@@ -166,6 +167,18 @@ final class DataApiBuilderTest extends IntegrationTestCase
             self::assertStringContainsString('titel', $exception->getMessage());
             self::assertStringContainsString(\sprintf('Field "titel" is not mapped on %s: did you mean "title"?', Task::class), $exception->getMessage());
         }
+    }
+
+    #[Test]
+    public function itReturnsTheSingleResultOfAQuery(): void
+    {
+        $qb = $this->tasks()->createQueryBuilder();
+        $task = $qb->where($qb->expr()->eq('id', 3))->getQuery()->getSingleResult();
+        $open = $this->tasks()->createQueryBuilder();
+
+        self::assertSame(3, $task->id);
+        $this->expectException(NonUniqueResultException::class);
+        $open->where($open->expr()->eq('done', false))->getQuery()->getSingleResult();
     }
 
     #[Test]

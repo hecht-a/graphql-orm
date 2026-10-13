@@ -9,6 +9,8 @@ use GraphqlOrm\Dialect\OffsetPaginationDialect;
 use GraphqlOrm\Exception\GraphqlRequestException;
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\Exception\LogicException;
+use GraphqlOrm\Exception\NonUniqueResultException;
+use GraphqlOrm\Exception\NoResultException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
@@ -276,26 +278,49 @@ final readonly class GraphqlQuery
      */
     public function getOneOrNullResult(): ?object
     {
-        $result = $this->limitedToOne()->getResult();
+        return $this->limitedTo(1)->items()[0] ?? null;
+    }
 
-        if ($result instanceof PaginatedResult) {
-            return $result->items[0] ?? null;
-        }
+    /**
+     * The only entity the query returns. Two are requested, unless the query has a limit, to tell it is unique.
+     *
+     * @return T
+     *
+     * @throws NoResultException        when the query returns nothing
+     * @throws NonUniqueResultException when the query returns several entities
+     */
+    public function getSingleResult(): object
+    {
+        $items = $this->limitedTo(2)->items();
 
-        return $result[0] ?? null;
+        return match (\count($items)) {
+            0 => throw NoResultException::forClass($this->entityClass),
+            1 => $items[0],
+            default => throw NonUniqueResultException::forClass($this->entityClass),
+        };
+    }
+
+    /**
+     * @return list<T>
+     */
+    private function items(): array
+    {
+        $result = $this->getResult();
+
+        return array_values($result instanceof PaginatedResult ? $result->items : $result);
     }
 
     /**
      * @return GraphqlQuery<T>
      */
-    private function limitedToOne(): self
+    private function limitedTo(int $limit): self
     {
         if ($this->options->limit !== null || !$this->graphql instanceof QueryNode) {
             return $this;
         }
 
         $options = clone $this->options;
-        $options->limit = 1;
+        $options->limit = $limit;
 
         // Root arguments are computed when the query is built, so they have to be recomputed with the new limit.
         $query = new QueryNode();

@@ -9,6 +9,8 @@ use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\Dialect\DefaultDialect;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
+use GraphqlOrm\Exception\NonUniqueResultException;
+use GraphqlOrm\Exception\NoResultException;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
@@ -153,6 +155,62 @@ final class QueryResultTest extends TestCase
         $query->getOneOrNullResult();
 
         self::assertStringContainsString('tasks(first: 5)', $client->lastQuery);
+    }
+
+    #[Test]
+    public function itReturnsTheSingleResultRequestingTwoToTellItIsUnique(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['tasks' => [['id' => 1, 'title' => 'A']]]]);
+        $query = $this->createRepository($client, new DefaultDialect(), FakeTask::class)->createQueryBuilder()->getQuery();
+
+        $task = $query->getSingleResult();
+
+        self::assertSame(1, $task->id);
+        self::assertStringContainsString('tasks(first: 2)', $client->lastQuery);
+    }
+
+    #[Test]
+    public function itThrowsWhenTheSingleResultIsMissing(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['tasks' => []]]);
+        $query = $this->createRepository($client, new DefaultDialect(), FakeTask::class)->createQueryBuilder()->getQuery();
+
+        $this->expectException(NoResultException::class);
+        $this->expectExceptionMessage(FakeTask::class);
+
+        $query->getSingleResult();
+    }
+
+    #[Test]
+    public function itThrowsWhenTheSingleResultIsNotUnique(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['tasks' => [['id' => 1, 'title' => 'A'], ['id' => 2, 'title' => 'B']]]]);
+        $query = $this->createRepository($client, new DefaultDialect(), FakeTask::class)->createQueryBuilder()->getQuery();
+
+        $this->expectException(NonUniqueResultException::class);
+        $this->expectExceptionMessage(FakeTask::class);
+
+        $query->getSingleResult();
+    }
+
+    #[Test]
+    public function itKeepsAnExplicitLimitForGetSingleResult(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['tasks' => [['id' => 1, 'title' => 'A']]]]);
+        $query = $this->createRepository($client, new DefaultDialect(), FakeTask::class)->createQueryBuilder()->limit(5)->getQuery();
+
+        $query->getSingleResult();
+
+        self::assertStringContainsString('tasks(first: 5)', $client->lastQuery);
+    }
+
+    #[Test]
+    public function itReturnsTheSingleResultOfAPaginatedQuery(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['tasks' => ['items' => [['id' => 1, 'title' => 'A']], 'hasNextPage' => false, 'endCursor' => 'c1']]]);
+        $query = $this->createRepository($client, new DataApiBuilderDialect(), FakeTask::class)->createQueryBuilder()->limit(10)->paginate()->getQuery();
+
+        self::assertSame(1, $query->getSingleResult()->id);
     }
 
     #[Test]
