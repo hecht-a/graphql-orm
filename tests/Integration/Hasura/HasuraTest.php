@@ -63,6 +63,19 @@ final class HasuraTest extends IntegrationTestCase
     }
 
     #[Test]
+    public function itIteratesOverEveryPage(): void
+    {
+        $tasks = $this->repository(Task::class)->createQueryBuilder()
+            ->orderBy('id', Direction::ASC)
+            ->limit(3)
+            ->paginate()
+            ->getQuery()
+            ->toIterable();
+
+        self::assertSame([1, 2, 3, 4], self::ids($tasks));
+    }
+
+    #[Test]
     public function itCountsEntities(): void
     {
         self::assertSame(4, $this->repository(Task::class)->count());

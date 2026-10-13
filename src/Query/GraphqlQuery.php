@@ -7,6 +7,7 @@ namespace GraphqlOrm\Query;
 use GraphqlOrm\Dialect\CursorPaginationDialect;
 use GraphqlOrm\Dialect\OffsetPaginationDialect;
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
+use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
@@ -102,6 +103,33 @@ final readonly class GraphqlQuery
             },
             $this->options
         );
+    }
+
+    /**
+     * Goes through every page of a paginated query, one query per page, the next page being fetched once the current
+     * one is read: a large result set is processed with the memory of a single page, as long as the entities read are
+     * not kept.
+     *
+     * @return \Generator<int, T>
+     *
+     * @throws LogicException when the query is not paginated
+     */
+    public function toIterable(): \Generator
+    {
+        if (!$this->options->paginate) {
+            throw new LogicException('toIterable() goes through the pages of the query: call paginate(), and limit() with the page size.');
+        }
+
+        $page = $this->getResult();
+
+        while ($page instanceof PaginatedResult) {
+            // Not "yield from": each page would restart the keys at 0.
+            foreach ($page->items as $item) {
+                yield $item;
+            }
+
+            $page = $page->next();
+        }
     }
 
     /**

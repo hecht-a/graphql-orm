@@ -130,6 +130,19 @@ final class DataApiBuilderTest extends IntegrationTestCase
     }
 
     #[Test]
+    public function itIteratesOverEveryPage(): void
+    {
+        $tasks = $this->tasks()->createQueryBuilder()
+            ->orderBy('id', Direction::ASC)
+            ->limit(3)
+            ->paginate()
+            ->getQuery()
+            ->toIterable();
+
+        self::assertSame([1, 2, 3, 4], self::ids($tasks));
+    }
+
+    #[Test]
     public function itNavigatesBetweenPages(): void
     {
         $firstPage = $this->tasks()->createQueryBuilder()->orderBy('id', Direction::ASC)->limit(3)->paginate()->getQuery()->getResult();

@@ -65,6 +65,14 @@ final class PostGraphileTest extends IntegrationTestCase
     }
 
     #[Test]
+    public function itIteratesOverEveryPage(): void
+    {
+        $tasks = $this->repository(RelayTask::class)->createQueryBuilder()->orderBy('id', Direction::DESC)->limit(3)->paginate()->getQuery()->toIterable();
+
+        self::assertSame([4, 3, 2, 1], self::ids($tasks));
+    }
+
+    #[Test]
     public function itNavigatesOrderedPages(): void
     {
         $firstPage = $this->repository(RelayTask::class)->createQueryBuilder()->orderBy('id', Direction::DESC)->limit(3)->paginate()->getQuery()->getResult();

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GraphqlOrm\Tests\Query;
 
 use GraphqlOrm\Dialect\RelayDialect;
+use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
@@ -61,6 +62,45 @@ final class RelayEndToEndTest extends TestCase
         self::assertSame(2, $secondPage?->items[0]->id);
         self::assertFalse($secondPage->hasNextPage);
         self::assertStringContainsString('tasks(first: 1, after: "c1")', $client->lastQuery);
+    }
+
+    #[Test]
+    public function itIteratesOverEveryPage(): void
+    {
+        $client = new FakeGraphqlClient(
+            ['data' => ['tasks' => ['edges' => [['node' => ['id' => 1, 'title' => 'A']], ['node' => ['id' => 2, 'title' => 'B']]], 'pageInfo' => ['hasNextPage' => true, 'endCursor' => 'c2']]]],
+            ['data' => ['tasks' => ['edges' => [['node' => ['id' => 3, 'title' => 'C']]], 'pageInfo' => ['hasNextPage' => false, 'endCursor' => 'c3']]]],
+        );
+
+        $tasks = $this->repository($client, FakeTask::class)->createQueryBuilder()->limit(2)->paginate()->getQuery()->toIterable();
+
+        self::assertSame([1, 2, 3], array_map(fn (FakeTask $task) => $task->id, iterator_to_array($tasks)));
+        self::assertSame(2, $client->callCount);
+        self::assertStringContainsString('tasks(first: 2, after: "c2")', $client->lastQuery);
+    }
+
+    #[Test]
+    public function itFetchesTheNextPageOnlyOnceTheCurrentOneIsRead(): void
+    {
+        $client = new FakeGraphqlClient(
+            ['data' => ['tasks' => ['edges' => [['node' => ['id' => 1, 'title' => 'A']]], 'pageInfo' => ['hasNextPage' => true, 'endCursor' => 'c1']]]],
+            ['data' => ['tasks' => ['edges' => [['node' => ['id' => 2, 'title' => 'B']]], 'pageInfo' => ['hasNextPage' => false, 'endCursor' => 'c2']]]],
+        );
+
+        $tasks = $this->repository($client, FakeTask::class)->createQueryBuilder()->limit(1)->paginate()->getQuery()->toIterable();
+
+        self::assertSame(1, $tasks->current()->id);
+        self::assertSame(1, $client->callCount);
+    }
+
+    #[Test]
+    public function itNeedsAPaginatedQueryToIterate(): void
+    {
+        $query = $this->repository(new FakeGraphqlClient(), FakeTask::class)->createQueryBuilder()->limit(100)->getQuery();
+
+        $this->expectException(LogicException::class);
+
+        $query->toIterable()->current();
     }
 
     #[Test]
