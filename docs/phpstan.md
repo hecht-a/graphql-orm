@@ -33,7 +33,7 @@ $tasks->createQueryBuilder()->select('title.length');
 
 | Call                                         | Keys or arguments checked | Expected name                  |
 |----------------------------------------------|---------------------------|--------------------------------|
-| `findBy()`, `findOneBy()`                    | criteria and ordering keys | GraphQL name (`mappedFrom`)   |
+| `findBy()`, `findOneBy()`, `count()`         | criteria and ordering keys | GraphQL name (`mappedFrom`)   |
 | `GraphqlQueryBuilder::orderBy()`             | field                      | GraphQL name (`mappedFrom`)   |
 | `GraphqlQueryBuilder::select()`, `addSelect()` | paths, segment by segment | GraphQL or PHP property name |
 

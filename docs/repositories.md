@@ -31,6 +31,9 @@ $tasks = $repository->findBy(['status' => 'active'], ['createdAt' => Direction::
 // First entity matching the criteria (null when none)
 $task = $repository->findOneBy(['status' => 'active'], ['createdAt' => Direction::DESC]);
 
+// Number of entities matching the criteria
+$count = $repository->count(['status' => 'active']);
+
 // Custom query via Query Builder
 $qb = $repository->createQueryBuilder();
 $tasks = $qb
@@ -52,3 +55,18 @@ equality; the dialect decides how it is sent:
 `find()` requires an identifier (`#[GraphqlField(identifier: true)]`) and throws a `LogicException` otherwise.
 Ordering is not supported by `DefaultDialect` (see [dialects](dialects.md)). Use the query builder for anything other
 than equalities.
+
+## Counting
+
+`count()` sends a query of its own, with the same criteria as `findBy()`:
+
+| Dialect                 | Count query                                                                 |
+|-------------------------|-----------------------------------------------------------------------------|
+| `DataApiBuilderDialect` | `tasks(filter: ...) { groupBy { aggregations { count(field: id) } } }`      |
+| `HasuraDialect`         | `tasks_aggregate(where: ...) { aggregate { count } }`                       |
+| `PostGraphileDialect`   | `allTasks(condition: ...) { totalCount }`                                   |
+| `RelayDialect`          | `tasks(...) { totalCount }`: not in the Relay specification, but common     |
+| `DefaultDialect`        | none: `count()` throws a `LogicException`                                   |
+
+Data API Builder counts the values of a field: the entity needs an identifier. The values of a count query are sent
+inline, not as GraphQL variables.

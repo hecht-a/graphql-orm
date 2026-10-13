@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `GraphqlEntityRepository::count($criteria)`, with the dialects implementing the new `CountingDialect` interface:
+  `DataApiBuilderDialect` (aggregation), `HasuraDialect` (`_aggregate`), `PostGraphileDialect` and `RelayDialect`
+  (`totalCount`). The PHPStan rules check its criteria as those of `findBy()`. A repository already declaring its own
+  `count()` must give it the same signature, `count(array $criteria = []): int` (that of Doctrine), or rename it.
 - Schema validation (`graphqlorm:schema:validate`, first request listener) also reports a field the schema declares
   nullable mapped on a property that does not accept `null`, a relation to another type than the one of its target
   entity or mapped on a scalar, and a collection mapped on a single object (or the reverse).
