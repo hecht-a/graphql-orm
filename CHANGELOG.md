@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   each query returning it, and `find()` returns one known in full without a query. Reset between requests and
   Messenger messages (`kernel.reset`); `GraphqlManager::clear()` for a long-running script. `toIterable()` keeps its
   pages out of it. Disabled by default.
+- `#[GraphqlField(fetch: Fetch::Lazy)]`: a relation selected by its identifier only, whatever `max_depth`, and loaded
+  on first access, the ghosts of a response together, as Doctrine `fetch: LAZY`. It needs no `lazy_loading`.
 
 ### Changed
 

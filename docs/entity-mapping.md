@@ -38,6 +38,32 @@ class Task
 | `identifier`       | `bool`               | Marks this field as the entity identifier              |
 | `targetEntity`     | `class-string\|null` | Explicit relation target (optional if PHP type is set) |
 | `ignoreValidation` | `bool`               | Ignore the schema validation                           |
+| `fetch`            | `Fetch`              | `Fetch::Eager` (default) or `Fetch::Lazy`, see [lazy relations](#lazy-relations) |
+
+## Lazy relations
+
+A relation is selected with its entity, up to `max_depth`. One read rarely, or heavy, can be fetched lazily, as with
+Doctrine `fetch: LAZY`:
+
+```php
+use GraphqlOrm\Attribute\Fetch;
+
+#[GraphqlField(mappedFrom: 'user', fetch: Fetch::Lazy)]
+public ?User $user = null;
+
+/** @var Task[] */
+#[GraphqlField(mappedFrom: 'tasks', fetch: Fetch::Lazy)]
+public array $tasks = [];
+```
+
+- The relation is selected by its identifier only (`user { id }`), whatever `max_depth`, and hydrated as a PHP lazy
+  ghost: reading its identifier costs nothing, the first access to another property loads it.
+- The ghosts of a response are loaded together: one query for the users of all the tasks, when the dialect filters on
+  a list (Data API Builder, Hasura).
+- A collection is selected by the identifiers of its items, each item being a ghost: a PHP array cannot be lazy itself.
+- An explicit `select('user.name')` still loads the relation with the query.
+- It needs no `lazy_loading`, which only applies to the relations beyond `max_depth`. Only a relation can be fetched
+  lazily: `fetch: Fetch::Lazy` on another field throws an `InvalidArgumentException`.
 
 ## Naming strategy
 

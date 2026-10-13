@@ -72,8 +72,9 @@ graphql_orm:
 
 ## Lazy loading
 
-Beyond `max_depth`, relations only get their identifier selected. With `lazy_loading`, they are hydrated as PHP lazy
-ghosts instead: reading the identifier costs nothing, and the first access to another property loads the entity with
+Beyond `max_depth`, relations only get their identifier selected. To fetch a given relation lazily whatever the depth,
+see [lazy relations](entity-mapping.md#lazy-relations). With `lazy_loading`, they are hydrated as PHP lazy ghosts
+instead: reading the identifier costs nothing, and the first access to another property loads the entity with
 a query of its own, through its repository `find()`.
 
 ```yaml
