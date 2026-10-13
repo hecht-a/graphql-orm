@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- `RelayDialect`, for APIs following the Relay cursor connections specification (`edges { node }`, `first` / `after`,
+  `pageInfo`), with its `RelayGraphqlWalker`.
+- `CursorPaginationDialect` interface, telling where `hasNextPage` and `endCursor` lie; implemented by
+  `DataApiBuilderDialect` and `RelayDialect`.
+- `AbstractGraphqlWalker::walkCollection()`, to print the envelope of nested collections.
+- Schema validation and `make:entity --from-schema` unwrap Relay connections.
+
+### Changed
+
+- `DefaultGraphqlWalker` is no longer `final`, so that dialects close to standard GraphQL can extend it.
+
+---
+
 ## [3.1.1] — 2026-10-13
 
 ### Fixed
