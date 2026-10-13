@@ -32,7 +32,6 @@ final class QueryBuilderFieldNamesRuleTest extends RuleTestCase
         $this->analyse([__DIR__ . '/data/query-builder-field-names.php'], [
             [\sprintf('Field "nmae" is not mapped on %s. Did you mean "name"?', User::class), 17, self::UNMAPPED_TIP],
             [\sprintf('Field "title" of %s is not a relation: "title.length" cannot be selected.', Task::class), 18],
-            [\sprintf('Field "dueDate" is the PHP property of %s: use its GraphQL name "due_date".', Task::class), 19],
         ]);
     }
 
@@ -43,7 +42,6 @@ final class QueryBuilderFieldNamesRuleTest extends RuleTestCase
 
         $this->analyse([__DIR__ . '/data/query-builder-field-names.php'], [
             [\sprintf('Field "title" of %s is not a relation: "title.length" cannot be selected.', Task::class), 18],
-            [\sprintf('Field "dueDate" is the PHP property of %s: use its GraphQL name "due_date".', Task::class), 19],
         ]);
     }
 }

@@ -76,6 +76,19 @@ final class HasuraTest extends IntegrationTestCase
     }
 
     #[Test]
+    public function itAcceptsThePropertyNamesOfTheEntity(): void
+    {
+        $withoutDueDate = $this->repository(Task::class)->findBy(['dueDate' => null], ['id' => Direction::ASC]);
+        $qb = $this->repository(Task::class)->createQueryBuilder();
+        $withDueDate = $qb->where($qb->expr()->isNotNull('dueDate'))->orderBy('dueDate', Direction::DESC)->getQuery()->getResult();
+
+        self::assertSame([2, 4], self::ids($withoutDueDate));
+        self::assertIsArray($withDueDate);
+        self::assertSame([3, 1], self::ids($withDueDate));
+        self::assertSame(2, $this->repository(Task::class)->count(['dueDate' => null]));
+    }
+
+    #[Test]
     public function itCountsEntities(): void
     {
         self::assertSame(4, $this->repository(Task::class)->count());

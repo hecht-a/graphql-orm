@@ -6,7 +6,6 @@ namespace GraphqlOrm\Query;
 
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\GraphqlManager;
-use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Ast\QueryNode;
@@ -232,7 +231,7 @@ final class GraphqlQueryStringBuilder
 
             $fieldName = (string) $fieldName;
 
-            $field = $this->findFieldMetadata($metadata, $fieldName);
+            $field = $metadata->field($fieldName);
 
             if ($field === null) {
                 $selection->add(new FieldNode($fieldName));
@@ -312,20 +311,5 @@ final class GraphqlQueryStringBuilder
         $selection->add(new FieldNode($identifier, isCollection: $field->isCollection));
 
         return new FieldNode($field->mappedFrom, [], $selection, isCollection: $field->isCollection);
-    }
-
-    private function findFieldMetadata(GraphqlEntityMetadata $metadata, string $name): ?GraphqlFieldMetadata
-    {
-        foreach ($metadata->fields as $field) {
-            if ($field->mappedFrom === $name) {
-                return $field;
-            }
-
-            if ($field->property === $name) {
-                return $field;
-            }
-        }
-
-        return null;
     }
 }

@@ -7,6 +7,7 @@ namespace GraphqlOrm\Query;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Query\Expr\ExpressionBuilder;
 use GraphqlOrm\Query\Expr\FilterExpressionInterface;
+use GraphqlOrm\Query\Expr\GraphqlNamedFilter;
 
 /**
  * @template T of object
@@ -130,6 +131,9 @@ final class GraphqlQueryBuilder
             ->getMetadataFactory()
             ->getMetadata($this->entityClass);
 
+        $options = clone $this->options;
+        $options->orderBy = $options->orderBy !== null ? $metadata->withGraphqlNames($options->orderBy) : null;
+
         $fields = $this->selectedFields
             ?? array_map(
                 fn ($f) => $f->mappedFrom,
@@ -141,8 +145,8 @@ final class GraphqlQueryBuilder
         $ast = (new GraphqlQueryStringBuilder($this->manager))
             ->entity($this->entityClass)
             ->root($metadata->name)
-            ->options($this->options)
-            ->filter($this->filter)
+            ->options($options)
+            ->filter($this->filter !== null ? new GraphqlNamedFilter($this->filter, $metadata) : null)
             ->fields($fields, $manualSelect)
             ->build();
 
@@ -150,7 +154,7 @@ final class GraphqlQueryBuilder
             $ast,
             $this->entityClass,
             $this->manager,
-            $this->options
+            $options
         );
     }
 }

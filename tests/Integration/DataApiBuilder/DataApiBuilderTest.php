@@ -143,6 +143,19 @@ final class DataApiBuilderTest extends IntegrationTestCase
     }
 
     #[Test]
+    public function itAcceptsThePropertyNamesOfTheEntity(): void
+    {
+        $withoutDueDate = $this->tasks()->findBy(['dueDate' => null], ['id' => Direction::ASC]);
+        $qb = $this->tasks()->createQueryBuilder();
+        $withDueDate = $qb->where($qb->expr()->isNotNull('dueDate'))->orderBy('dueDate', Direction::DESC)->getQuery()->getResult();
+
+        self::assertSame([2, 4], self::ids($withoutDueDate));
+        self::assertIsArray($withDueDate);
+        self::assertSame([3, 1], self::ids($withDueDate));
+        self::assertSame(2, $this->tasks()->count(['dueDate' => null]));
+    }
+
+    #[Test]
     public function itNavigatesBetweenPages(): void
     {
         $firstPage = $this->tasks()->createQueryBuilder()->orderBy('id', Direction::ASC)->limit(3)->paginate()->getQuery()->getResult();

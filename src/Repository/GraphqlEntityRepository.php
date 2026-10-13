@@ -59,8 +59,8 @@ class GraphqlEntityRepository
     }
 
     /**
-     * @param array<string, mixed>          $criteria GraphQL field name => expected value
-     * @param array<string, Direction>|null $orderBy  GraphQL field name => direction
+     * @param array<string, mixed>          $criteria GraphQL field name or PHP property => expected value
+     * @param array<string, Direction>|null $orderBy  GraphQL field name or PHP property => direction
      *
      * @return T|null
      */
@@ -70,8 +70,8 @@ class GraphqlEntityRepository
     }
 
     /**
-     * @param array<string, mixed>          $criteria GraphQL field name => expected value
-     * @param array<string, Direction>|null $orderBy  GraphQL field name => direction
+     * @param array<string, mixed>          $criteria GraphQL field name or PHP property => expected value
+     * @param array<string, Direction>|null $orderBy  GraphQL field name or PHP property => direction
      *
      * @return T[]
      *
@@ -87,16 +87,16 @@ class GraphqlEntityRepository
             }
         }
 
-        $options = new QueryOptions();
-        $options->orderBy = $orderBy;
-        $options->limit = $limit;
-
         $metadata = $this->manager->getMetadataFactory()->getMetadata($this->entityClass);
+
+        $options = new QueryOptions();
+        $options->orderBy = $orderBy !== null ? $metadata->withGraphqlNames($orderBy) : null;
+        $options->limit = $limit;
 
         $query = (new GraphqlQueryStringBuilder($this->manager))
             ->entity($this->entityClass)
             ->root($metadata->name)
-            ->arguments($this->manager->getDialect()->applyCriteria($criteria))
+            ->arguments($this->manager->getDialect()->applyCriteria($metadata->withGraphqlNames($criteria)))
             ->options($options)
             ->build();
 
@@ -109,7 +109,7 @@ class GraphqlEntityRepository
     /**
      * Counts the entities matching the criteria, with a query of its own; values are sent inline, not as variables.
      *
-     * @param array<string, mixed> $criteria GraphQL field name => expected value
+     * @param array<string, mixed> $criteria GraphQL field name or PHP property => expected value
      *
      * @throws LogicException when the dialect cannot count
      */
@@ -122,7 +122,7 @@ class GraphqlEntityRepository
         }
 
         $metadata = $this->manager->getMetadataFactory()->getMetadata($this->entityClass);
-        $field = $dialect->countField($metadata->name, $dialect->applyCriteria($criteria), $metadata->identifier?->mappedFrom);
+        $field = $dialect->countField($metadata->name, $dialect->applyCriteria($metadata->withGraphqlNames($criteria)), $metadata->identifier?->mappedFrom);
 
         $query = new QueryNode();
         $query->fields[] = $field;

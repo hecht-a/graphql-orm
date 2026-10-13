@@ -88,26 +88,21 @@ final readonly class GraphqlEntityValueResolver implements ValueResolverInterfac
 
     /**
      * @param class-string          $class
-     * @param array<string, string> $mapping route parameter => GraphQL field name
+     * @param array<string, string> $mapping route parameter => GraphQL field name or PHP property
      *
      * @return array<string, bool|float|int|string|null>
      */
     private function mappedCriteria(string $class, Request $request, array $mapping): array
     {
-        $fields = [];
-
-        foreach ($this->manager->getMetadataFactory()->getMetadata($class)->fields as $field) {
-            $fields[$field->mappedFrom] = $field;
-        }
-
+        $metadata = $this->manager->getMetadataFactory()->getMetadata($class);
         $criteria = [];
 
         foreach ($mapping as $parameter => $fieldName) {
-            $field = $fields[$fieldName] ?? throw new InvalidArgumentException(\sprintf('#[MapGraphqlEntity] maps the route parameter "%s" on "%s", which "%s" does not map.', $parameter, $fieldName, $class));
+            $field = $metadata->field($fieldName) ?? throw new InvalidArgumentException(\sprintf('#[MapGraphqlEntity] maps the route parameter "%s" on "%s", which "%s" does not map.', $parameter, $fieldName, $class));
             $value = $request->attributes->get($parameter);
 
             if (\is_scalar($value)) {
-                $criteria[$fieldName] = $this->cast($class, $field, $value);
+                $criteria[$field->mappedFrom] = $this->cast($class, $field, $value);
             }
         }
 

@@ -29,7 +29,7 @@ final class FieldNameChecker
     }
 
     /**
-     * A field name sent as is to the API (repository criteria, ordering): it must be the GraphQL name.
+     * A field name of the repository criteria or of an ordering: its GraphQL name or its PHP property.
      *
      * @return list<IdentifierRuleError>
      */
@@ -37,16 +37,8 @@ final class FieldNameChecker
     {
         $metadata = $this->metadata($entityClass);
 
-        if ($metadata === null || $this->fieldByGraphqlName($metadata, $name) !== null) {
+        if ($metadata === null || $metadata->field($name) !== null) {
             return [];
-        }
-
-        $field = $this->fieldByProperty($metadata, $name);
-
-        if ($field !== null) {
-            return [RuleErrorBuilder::message(\sprintf('Field "%s" is the PHP property of %s: use its GraphQL name "%s".', $name, $entityClass, $field->mappedFrom))
-                ->identifier('graphqlOrm.propertyName')
-                ->build()];
         }
 
         return $this->unmapped($metadata, $name);
@@ -67,7 +59,7 @@ final class FieldNameChecker
                 return [];
             }
 
-            $field = $this->fieldByGraphqlName($metadata, $segment) ?? $this->fieldByProperty($metadata, $segment);
+            $field = $metadata->field($segment);
 
             if ($field === null) {
                 return $this->unmapped($metadata, $segment);
@@ -120,28 +112,6 @@ final class FieldNameChecker
         }
 
         return $this->metadata[$class];
-    }
-
-    private function fieldByGraphqlName(GraphqlEntityMetadata $metadata, string $name): ?GraphqlFieldMetadata
-    {
-        foreach ($metadata->fields as $field) {
-            if ($field->mappedFrom === $name) {
-                return $field;
-            }
-        }
-
-        return null;
-    }
-
-    private function fieldByProperty(GraphqlEntityMetadata $metadata, string $name): ?GraphqlFieldMetadata
-    {
-        foreach ($metadata->fields as $field) {
-            if ($field->property === $name) {
-                return $field;
-            }
-        }
-
-        return null;
     }
 
     /**

@@ -12,6 +12,7 @@ use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
+use GraphqlOrm\Tests\Integration\Entity\Task;
 use GraphqlOrm\ValueResolver\GraphqlEntityValueResolver;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -124,6 +125,17 @@ final class GraphqlEntityValueResolverTest extends TestCase
 
         self::assertInstanceOf(FakeTask::class, $resolved[0] ?? null);
         self::assertStringContainsString('filter: { title: { eq: "A" } }', $client->lastQuery);
+    }
+
+    #[Test]
+    public function itMapsTheRouteParametersOnPropertyNames(): void
+    {
+        $client = new FakeGraphqlClient(self::TASK);
+        $argument = new ArgumentMetadata('task', Task::class, false, false, null, true, [new MapGraphqlEntity(mapping: ['due' => 'dueDate'])]);
+
+        $this->resolver($client)->resolve(new Request(attributes: ['due' => '2026-01-15']), $argument);
+
+        self::assertStringContainsString('filter: { due_date: { eq: "2026-01-15" } }', $client->lastQuery);
     }
 
     #[Test]

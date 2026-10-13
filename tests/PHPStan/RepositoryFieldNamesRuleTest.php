@@ -26,26 +26,19 @@ final class RepositoryFieldNamesRuleTest extends RuleTestCase
     }
 
     #[Test]
-    public function itReportsPropertyNamesAndUnmappedFields(): void
+    public function itAcceptsPropertyNamesAndReportsUnmappedFields(): void
     {
         $this->analyse([__DIR__ . '/data/repository-field-names.php'], [
-            [\sprintf('Field "dueDate" is the PHP property of %s: use its GraphQL name "due_date".', Task::class), 18],
             [\sprintf('Field "titel" is not mapped on %s. Did you mean "title"?', Task::class), 19, self::UNMAPPED_TIP],
-            [\sprintf('Field "dueDate" is the PHP property of %s: use its GraphQL name "due_date".', Task::class), 21],
             [\sprintf('Field "user_id" is not mapped on %s. Did you mean "user"?', Task::class), 22, self::UNMAPPED_TIP],
-            [\sprintf('Field "dueDate" is the PHP property of %s: use its GraphQL name "due_date".', Task::class), 24],
         ]);
     }
 
     #[Test]
-    public function itOnlyReportsPropertyNamesWhenUnmappedFieldsAreAllowed(): void
+    public function itReportsNothingWhenUnmappedFieldsAreAllowed(): void
     {
         $this->reportUnmappedFields = false;
 
-        $this->analyse([__DIR__ . '/data/repository-field-names.php'], [
-            [\sprintf('Field "dueDate" is the PHP property of %s: use its GraphQL name "due_date".', Task::class), 18],
-            [\sprintf('Field "dueDate" is the PHP property of %s: use its GraphQL name "due_date".', Task::class), 21],
-            [\sprintf('Field "dueDate" is the PHP property of %s: use its GraphQL name "due_date".', Task::class), 24],
-        ]);
+        $this->analyse([__DIR__ . '/data/repository-field-names.php'], []);
     }
 }

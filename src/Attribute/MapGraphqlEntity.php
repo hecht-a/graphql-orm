@@ -15,7 +15,7 @@ final class MapGraphqlEntity extends ValueResolver
 {
     /**
      * @param string|null                $id       route parameter holding the identifier, instead of the argument name or "id"
-     * @param array<string, string>|null $mapping  route parameter => GraphQL field name, the entity being found with findOneBy()
+     * @param array<string, string>|null $mapping  route parameter => GraphQL field name or PHP property, the entity being found with findOneBy()
      * @param bool                       $disabled true to leave the argument to the other resolvers
      */
     public function __construct(
