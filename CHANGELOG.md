@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [4.0.0] — 2026-10-13
+
+### Upgrading from 3.x
+
+- PHP 8.4+ is required: lazy loading relies on PHP 8.4 lazy objects. The Symfony requirement is unchanged (7.4 or 8.x).
+- Nothing else changes unless `lazy_loading` is enabled: it is disabled by default, so relations beyond `max_depth`
+  still only get their identifier. When enabling it, mind the extra query sent for each lazy relation accessed (see
+  the "Lazy loading" section of docs/configuration.md).
+- Contributors: the Castor QA tasks need Castor 1.8 or later, whose embedded PHP satisfies the requirement.
 
 ### Added
 
