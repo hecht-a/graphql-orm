@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- Schema validation (`graphqlorm:schema:validate`, first request listener) also reports a field the schema declares
+  nullable mapped on a property that does not accept `null`, a relation to another type than the one of its target
+  entity or mapped on a scalar, and a collection mapped on a single object (or the reverse).
+
+---
+
 ## [4.2.0] — 2026-10-13
 
 ### Added

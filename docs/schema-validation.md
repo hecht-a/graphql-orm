@@ -15,17 +15,30 @@ match or when the schema cannot be introspected. Run it in CI against an environ
 ## What is validated
 
 - Every mapped entity has a corresponding GraphQL type in the schema. The type is the one returned by the root query
-  field (`#[GraphqlEntity(name: ...)]`); for a paginated root field exposing an `items` list (e.g. Data API Builder
-  connections), the type of `items` is used. If the root field is not found, the type name is guessed from the root
-  name (`tasks` → `Task`)
+  field (`#[GraphqlEntity(name: ...)]`); for a connection (Data API Builder `items`, Relay `edges { node }`), the type of
+  its entities is used. If the root field is not found, the type name is guessed from the root name (`tasks` → `Task`)
 - Every mapped field exists on that type
-- Scalar types are compatible between PHP and GraphQL (e.g. `int` ↔ `Int`, `string` ↔ `String`)
+- Scalar types are compatible between PHP and GraphQL (e.g. `int` ↔ `Int`, `string` ↔ `String`, `\DateTimeImmutable`
+  ↔ `DateTime` or `timestamptz`)
+- A field the schema declares nullable is mapped on a property accepting `null`: hydrating `null` into a `string`
+  property fails with a `TypeError`, as soon as the API returns it
+- A relation returns the GraphQL type of its target entity, as a list or connection for a collection (`array`
+  property) and as a single object otherwise; a relation mapped on a scalar is reported too
 
 When a field is not found, the error message suggests the closest match:
 
 ```
 [App\GraphQL\Entity\Task] Field "titel" (mapped from "titel") does not exist
 on GraphQL type "Task". Did you mean "title"?
+```
+
+The other checks say how to fix the mapping:
+
+```
+[App\GraphQL\Entity\Task] Field "dueDate" is nullable in the schema but property "dueDate"
+does not accept null: declare it as "?DateTimeImmutable".
+[App\GraphQL\Entity\Task] Field "user" is a collection but returns a single object in the schema:
+map it on a single relation.
 ```
 
 ## Validate on the first request
