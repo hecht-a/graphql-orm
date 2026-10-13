@@ -70,3 +70,41 @@ than equalities.
 
 Data API Builder counts the values of a field: the entity needs an identifier. The values of a count query are sent
 inline, not as GraphQL variables.
+
+## In a controller
+
+An argument typed with an entity receives the entity whose identifier is in the route, found with `find()`:
+
+```php
+#[Route('/tasks/{id}')]
+public function show(Task $task): Response
+{
+    // ...
+}
+```
+
+The identifier is read from the route parameter named after the argument (`{task}`), otherwise from `{id}`. An entity
+not found is a 404 response, or `null` for a nullable argument (`?Task $task`). Route parameters being strings, an
+integer identifier is converted, and a value that is not an integer is a 404 without query.
+
+`#[MapGraphqlEntity]` changes how the entity is found, as Doctrine `#[MapEntity]` does:
+
+```php
+use GraphqlOrm\Attribute\MapGraphqlEntity;
+
+// The identifier in another route parameter
+#[Route('/users/{userId}/tasks/{taskId}')]
+public function show(
+    #[MapGraphqlEntity(id: 'userId')] User $user,
+    #[MapGraphqlEntity(id: 'taskId')] Task $task,
+): Response
+
+// Other fields, found with findOneBy(): route parameter => GraphQL field name
+#[Route('/projects/{slug}')]
+public function project(#[MapGraphqlEntity(mapping: ['slug' => 'slug'])] Project $project): Response
+
+// Left to the other resolvers
+public function create(#[MapGraphqlEntity(disabled: true)] Task $task): Response
+```
+
+A mapping on a field the entity does not map throws an `InvalidArgumentException`.

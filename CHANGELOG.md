@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   as one inequality per value, Data API Builder having no "not in" operator.
 - `GraphqlQuery::toIterable()`, a generator going through every page of a paginated query, fetching each page once the
   previous one is read.
+- Controller arguments typed with an entity receive the entity whose identifier is in the route (`{task}` or `{id}`), a
+  404 response when it does not exist, or `null` for a nullable argument.
+  `#[MapGraphqlEntity]` reads the identifier from another route parameter (`id`), finds the entity by other fields
+  (`mapping`) or disables the resolution (`disabled`), as Doctrine `#[MapEntity]` does.
 
 ---
 
