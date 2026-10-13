@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- Lazy loading loads the ghosts of a class met in a response with one query (`in` on their identifiers, 100 per query)
+  instead of one query each, with the dialects implementing the new `BatchLoadingDialect` marker interface:
+  `DataApiBuilderDialect` and `HasuraDialect`.
+
+### Changed
+
+- `GraphqlExecutionContext::$lazyLoader`, set by the manager, loads a list of identifiers and is marked `@internal`.
+
+---
+
 ## [4.0.1] — 2026-10-13
 
 ### Fixed

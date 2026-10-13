@@ -131,6 +131,9 @@ final class MyDialect implements GraphqlQueryDialect
 }
 ```
 
+If the filter of your API supports `in()` on the identifier, implement the `BatchLoadingDialect` marker interface: the
+lazy relations of a response are then loaded with one query per class instead of one per entity.
+
 For cursor pagination, also implement `CursorPaginationDialect` (`hasNextPage()`, `endCursor()`) to tell where the
 page information lies; without it, they are read on the root field, as Data API Builder returns them. A walker
 extending `AbstractGraphqlWalker` can override `walkCollection()` to print the envelope of nested collections.

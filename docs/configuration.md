@@ -85,9 +85,12 @@ $task->user->id;                    // no query: the identifier is known
 $task->user->name;                  // users(...) { id name ... }: the user is loaded now
 ```
 
-- Each load is a query of its own, shown in the profiler, the logs and the [events](events.md): accessing a lazy
-  relation in a loop sends one query per entity (the N+1 problem). Raise `max_depth`, or select the fields you need,
-  when you know they will be read.
+- With Data API Builder and Hasura, the first access loads every lazy entity of the same class met in the response,
+  with one query filtering on their identifiers (`in`, 100 identifiers per query): reading `$task->user->name` for 100
+  tasks sends one query, not 100. With the other dialects, which standardize no list filter, each entity is loaded by
+  a query of its own (the N+1 problem): raise `max_depth`, or select the fields you need, when you know they will be
+  read.
+- Each load is shown in the profiler, the logs and the [events](events.md).
 - An entity whose complete row comes later in the same response is completed from it, without query.
 - An entity deleted in the meantime throws an `EntityNotFoundException` on first access.
 - The relations of a lazily loaded entity are lazy as well.
