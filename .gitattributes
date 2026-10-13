@@ -3,3 +3,4 @@
 /docs/package.json export-ignore
 /docs/package-lock.json export-ignore
 /.github export-ignore
+/phpbench.json export-ignore
