@@ -9,6 +9,7 @@ Dialects adapt query generation and response parsing to a specific GraphQL API f
 | Default          | `DefaultDialect`        | Standard GraphQL APIs (no ordering nor pagination) |
 | Data API Builder | `DataApiBuilderDialect` | Microsoft Data API Builder |
 | Relay            | `RelayDialect`          | Relay cursor connections (GitHub, Shopify, Apollo, Hot Chocolate…) |
+| Hasura           | `HasuraDialect`         | Hasura and APIs following its `where` / `order_by` conventions |
 
 Standard GraphQL defines no ordering nor pagination arguments: `DefaultDialect` throws a `LogicException` when
 `orderBy()` or `paginate()` is used, instead of silently ignoring it. Use a dialect matching your API, or write one
@@ -82,6 +83,36 @@ query {
 Relay standardizes neither filtering nor ordering: criteria and query builder filters are sent as root arguments, as
 with `DefaultDialect`, and `orderBy()` throws a `LogicException`. Write a dialect extending the behaviour of your API
 if it orders through a specific argument.
+
+## Hasura dialect
+
+The `HasuraDialect` reads collections as plain lists, root field and nested collections alike, and translates the
+query builder filters into a `where` boolean expression:
+
+```php
+$qb->where($qb->expr()->orX($qb->expr()->contains('title', 'docs'), $qb->expr()->eq('id', 3)))
+    ->orderBy('id', Direction::DESC)
+    ->limit(10);
+```
+
+```graphql
+query {
+  tasks(where: { _or: [{ title: { _like: "%docs%" } }, { id: { _eq: 3 } }] }, order_by: { id: desc }, limit: 10) {
+    id
+    title
+  }
+}
+```
+
+| Query builder                                      | Hasura                           |
+|----------------------------------------------------|----------------------------------|
+| `eq`, `neq`, `in`, `isNull`                        | `_eq`, `_neq`, `_in`, `_is_null` |
+| `contains`, `startsWith`, `endsWith`               | `_like` with `%` wildcards       |
+| `notContains`                                      | `_nlike` with `%` wildcards      |
+| `andX`, `orX`                                      | `_and`, `_or`                    |
+
+`%` and `_` in a searched value are escaped, so they match literally. `findBy()` criteria are sent in `where` as
+`_eq` (`_is_null` for `null`). Hasura paginates with an offset, not a cursor: `paginate()` throws a `LogicException`.
 
 ## Custom dialect
 

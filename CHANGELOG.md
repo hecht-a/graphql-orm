@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `RelayDialect`, for APIs following the Relay cursor connections specification (`edges { node }`, `first` / `after`,
   `pageInfo`), with its `RelayGraphqlWalker`.
+- `HasuraDialect`, for Hasura and APIs following its conventions: `where` with `_`-prefixed operators (`%` and `_` of
+  searched values escaped), `order_by`, `limit`, plain lists; `paginate()` is rejected, Hasura paginating with an
+  offset.
 - `CursorPaginationDialect` interface, telling where `hasNextPage` and `endCursor` lie; implemented by
   `DataApiBuilderDialect` and `RelayDialect`.
 - `AbstractGraphqlWalker::walkCollection()`, to print the envelope of nested collections.
