@@ -8,6 +8,7 @@ use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Command\MakeGraphqlEntityCommand;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\DependencyInjection\GraphqlOrmExtension;
+use GraphqlOrm\Form\GraphqlEntityType;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
@@ -56,6 +57,14 @@ final class GraphqlOrmExtensionTest extends TestCase
         $tags = $container->getDefinition(GraphqlEntityValueResolver::class)->getTag('controller.argument_value_resolver');
 
         self::assertSame([['priority' => 110, 'name' => GraphqlEntityValueResolver::class]], $tags);
+    }
+
+    #[Test]
+    public function itRegistersTheFormTypeOfTheEntities(): void
+    {
+        $container = $this->createContainer(debug: false);
+
+        self::assertTrue($container->getDefinition(GraphqlEntityType::class)->hasTag('form.type'));
     }
 
     #[Test]

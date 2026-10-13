@@ -10,6 +10,7 @@ use GraphqlOrm\Command\MakeGraphqlEntityCommand;
 use GraphqlOrm\Command\SchemaValidateCommand;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\EventListener\SchemaValidationListener;
+use GraphqlOrm\Form\GraphqlEntityType;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Logging\QueryRedactor;
@@ -20,6 +21,7 @@ use GraphqlOrm\Schema\SchemaValidator;
 use GraphqlOrm\ValueResolver\GraphqlEntityValueResolver;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Form\FormTypeInterface;
 use Symfony\Component\Stopwatch\Stopwatch;
 
 use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
@@ -53,6 +55,13 @@ return static function (ContainerConfigurator $config) {
     $services->set(GraphqlEntityValueResolver::class)
         ->autoconfigure(false)
         ->tag('controller.argument_value_resolver', ['priority' => 110, 'name' => GraphqlEntityValueResolver::class]);
+
+    // symfony/form is optional.
+    if (interface_exists(FormTypeInterface::class)) {
+        $services->set(GraphqlEntityType::class)
+            ->autoconfigure(false)
+            ->tag('form.type');
+    }
 
     $services->set(GraphqlClientInterface::class);
 
