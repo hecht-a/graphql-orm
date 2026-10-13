@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\DataCollector;
 
+use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Query\GraphqlQueryTrace;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -14,12 +15,24 @@ use Symfony\Component\HttpKernel\DataCollector\DataCollector;
  */
 final class GraphqlOrmDataCollector extends DataCollector
 {
+    /**
+     * Queries of a same shape sent this many times are reported, as the sign of a loop (an N+1 problem).
+     */
+    public const REPEATED_QUERY_THRESHOLD = 3;
+
+    public function __construct(
+        private readonly QueryRedactor $redactor = new QueryRedactor(),
+    ) {
+    }
+
     public function addQuery(
         GraphqlQueryTrace $trace,
     ): void {
         $queries = $this->getQueries();
         $queries[] = [
             'graphql' => $trace->graphql,
+            // The query with its values masked: queries differing only by their values share it.
+            'shape' => $this->redactor->redactQuery($trace->graphql),
             'ast' => $trace->ast,
             'variables' => $trace->variables,
             'endpoint' => $trace->endpoint,
@@ -75,6 +88,34 @@ final class GraphqlOrmDataCollector extends DataCollector
         }
 
         return $total;
+    }
+
+    /**
+     * The shapes of queries sent at least REPEATED_QUERY_THRESHOLD times, with the numbers of these queries (from 1).
+     *
+     * @return list<array{shape: string, count: int, queries: list<int>}>
+     */
+    public function getRepeatedQueries(): array
+    {
+        $queriesByShape = [];
+
+        foreach ($this->getQueries() as $index => $query) {
+            $shape = $query['shape'] ?? null;
+
+            if (\is_string($shape)) {
+                $queriesByShape[$shape][] = $index + 1;
+            }
+        }
+
+        $repeated = [];
+
+        foreach ($queriesByShape as $shape => $queries) {
+            if (\count($queries) >= self::REPEATED_QUERY_THRESHOLD) {
+                $repeated[] = ['shape' => (string) $shape, 'count' => \count($queries), 'queries' => $queries];
+            }
+        }
+
+        return $repeated;
     }
 
     public function getErrorCount(): int

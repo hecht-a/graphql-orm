@@ -80,6 +80,40 @@ final class GraphqlOrmDataCollectorTest extends TestCase
     }
 
     #[Test]
+    public function itGroupsTheQueriesRepeatedWithOtherValues(): void
+    {
+        foreach (['users(id: 1) { id name }', 'tasks { id }', 'users(id: 2) { id name }', 'users(id: 3) { id name }'] as $graphql) {
+            $this->collector->addQuery(self::traceOf('query { ' . $graphql . ' }'));
+        }
+
+        $repeated = $this->collector->getRepeatedQueries();
+
+        self::assertCount(1, $repeated);
+        self::assertSame('query { users(id: ***) { id name } }', $repeated[0]['shape']);
+        self::assertSame(3, $repeated[0]['count']);
+        self::assertSame([1, 3, 4], $repeated[0]['queries']);
+    }
+
+    #[Test]
+    public function itDoesNotReportAQueryRunTwice(): void
+    {
+        $this->collector->addQuery(self::traceOf('query { users(id: 1) { id } }'));
+        $this->collector->addQuery(self::traceOf('query { users(id: 2) { id } }'));
+
+        self::assertSame([], $this->collector->getRepeatedQueries());
+    }
+
+    #[Test]
+    public function itGroupsQueriesWhoseValuesAreAlreadyMasked(): void
+    {
+        foreach ([1, 2, 3] as $_) {
+            $this->collector->addQuery(self::traceOf('query { users(filter: { id: { in: ["***"] } }) { id } }'));
+        }
+
+        self::assertSame(3, $this->collector->getRepeatedQueries()[0]['count'] ?? null);
+    }
+
+    #[Test]
     public function itIsNamedForTheProfilerPanel(): void
     {
         self::assertSame('graphql_orm', $this->collector->getName());
@@ -94,6 +128,14 @@ final class GraphqlOrmDataCollectorTest extends TestCase
         $trace->graphql = 'query { tasks { id } }';
         $trace->duration = $duration;
         $trace->errors = $errors;
+
+        return $trace;
+    }
+
+    private static function traceOf(string $graphql): GraphqlQueryTrace
+    {
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = $graphql;
 
         return $trace;
     }

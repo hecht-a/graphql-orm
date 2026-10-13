@@ -44,7 +44,8 @@
         "symfony/phpunit-bridge": "^8.0",
         "phpunit/phpunit": "^12.5",
         "symfony/cache": "^7.4 || ^8.0",
-        "phpstan/phpstan": "^2.2"
+        "phpstan/phpstan": "^2.2",
+        "twig/twig": "^3.20"
     },
     "suggest": {
         "phpstan/extension-installer": "Enables the PHPStan rules checking field names (extension.neon)"

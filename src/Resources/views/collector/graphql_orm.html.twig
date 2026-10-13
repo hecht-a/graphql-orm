@@ -23,13 +23,19 @@
             <b>Errors</b>
             <span class="sf-toolbar-status sf-toolbar-status-red">{{ collector.errorCount|default(0) }}</span>
         </div>
+        {% if collector.repeatedQueries is not empty %}
+            <div class="sf-toolbar-info-piece">
+                <b>Repeated</b>
+                <span class="sf-toolbar-status sf-toolbar-status-yellow">{{ collector.repeatedQueries|length }}</span>
+            </div>
+        {% endif %}
     {% endset %}
 
     {{ include('@WebProfiler/Profiler/toolbar_item.html.twig', {
         link: profiler_url,
         icon: icon,
         text: text,
-        status: collector.errorCount > 0 ? 'red'
+        status: collector.errorCount > 0 ? 'red' : (collector.repeatedQueries is not empty ? 'yellow')
     }) }}
 
 {% endblock %}
@@ -60,8 +66,33 @@
             <p>No GraphQL queries were executed.</p>
         </div>
     {% else %}
+        {% if collector.repeatedQueries is not empty %}
+            <div class="sf-profiler-block graphql-orm-repeated">
+                <h3>Repeated queries</h3>
+                <p>
+                    These queries differ only by their values, which is the sign of a loop sending one query per entity
+                    (an N+1 problem), e.g. lazy relations loaded one by one. Select the fields you need, raise
+                    <code>max_depth</code>, or use a dialect loading the lazy relations in batches.
+                </p>
+                <table>
+                    <thead>
+                        <tr><th>Sent</th><th>Queries</th><th>Query, values masked</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for repeated in collector.repeatedQueries %}
+                            <tr>
+                                <td>{{ repeated.count }} times</td>
+                                <td>{% for number in repeated.queries %}<a href="#graphql-orm-query-{{ number }}">#{{ number }}</a>{{ loop.last ? '' : ', ' }}{% endfor %}</td>
+                                <td><pre>{{ repeated.shape }}</pre></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+
         {% for query in collector.queries %}
-            <div class="sf-profiler-block">
+            <div class="sf-profiler-block" id="graphql-orm-query-{{ loop.index }}">
                 <h3>
                     Query #{{ loop.index }}
                     {% if query.errors %}
@@ -221,58 +252,6 @@ border-radius:6px;
         {% endfor %}
     {% endif %}
 
-    {% macro renderAst(node, depth) %}
-        {% import _self as self %}
-        {% if node.operation is defined %}
-            <div class="ast-node ast-root">
-                <div class="ast-header open">
-                    <span class="ast-toggle">▼</span>
-                    <strong>{{ node.operation }}</strong>
-                    <span class="ast-meta">
-                        [depth: {{ depth }} | fields: {{ node.fields|length }}]
-                    </span>
-                </div>
-                <div class="ast-children">
-                    {% for field in node.fields %}
-                        {{ self.renderAst(field, depth + 1) }}
-                    {% endfor %}
-                </div>
-            </div>
-        {% else %}
-            {% set hasChildren = node.selectionSet and node.selectionSet.fields|length > 0 %}
-            <div class="ast-node">
-                <div class="ast-header {{ hasChildren ? 'open' : '' }}">
-                    {% if hasChildren %}
-                        <span class="ast-toggle">▼</span>
-                    {% else %}
-                        <span class="ast-leaf">•</span>
-                    {% endif %}
-                    <span class="ast-name">
-                        {{ node.name }}
-                        {% if node.arguments is defined and node.arguments %}
-                            (
-                            {% for k,v in node.arguments %}
-                                {{ k }}={{ v }}{% if not loop.last %}, {% endif %}
-                            {% endfor %}
-                            )
-                        {% endif %}
-                    </span>
-                    {% if hasChildren %}
-                        <span class="ast-meta">
-                            [depth: {{ depth }} | fields: {{ node.selectionSet.fields|length }}]
-                        </span>
-                    {% endif %}
-                </div>
-                {% if hasChildren %}
-                    <div class="ast-children">
-                        {% for child in node.selectionSet.fields %}
-                            {{ self.renderAst(child,depth + 1) }}
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            </div>
-        {% endif %}
-    {% endmacro %}
 
     <style>
         .graphql-ast-tree{
@@ -369,3 +348,58 @@ border-radius:6px;
         })
     </script>
 {% endblock %}
+
+{# ================= MACROS ================= #}
+
+{% macro renderAst(node, depth) %}
+    {% import _self as self %}
+    {% if node.operation is defined %}
+        <div class="ast-node ast-root">
+            <div class="ast-header open">
+                <span class="ast-toggle">▼</span>
+                <strong>{{ node.operation }}</strong>
+                <span class="ast-meta">
+                    [depth: {{ depth }} | fields: {{ node.fields|length }}]
+                </span>
+            </div>
+            <div class="ast-children">
+                {% for field in node.fields %}
+                    {{ self.renderAst(field, depth + 1) }}
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        {% set hasChildren = node.selectionSet and node.selectionSet.fields|length > 0 %}
+        <div class="ast-node">
+            <div class="ast-header {{ hasChildren ? 'open' : '' }}">
+                {% if hasChildren %}
+                    <span class="ast-toggle">▼</span>
+                {% else %}
+                    <span class="ast-leaf">•</span>
+                {% endif %}
+                <span class="ast-name">
+                    {{ node.name }}
+                    {% if node.arguments is defined and node.arguments %}
+                        (
+                        {% for k,v in node.arguments %}
+                            {{ k }}={{ v }}{% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                        )
+                    {% endif %}
+                </span>
+                {% if hasChildren %}
+                    <span class="ast-meta">
+                        [depth: {{ depth }} | fields: {{ node.selectionSet.fields|length }}]
+                    </span>
+                {% endif %}
+            </div>
+            {% if hasChildren %}
+                <div class="ast-children">
+                    {% for child in node.selectionSet.fields %}
+                        {{ self.renderAst(child,depth + 1) }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endmacro %}
