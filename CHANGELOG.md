@@ -14,11 +14,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `PostGraphileDialect` rejects it with a `LogicException`, its conditions matching a single value.
 - `slow_query_threshold` (milliseconds): a query lasting at least that long is logged as a warning ("Slow GraphQL
   query") and highlighted in the profiler, with a count in the toolbar. No threshold by default.
+- `graphqlorm:find` console command: queries the API with `findBy()` (`--criteria field=value`, `--order-by`,
+  `--limit`) and shows the entities as hydrated, as a table or JSON.
 
 ### Changed
 
 - The duration of a query is measured by the client itself, so that it is known without the Symfony stopwatch, which
   is still fed for the profiler timeline.
+
+### Fixed
+
+- `findBy($criteria, [])`: an empty ordering, accepted by Doctrine, was sent as an empty `orderBy` argument, which Data
+  API Builder rejects.
 
 ---
 

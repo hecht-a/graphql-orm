@@ -79,6 +79,37 @@ Relations
 
 The `★` marks the identifier field.
 
+## Find entities
+
+`graphqlorm:find` queries the API with `findBy()` and shows the entities as hydrated: to try a mapping or a criterion
+without writing a controller.
+
+```bash
+php bin/console graphqlorm:find Task --criteria done=false --order-by dueDate=desc --limit 5
+```
+
+```
+ ---- ----------------------- ------- --------------------------- ------
+  id   title                   done    dueDate                     user
+ ---- ----------------------- ------- --------------------------- ------
+  4    Plan the next release   false   null                        null
+  3    Release the bundle      false   2026-02-01T09:00:00+00:00   #2
+  1    Write the docs          false   2026-01-15T10:00:00+00:00   #1
+ ---- ----------------------- ------- --------------------------- ------
+
+3 tasks found.
+```
+
+| Option             | Description                                                                          |
+|--------------------|--------------------------------------------------------------------------------------|
+| `--criteria`       | `field=value`, repeatable; the value is read as JSON when it is one (`false`, `3`, `null`, `[1,3]`), as a string otherwise (`title=Write the docs`, or `title="123"` to keep a string) |
+| `--order-by`       | `field=asc` or `field=desc`, repeatable                                               |
+| `--limit`          | maximum number of entities, 20 by default                                             |
+| `--format`, `-f`   | `table` (default) or `json`                                                           |
+
+Fields are GraphQL names or PHP properties. A relation is shown by its identifier, a collection by its size (its
+identifiers in JSON). The errors of the server are shown, with the unmapped fields pointed out.
+
 ## Validate the schema
 
 ```bash
