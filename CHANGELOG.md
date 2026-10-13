@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `HasuraDialect` supports `paginate()` with offsets: the cursor of a page is the offset of the next one, and one extra
+  row is requested so that `hasNextPage` is exact. `OffsetPaginationDialect` marker interface for such dialects.
+
 ### Fixed
 
 - `DataApiBuilderDialect`: going back to the first page of a pagination started at a cursor (`paginate($cursor)`)

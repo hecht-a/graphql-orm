@@ -112,7 +112,8 @@ query {
 | `andX`, `orX`                                      | `_and`, `_or`                    |
 
 `%` and `_` in a searched value are escaped, so they match literally. `findBy()` criteria are sent in `where` as
-`_eq` (`_is_null` for `null`). Hasura paginates with an offset, not a cursor: `paginate()` throws a `LogicException`.
+`_eq` (`_is_null` for `null`). Hasura paginates with an offset: `paginate()` needs a `limit()`, and the cursor of a page
+is the offset of the next one (see [pagination](pagination.md)).
 
 ## Custom dialect
 
@@ -133,6 +134,9 @@ final class MyDialect implements GraphqlQueryDialect
 
 If the filter of your API supports `in()` on the identifier, implement the `BatchLoadingDialect` marker interface: the
 lazy relations of a response are then loaded with one query per class instead of one per entity.
+
+For an offset pagination, implement the `OffsetPaginationDialect` marker interface: send `limit()` + 1 rows and the
+cursor as offset, as `HasuraDialect::withPagination()` does; the extra row tells a next page exists and is dropped.
 
 For cursor pagination, also implement `CursorPaginationDialect` (`hasNextPage()`, `endCursor()`) to tell where the
 page information lies; without it, they are read on the root field, as Data API Builder returns them. A walker
