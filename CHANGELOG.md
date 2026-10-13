@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- A list criterion of the find methods, `count()` and the aggregates matches any of its values, as with Doctrine:
+  `findBy(['id' => [1, 3]])` is sent as `in` (Data API Builder) or `_in` (Hasura); an empty list matches nothing.
+  `PostGraphileDialect` rejects it with a `LogicException`, its conditions matching a single value.
+
+---
+
 ## [4.6.0] — 2026-10-13
 
 ### Added

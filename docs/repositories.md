@@ -46,7 +46,8 @@ $tasks = $qb
 
 Criteria and ordering keys are the GraphQL names of the fields (`mappedFrom`) or the PHP properties of the entity:
 `findBy(['dueDate' => null])` and `findBy(['due_date' => null])` send the same query. A property having the GraphQL
-name of another field designates that field. Each criterion is an equality; the dialect decides how it is sent:
+name of another field designates that field. Each criterion is an equality, and a list matches any of its values, as
+with Doctrine (`findBy(['id' => [1, 3]])`, an empty list matching nothing); the dialect decides how it is sent:
 
 | Dialect                 | `findBy(['status' => 'active', 'deletedAt' => null])`                      |
 |-------------------------|-----------------------------------------------------------------------------|
