@@ -54,7 +54,7 @@ final readonly class SchemaIntrospector
     private const DEFAULT_QUERY_TYPE = 'Query';
 
     /**
-     * @return array<string, array{kind: string, fields: array<string, array{kind: string, name: string|null}>}>
+     * @return array<string, array{kind: string, fields: array<string, array{kind: string, name: string|null, nullable: bool, list: bool}>}>
      */
     public function introspect(): array
     {
@@ -64,7 +64,7 @@ final readonly class SchemaIntrospector
     /**
      * @return array{
      *   queryType: string,
-     *   types: array<string, array{kind: string, fields: array<string, array{kind: string, name: string|null}>}>
+     *   types: array<string, array{kind: string, fields: array<string, array{kind: string, name: string|null, nullable: bool, list: bool}>}>
      * }
      */
     public function introspectSchema(): array
@@ -146,13 +146,18 @@ final readonly class SchemaIntrospector
     }
 
     /**
+     * Unwraps the NON_NULL and LIST wrappers down to the named type, recording whether the field may be null and whether
+     * it is a list.
+     *
      * @param array<mixed> $type
      *
-     * @return array{kind: string, name: string|null}
+     * @return array{kind: string, name: string|null, nullable: bool, list: bool}
      */
     private function resolveFieldType(array $type): array
     {
         $current = $type;
+        $nullable = ($current['kind'] ?? null) !== 'NON_NULL';
+        $list = false;
 
         while (true) {
             $kind = $current['kind'] ?? null;
@@ -161,6 +166,7 @@ final readonly class SchemaIntrospector
                 break;
             }
 
+            $list = $list || $kind === 'LIST';
             $ofType = $current['ofType'] ?? [];
             $current = \is_array($ofType) ? $ofType : [];
         }
@@ -171,6 +177,8 @@ final readonly class SchemaIntrospector
         return [
             'kind' => \is_string($kind) ? $kind : 'UNKNOWN',
             'name' => \is_string($name) ? $name : null,
+            'nullable' => $nullable,
+            'list' => $list,
         ];
     }
 }

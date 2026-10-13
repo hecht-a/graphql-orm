@@ -5,8 +5,12 @@ declare(strict_types=1);
 namespace GraphqlOrm\Command;
 
 use GraphqlOrm\Codegen\PropertyDefinition;
+use GraphqlOrm\Codegen\SchemaPropertyMapper;
 use GraphqlOrm\Codegen\StubRenderer;
+use GraphqlOrm\Exception\GraphqlOrmException;
 use GraphqlOrm\Query\GraphqlName;
+use GraphqlOrm\Schema\GraphqlSchema;
+use GraphqlOrm\Schema\SchemaIntrospector;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Option;
@@ -40,6 +44,8 @@ final readonly class MakeGraphqlEntityCommand
         private string $repositoryNamespace,
         private Filesystem $fs,
         private StubRenderer $stubRenderer,
+        private SchemaIntrospector $introspector,
+        private SchemaPropertyMapper $schemaPropertyMapper = new SchemaPropertyMapper(),
     ) {
     }
 
@@ -49,16 +55,21 @@ final readonly class MakeGraphqlEntityCommand
         #[Argument('Entity name')] string $name,
         #[Option('GraphQL root')] ?string $root = null,
         #[Option('Overwrite files if exist', shortcut: 'f')] bool $force = false,
+        #[Option('Generate the properties from the GraphQL schema instead of asking them', name: 'from-schema')] bool $fromSchema = false,
     ): int {
         $io = new SymfonyStyle($input, $output);
 
         $className = $this->normalizeClassName($name);
+        $root = \is_string($root) && $root !== '' ? $root : $this->defaultRoot($className);
 
-        $properties = $this->askProperties($io);
+        $properties = $fromSchema ? $this->propertiesFromSchema($io, $root) : $this->askProperties($io);
+
+        if ($properties === null) {
+            return Command::FAILURE;
+        }
+
         $propertiesCode = $this->renderProperties($properties);
         $relationImports = $this->collectRelationImports($properties);
-
-        $root = \is_string($root) && $root !== '' ? $root : $this->defaultRoot($className);
 
         $entityFqcn = $this->entityNamespace . '\\' . $className;
         $entityPath = rtrim($this->entityDir, '/') . '/' . $className . '.php';
@@ -108,7 +119,55 @@ final readonly class MakeGraphqlEntityCommand
             \sprintf('GraphQL root :   %s', $root),
         ]);
 
+        $this->listMissingRelationTargets($io, $properties);
+
         return Command::SUCCESS;
+    }
+
+    /**
+     * @return PropertyDefinition[]|null null when the schema cannot be read or has no type for the root
+     */
+    private function propertiesFromSchema(SymfonyStyle $io, string $root): ?array
+    {
+        try {
+            $introspection = $this->introspector->introspectSchema();
+        } catch (GraphqlOrmException $e) {
+            $io->error(\sprintf('The GraphQL schema could not be introspected: %s', $e->getMessage()));
+
+            return null;
+        }
+
+        $schema = new GraphqlSchema($introspection['types'], $introspection['queryType']);
+        $typeName = $schema->entityTypeOfRoot($root);
+
+        if ($typeName === null) {
+            $io->error(\sprintf('No GraphQL type found for the root "%s": pass the root query field with --root.', $root));
+
+            return null;
+        }
+
+        $io->note(\sprintf('Properties generated from the GraphQL type "%s".', $typeName));
+
+        return $this->schemaPropertyMapper->map($schema, $typeName);
+    }
+
+    /**
+     * @param PropertyDefinition[] $properties
+     */
+    private function listMissingRelationTargets(SymfonyStyle $io, array $properties): void
+    {
+        $existing = $this->findExistingEntities();
+        $missing = [];
+
+        foreach ($properties as $property) {
+            if ($property->relation && $property->targetEntity !== null && !\in_array($property->targetEntity, $existing, true)) {
+                $missing[$property->targetEntity] = \sprintf('%s: php bin/console graphqlorm:make:entity %s --from-schema', $property->targetEntity, $property->targetEntity);
+            }
+        }
+
+        if ($missing !== []) {
+            $io->warning(['Relations point to entities that do not exist yet:', ...array_values($missing)]);
+        }
     }
 
     /**

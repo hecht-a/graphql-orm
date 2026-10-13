@@ -6,6 +6,7 @@ namespace GraphqlOrm\Tests;
 
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Codegen\PropertyDefinition;
+use GraphqlOrm\Codegen\SchemaPropertyMapper;
 use GraphqlOrm\Codegen\StubRenderer;
 use GraphqlOrm\Command\DebugEntityCommand;
 use GraphqlOrm\Command\MakeGraphqlEntityCommand;
@@ -24,6 +25,7 @@ use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Metadata\MetadataCacheWarmer;
 use GraphqlOrm\Query\GraphqlQueryCompiler;
 use GraphqlOrm\Query\GraphqlQueryStringBuilder;
+use GraphqlOrm\Schema\GraphqlSchema;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Schema\SchemaIntrospector;
 use GraphqlOrm\Schema\SchemaValidator;
@@ -67,9 +69,11 @@ final class PublicApiTest extends TestCase
             QueryRedactor::class,
             RootArgumentTypeResolver::class,
             SchemaIntrospector::class,
+            GraphqlSchema::class,
             SchemaValidator::class,
             SchemaValidationListener::class,
             StubRenderer::class,
+            SchemaPropertyMapper::class,
             PropertyDefinition::class,
             DebugEntityCommand::class,
             MakeGraphqlEntityCommand::class,
