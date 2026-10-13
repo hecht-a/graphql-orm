@@ -78,7 +78,11 @@ final readonly class GraphqlClient implements GraphqlClientInterface
         $context->trace->responseSize = \strlen($content);
 
         if ($statusCode >= self::FIRST_HTTP_ERROR_STATUS) {
-            throw GraphqlRequestException::httpError($this->endpoint, $statusCode);
+            // Servers such as Data API Builder and PostGraphile answer an invalid query with a 400 holding its errors.
+            $errors = $this->errorsOf($content);
+            $context->trace->errors = $errors !== [] ? $errors : null;
+
+            throw GraphqlRequestException::httpError($this->endpoint, $statusCode, $errors);
         }
 
         return $this->decode($content, $context);
@@ -94,6 +98,24 @@ final readonly class GraphqlClient implements GraphqlClientInterface
         }
 
         return [...$this->headers, ...$this->headersProvider->getHeaders()];
+    }
+
+    /**
+     * The GraphQL errors of an HTTP error body, or none when it holds none (an HTML error page, for instance).
+     *
+     * @return list<mixed>
+     */
+    private function errorsOf(string $content): array
+    {
+        try {
+            $body = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return [];
+        }
+
+        $errors = \is_array($body) ? $body['errors'] ?? null : null;
+
+        return \is_array($errors) && array_is_list($errors) ? $errors : [];
     }
 
     /**

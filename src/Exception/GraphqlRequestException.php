@@ -11,9 +11,14 @@ final class GraphqlRequestException extends \RuntimeException implements Graphql
         return new self(\sprintf('GraphQL request to "%s" failed: %s', $endpoint, $previous->getMessage()), 0, $previous);
     }
 
-    public static function httpError(string $endpoint, int $statusCode): self
+    /**
+     * @param array<string|int, mixed> $errors the GraphQL errors of the response body, if any
+     */
+    public static function httpError(string $endpoint, int $statusCode, array $errors = []): self
     {
-        return new self(\sprintf('GraphQL endpoint "%s" answered with HTTP status %d.', $endpoint, $statusCode));
+        $message = \sprintf('GraphQL endpoint "%s" answered with HTTP status %d', $endpoint, $statusCode);
+
+        return new self($errors === [] ? $message . '.' : $message . ': ' . implode(' | ', self::messages($errors)));
     }
 
     public static function invalidJson(string $endpoint, \JsonException $previous): self
@@ -26,6 +31,16 @@ final class GraphqlRequestException extends \RuntimeException implements Graphql
      */
     public static function graphqlErrors(array $errors): self
     {
+        return new self('GraphQL query returned errors without data: ' . implode(' | ', self::messages($errors)));
+    }
+
+    /**
+     * @param array<string|int, mixed> $errors
+     *
+     * @return list<string>
+     */
+    private static function messages(array $errors): array
+    {
         $messages = [];
 
         foreach ($errors as $error) {
@@ -33,6 +48,6 @@ final class GraphqlRequestException extends \RuntimeException implements Graphql
             $messages[] = \is_string($message) ? $message : 'Unknown error';
         }
 
-        return new self('GraphQL query returned errors without data: ' . implode(' | ', $messages));
+        return $messages;
     }
 }

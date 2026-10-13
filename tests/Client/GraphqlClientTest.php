@@ -88,6 +88,25 @@ final class GraphqlClientTest extends TestCase
     }
 
     #[Test]
+    public function itGivesTheGraphqlErrorsOfAnHttpErrorResponse(): void
+    {
+        $client = $this->createClient(new MockResponse(
+            '{"errors":[{"message":"Cannot query field \\"titel\\" on type \\"Task\\". Did you mean \\"title\\"?"}]}',
+            ['http_code' => 400],
+        ));
+        $context = new GraphqlExecutionContext();
+
+        try {
+            $client->query(self::QUERY, $context);
+            self::fail('An HTTP error must fail.');
+        } catch (GraphqlOrmException $exception) {
+            self::assertStringContainsString('HTTP status 400', $exception->getMessage());
+            self::assertStringContainsString('Cannot query field "titel" on type "Task". Did you mean "title"?', $exception->getMessage());
+            self::assertSame([['message' => 'Cannot query field "titel" on type "Task". Did you mean "title"?']], $context->trace->errors);
+        }
+    }
+
+    #[Test]
     public function itThrowsABundleExceptionWhenTheServerAnswersWithAnHttpError(): void
     {
         $client = $this->createClient(new MockResponse('<html>Bad Gateway</html>', ['http_code' => 502]));
