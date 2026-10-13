@@ -13,12 +13,25 @@ For each request, the panel shows:
 	- Response size
 	- Hydration stats (entities, relations, collections, max depth)
 	- Generated GraphQL query (with Copy button), values masked by default (see [logging.md](logging.md#masked-values))
+	- "Copy as cURL" button, to replay the query from a terminal (see [below](#copy-as-curl))
 	- Interactive AST viewer
 	- Variables
 	- Caller (file + line that triggered the query)
 
 No additional configuration is needed — the collector is registered automatically in debug mode (`kernel.debug`). It
 is not registered otherwise, so queries are not kept in memory in production.
+
+## Copy as cURL
+
+"Copy as cURL" copies the query, with its variables, as a command to run in a terminal:
+
+```bash
+curl -X POST 'https://api.example.com/graphql' -H 'Content-Type: application/json' --data-raw '{"query":"...","variables":{"id":3}}'
+```
+
+Headers are not recorded: add yours, such as `-H 'Authorization: Bearer ...'`, so that no token ends up in the
+profiler. The values are those shown by the profiler, masked by default: to replay the query as sent, disable
+`redact_query_values` in the development environment only.
 
 ## Repeated queries
 

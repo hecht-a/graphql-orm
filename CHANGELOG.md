@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   field, as before.
 - A failing query naming fields the entity does not map points them out, with the closest mapped field:
   `Field "titel" is not mapped on App\Task: did you mean "title"?`. They are still sent, the API may accept them.
+- Profiler: "Copy as cURL" copies a query, with its variables, as a command to replay it from a terminal. Headers are
+  not recorded, so no token ends up in it.
 
 ### Changed
 
