@@ -56,6 +56,18 @@ parameters:
         reportUnmappedFields: false
 ```
 
+## Naming strategy
+
+The rules read the entities as the bundle does. When the bundle names the fields with a
+[naming strategy](entity-mapping.md#naming-strategy) other than the default one, set the same class, which must be
+buildable without argument:
+
+```neon
+parameters:
+    graphqlOrm:
+        namingStrategy: GraphqlOrm\Metadata\Naming\SnakeCaseNamingStrategy
+```
+
 ## Error identifiers
 
 | Identifier                 | Meaning                                                    |

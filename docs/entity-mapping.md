@@ -34,10 +34,45 @@ class Task
 
 | Parameter          | Type                 | Description                                            |
 |--------------------|----------------------|--------------------------------------------------------|
-| `mappedFrom`       | `string`             | Field name in the GraphQL schema                       |
+| `mappedFrom`       | `string\|null`       | Field name in the GraphQL schema; named by the [naming strategy](#naming-strategy) when omitted |
 | `identifier`       | `bool`               | Marks this field as the entity identifier              |
 | `targetEntity`     | `class-string\|null` | Explicit relation target (optional if PHP type is set) |
 | `ignoreValidation` | `bool`               | Ignore the schema validation                           |
+
+## Naming strategy
+
+`mappedFrom` can be left out: the field is then named from its property by the naming strategy of the bundle, as
+Doctrine `naming_strategy` does for columns. An explicit `mappedFrom` always wins.
+
+| Strategy                  | `dueDate` is named | Suits                                              |
+|---------------------------|--------------------|----------------------------------------------------|
+| `DefaultNamingStrategy`   | `dueDate`          | camelCase APIs (PostGraphile, most GraphQL APIs)   |
+| `SnakeCaseNamingStrategy` | `due_date`         | APIs exposing database columns (Hasura, Data API Builder) |
+
+```yaml
+# config/packages/graphql_orm.yaml
+graphql_orm:
+    naming_strategy: GraphqlOrm\Metadata\Naming\SnakeCaseNamingStrategy
+```
+
+```php
+#[GraphqlEntity(name: 'tasks')]
+class Task
+{
+    #[GraphqlField(identifier: true)]
+    public int $id;
+
+    #[GraphqlField] // due_date
+    public ?DateTimeImmutable $dueDate = null;
+
+    #[GraphqlField(mappedFrom: 'deadline_at')]
+    public ?DateTimeImmutable $deadline = null;
+}
+```
+
+`naming_strategy` is a service id: implement `NamingStrategy` for another convention. With the
+[PHPStan rules](phpstan.md), set the same class in the `graphqlOrm.namingStrategy` parameter. After changing the
+strategy, clear the cache (`cache:clear`), which holds the metadata outside debug mode.
 
 ## Relations
 

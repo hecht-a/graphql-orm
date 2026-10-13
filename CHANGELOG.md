@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `mappedFrom` of `#[GraphqlField]` is optional: the field is then named from its property by the naming strategy,
+  `naming_strategy` in the configuration, as Doctrine does for columns. `DefaultNamingStrategy` (the default) keeps the
+  property name, `SnakeCaseNamingStrategy` turns `dueDate` into `due_date`; implement `NamingStrategy` for another
+  convention. The PHPStan rules take the same class in the `graphqlOrm.namingStrategy` parameter.
+
+---
+
 ## [4.5.0] — 2026-10-13
 
 ### Added

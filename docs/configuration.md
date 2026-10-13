@@ -57,6 +57,7 @@ graphql_orm:
 | `http_client`                     | `null`                   | HTTP client service id; defaults to the autowired `HttpClientInterface` |
 | `dialect`                         | `DefaultDialect`         | GraphQL dialect to use                  |
 | `headers`                         | `[]`                     | HTTP headers sent with every request    |
+| `naming_strategy`                 | `DefaultNamingStrategy`  | Names the fields without `mappedFrom` (see [naming strategy](entity-mapping.md#naming-strategy)) |
 | `metadata_cache_pool`             | `cache.system`           | Cache pool for entity metadata outside debug mode (see [metadata cache](#metadata-cache)); `null` disables it |
 | `headers_provider`                | `null`                   | Service id computing headers per request (see [dynamic headers](#dynamic-headers)) |
 | `http_client_options.verify_host` | `true`                   | TLS host verification                   |
