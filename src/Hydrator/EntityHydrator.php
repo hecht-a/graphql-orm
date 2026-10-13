@@ -75,7 +75,7 @@ class EntityHydrator
 
         // An entity met again, e.g. first as a nested relation reduced to its identifier, gets the fields of this row.
         if ($known !== null && $this->isUninitializedGhost($known)) {
-            return $this->completeGhost($known, $metadata, $data, $context, $depth);
+            return $this->markComplete($this->completeGhost($known, $metadata, $data, $context, $depth), $metadata, $data, $context);
         }
 
         if ($known !== null) {
@@ -86,7 +86,7 @@ class EntityHydrator
                 $this->callAfterHydrateMethods($known, $metadata);
             }
 
-            return $known;
+            return $this->markComplete($known, $metadata, $data, $context);
         }
 
         ++$context->trace->hydratedEntities;
@@ -108,6 +108,25 @@ class EntityHydrator
         $this->callBeforeHydrateMethods($entity, $data);
         $this->hydrateFields($entity, $metadata, $data, $context, $depth);
         $this->callAfterHydrateMethods($entity, $metadata);
+
+        return $this->markComplete($entity, $metadata, $data, $context);
+    }
+
+    /**
+     * Records an entity hydrated from a row holding every mapped field: one known only in part (a selection of its
+     * fields) is not, whatever the default values of its properties.
+     *
+     * @param array<string|int, mixed> $data
+     */
+    private function markComplete(object $entity, GraphqlEntityMetadata $metadata, array $data, GraphqlExecutionContext $context): object
+    {
+        foreach ($metadata->fields as $field) {
+            if (!\array_key_exists($field->mappedFrom, $data)) {
+                return $entity;
+            }
+        }
+
+        $context->completeEntities[] = $entity;
 
         return $entity;
     }

@@ -10,6 +10,7 @@ use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\Exception\GraphqlRequestException;
 use GraphqlOrm\Exception\NonUniqueResultException;
+use GraphqlOrm\Execution\IdentityMap;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\Naming\SnakeCaseNamingStrategy;
 use GraphqlOrm\Query\Direction;
@@ -248,6 +249,24 @@ final class DataApiBuilderTest extends IntegrationTestCase
     public function itAcceptsAnEmptyOrdering(): void
     {
         self::assertCount(2, $this->tasks()->findBy([], [], 2));
+    }
+
+    #[Test]
+    public function itServesTheKnownEntitiesFromASharedIdentityMap(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $identityMap = new IdentityMap();
+        $tasks = $this->repository(Task::class, collector: $collector, identityMap: $identityMap);
+        $users = $this->repository(User::class, collector: $collector, identityMap: $identityMap);
+
+        $all = $tasks->findAll();
+        $task = $tasks->find(1);
+        $user = $users->find(1);
+
+        self::assertSame($all[0], $task);
+        self::assertSame($task->user, $user);
+        // The user came in full with the tasks (max_depth 2): neither find() sends a query.
+        self::assertSame(1, $collector->getQueryCount());
     }
 
     #[Test]

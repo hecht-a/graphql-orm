@@ -60,7 +60,9 @@ class GraphqlEntityRepository
             throw new LogicException(\sprintf('"%s" has no identifier: mark one of its fields with #[GraphqlField(identifier: true)].', $this->entityClass));
         }
 
-        return $this->findOneBy([$identifier->mappedFrom => $id]);
+        $known = \is_int($id) || \is_string($id) ? $this->manager->findKnown($this->entityClass, $id) : null;
+
+        return $known ?? $this->findOneBy([$identifier->mappedFrom => $id]);
     }
 
     /**

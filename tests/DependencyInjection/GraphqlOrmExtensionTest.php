@@ -10,6 +10,7 @@ use GraphqlOrm\Command\MakeGraphqlEntityCommand;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\DependencyInjection\GraphqlOrmExtension;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
+use GraphqlOrm\Execution\IdentityMap;
 use GraphqlOrm\Form\GraphqlEntityType;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Logging\QueryRedactor;
@@ -30,6 +31,7 @@ use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -129,6 +131,23 @@ final class GraphqlOrmExtensionTest extends TestCase
         $container->compile();
 
         self::assertInstanceOf(FindCommand::class, $container->get(FindCommand::class));
+    }
+
+    #[Test]
+    public function itSharesAnIdentityMapResetBetweenRequests(): void
+    {
+        $container = $this->createContainer(debug: false, config: ['identity_map' => true]);
+
+        self::assertTrue($container->getDefinition(IdentityMap::class)->hasTag('kernel.reset'));
+        self::assertEquals(new Reference(IdentityMap::class), $container->getDefinition(GraphqlManager::class)->getArgument('$identityMap'));
+    }
+
+    #[Test]
+    public function itSharesNoIdentityMapByDefault(): void
+    {
+        $container = $this->createContainer(debug: false);
+
+        self::assertFalse($container->hasDefinition(IdentityMap::class));
     }
 
     #[Test]

@@ -21,6 +21,15 @@ final class GraphqlExecutionContext
     public ?\Closure $lazyLoader = null;
 
     /**
+     * The entities hydrated from a row holding every mapped field, which a shared identity map may serve to find().
+     *
+     * @internal filled by EntityHydrator
+     *
+     * @var list<object>
+     */
+    public array $completeEntities = [];
+
+    /**
      * @param array<string, array<int|string, object>> $identityMap
      */
     public function __construct(

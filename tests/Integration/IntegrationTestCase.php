@@ -7,6 +7,7 @@ namespace GraphqlOrm\Tests\Integration;
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
+use GraphqlOrm\Execution\IdentityMap;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
@@ -57,6 +58,7 @@ abstract class IntegrationTestCase extends TestCase
         bool $lazyLoading = false,
         ?GraphqlOrmDataCollector $collector = null,
         NamingStrategy $namingStrategy = new DefaultNamingStrategy(),
+        ?IdentityMap $identityMap = null,
     ): GraphqlEntityRepository {
         $metadataFactory = new GraphqlEntityMetadataFactory(namingStrategy: $namingStrategy);
         $manager = new GraphqlManager(
@@ -68,6 +70,7 @@ abstract class IntegrationTestCase extends TestCase
             $this->dialect(),
             argumentTypeResolver: $argumentTypeResolver,
             lazyLoading: $lazyLoading,
+            identityMap: $identityMap,
         );
 
         return new GraphqlEntityRepository($manager, $entityClass);

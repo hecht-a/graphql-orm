@@ -17,4 +17,11 @@ final class QueryOptions
 
     /** @var string[] */
     public array $cursorStack = [];
+
+    /**
+     * Kept out of the shared identity map, so that going through every page holds a single page in memory.
+     *
+     * @internal set by GraphqlQuery::toIterable()
+     */
+    public bool $detached = false;
 }

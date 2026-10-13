@@ -173,7 +173,9 @@ final readonly class GraphqlQuery
             throw new LogicException('toIterable() goes through the pages of the query: call paginate(), and limit() with the page size.');
         }
 
-        $page = $this->getResult();
+        $options = clone $this->options;
+        $options->detached = true;
+        $page = (new self($this->graphql, $this->entityClass, $this->manager, $options, $this->unmappedFieldHints))->getResult();
 
         while ($page instanceof PaginatedResult) {
             // Not "yield from": each page would restart the keys at 0.

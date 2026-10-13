@@ -7,6 +7,7 @@ namespace GraphqlOrm\DependencyInjection;
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Client\GraphqlClientInterface;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
+use GraphqlOrm\Execution\IdentityMap;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\MetadataCacheWarmer;
@@ -41,6 +42,7 @@ final class GraphqlOrmExtension extends Extension
          *   metadata_cache_pool: string|null,
          *   naming_strategy: string,
          *   slow_query_threshold: int|float|null,
+         *   identity_map: bool,
          *   headers_provider: string|null,
          *   lazy_loading: bool,
          *   max_depth: int,
@@ -98,6 +100,11 @@ final class GraphqlOrmExtension extends Extension
         }
 
         $debug = $container->hasParameter('kernel.debug') && $container->getParameter('kernel.debug');
+
+        if ($config['identity_map']) {
+            $container->register(IdentityMap::class, IdentityMap::class)->addTag('kernel.reset', ['method' => 'reset']);
+            $container->getDefinition(GraphqlManager::class)->setArgument('$identityMap', new Reference(IdentityMap::class));
+        }
 
         // A float node keeps an integer (500) as is.
         $slowQueryThreshold = $config['slow_query_threshold'] !== null ? (float) $config['slow_query_threshold'] : null;

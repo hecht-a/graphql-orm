@@ -14,6 +14,7 @@ use GraphqlOrm\Event\QueryExecutedEvent;
 use GraphqlOrm\Event\QueryFailedEvent;
 use GraphqlOrm\Event\QueryStartedEvent;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
+use GraphqlOrm\Execution\IdentityMap;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
@@ -37,6 +38,8 @@ class GraphqlManager
      */
     private const LAZY_LOADING_BATCH_SIZE = 100;
 
+    private bool $loadingLazily = false;
+
     public function __construct(
         private GraphqlEntityMetadataFactory $metadataFactory,
         private GraphqlClientInterface $client,
@@ -51,7 +54,30 @@ class GraphqlManager
         private ?EventDispatcherInterface $eventDispatcher = null,
         private bool $lazyLoading = false,
         private ?float $slowQueryThreshold = null,
+        private ?IdentityMap $identityMap = null,
     ) {
+    }
+
+    /**
+     * The entity known in full with this identifier in the shared identity map, if any: find() then needs no query.
+     *
+     * @template T of object
+     *
+     * @param class-string<T> $class
+     *
+     * @return T|null
+     */
+    public function findKnown(string $class, int|string $identifier): ?object
+    {
+        return $this->identityMap?->find($class, $identifier);
+    }
+
+    /**
+     * Forgets the entities of the shared identity map, as between two requests: for a long-running script.
+     */
+    public function clear(): void
+    {
+        $this->identityMap?->reset();
     }
 
     /**
@@ -82,6 +108,11 @@ class GraphqlManager
     public function send(QueryNode|string $graphql, callable $hydration, QueryOptions $options = new QueryOptions(), array $variables = []): \Closure
     {
         $context = new GraphqlExecutionContext(dialect: $this->dialect);
+        $shared = $this->identityMap !== null && !$options->detached && !$this->loadingLazily;
+
+        if ($shared) {
+            $context->identityMap = $this->identityMap->entities();
+        }
 
         if ($this->lazyLoading) {
             $context->lazyLoader = $this->loadLazily(...);
@@ -113,12 +144,16 @@ class GraphqlManager
             throw $exception;
         }
 
-        return function () use ($response, $hydration, $context): array|PaginatedResult {
+        return function () use ($response, $hydration, $context, $shared): array|PaginatedResult {
             $failure = null;
 
             try {
                 $entities = $hydration($response(), $context);
                 $context->trace->hydratedCount = \count($entities instanceof PaginatedResult ? $entities->items : $entities);
+
+                if ($shared) {
+                    $this->identityMap?->merge($context->identityMap, $context->completeEntities);
+                }
             } catch (\Throwable $exception) {
                 $failure = $exception;
 
@@ -153,22 +188,30 @@ class GraphqlManager
      */
     private function loadLazily(string $class, array $identifiers): array
     {
-        $repository = new GraphqlEntityRepository($this, $class);
-        $identifier = $this->metadataFactory->getMetadata($class)->identifier;
+        // A ghost is loaded while it initializes: its query must not meet it again through the shared identity map.
+        $loadingLazily = $this->loadingLazily;
+        $this->loadingLazily = true;
 
-        if ($identifier === null || \count($identifiers) === 1 || !$this->dialect instanceof BatchLoadingDialect) {
-            return array_values(array_filter(array_map($repository->find(...), $identifiers)));
+        try {
+            $repository = new GraphqlEntityRepository($this, $class);
+            $identifier = $this->metadataFactory->getMetadata($class)->identifier;
+
+            if ($identifier === null || \count($identifiers) === 1 || !$this->dialect instanceof BatchLoadingDialect) {
+                return array_values(array_filter(array_map($repository->find(...), $identifiers)));
+            }
+
+            $entities = [];
+
+            foreach (array_chunk($identifiers, self::LAZY_LOADING_BATCH_SIZE) as $batch) {
+                $qb = $repository->createQueryBuilder();
+                $result = $qb->where($qb->expr()->in($identifier->mappedFrom, $batch))->limit(\count($batch))->getQuery()->getResult();
+                $entities = [...$entities, ...array_values($result instanceof PaginatedResult ? $result->items : $result)];
+            }
+
+            return $entities;
+        } finally {
+            $this->loadingLazily = $loadingLazily;
         }
-
-        $entities = [];
-
-        foreach (array_chunk($identifiers, self::LAZY_LOADING_BATCH_SIZE) as $batch) {
-            $qb = $repository->createQueryBuilder();
-            $result = $qb->where($qb->expr()->in($identifier->mappedFrom, $batch))->limit(\count($batch))->getQuery()->getResult();
-            $entities = [...$entities, ...array_values($result instanceof PaginatedResult ? $result->items : $result)];
-        }
-
-        return $entities;
     }
 
     public function getDialect(): GraphqlQueryDialect
