@@ -17,6 +17,7 @@ use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Schema\SchemaIntrospector;
 use GraphqlOrm\Schema\SchemaValidationMode;
 use GraphqlOrm\Schema\SchemaValidator;
+use GraphqlOrm\ValueResolver\GraphqlEntityValueResolver;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Stopwatch\Stopwatch;
@@ -47,6 +48,11 @@ return static function (ContainerConfigurator $config) {
         ->arg('$eventDispatcher', service('event_dispatcher')->nullOnInvalid());
 
     $services->set(QueryRedactor::class);
+
+    // Before the request attribute resolver (priority 100), which would give the route parameter as is.
+    $services->set(GraphqlEntityValueResolver::class)
+        ->autoconfigure(false)
+        ->tag('controller.argument_value_resolver', ['priority' => 110, 'name' => GraphqlEntityValueResolver::class]);
 
     $services->set(GraphqlClientInterface::class);
 

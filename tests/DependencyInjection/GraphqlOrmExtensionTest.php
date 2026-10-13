@@ -15,6 +15,7 @@ use GraphqlOrm\Metadata\MetadataCacheWarmer;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Tests\Fixtures\FakeEventDispatcher;
 use GraphqlOrm\Tests\Fixtures\FakeHeadersProvider;
+use GraphqlOrm\ValueResolver\GraphqlEntityValueResolver;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -45,6 +46,16 @@ final class GraphqlOrmExtensionTest extends TestCase
 
         self::assertFalse($container->has(GraphqlOrmDataCollector::class));
         self::assertInstanceOf(GraphqlManager::class, $container->get(GraphqlManager::class));
+    }
+
+    #[Test]
+    public function itResolvesTheEntitiesOfTheControllersBeforeTheRequestAttributes(): void
+    {
+        $container = $this->createContainer(debug: false);
+
+        $tags = $container->getDefinition(GraphqlEntityValueResolver::class)->getTag('controller.argument_value_resolver');
+
+        self::assertSame([['priority' => 110, 'name' => GraphqlEntityValueResolver::class]], $tags);
     }
 
     #[Test]
