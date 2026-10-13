@@ -53,6 +53,8 @@ final readonly class GraphqlClient implements ConcurrentGraphqlClientInterface
         $context->trace->endpoint = $this->endpoint;
 
         $this->stopwatch?->start($eventName, 'graphql_orm');
+        // Measured without the stopwatch too, which the application may not provide.
+        $startedAt = hrtime(true);
 
         try {
             // The request is sent here; reading its response, later, is what waits for it.
@@ -73,18 +75,18 @@ final readonly class GraphqlClient implements ConcurrentGraphqlClientInterface
                     ]
                 );
         } catch (TransportExceptionInterface $e) {
-            $this->stopTimer($eventName, $context);
+            $this->stopTimer($eventName, $startedAt, $context);
 
             throw GraphqlRequestException::transportFailed($this->endpoint, $e);
         }
 
-        return fn (): array => $this->receive($response, $eventName, $context);
+        return fn (): array => $this->receive($response, $eventName, $startedAt, $context);
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function receive(ResponseInterface $response, string $eventName, GraphqlExecutionContext $context): array
+    private function receive(ResponseInterface $response, string $eventName, int|float $startedAt, GraphqlExecutionContext $context): array
     {
         try {
             $statusCode = $response->getStatusCode();
@@ -92,7 +94,7 @@ final readonly class GraphqlClient implements ConcurrentGraphqlClientInterface
         } catch (TransportExceptionInterface $e) {
             throw GraphqlRequestException::transportFailed($this->endpoint, $e);
         } finally {
-            $this->stopTimer($eventName, $context);
+            $this->stopTimer($eventName, $startedAt, $context);
         }
 
         $context->trace->responseSize = \strlen($content);
@@ -108,10 +110,10 @@ final readonly class GraphqlClient implements ConcurrentGraphqlClientInterface
         return $this->decode($content, $context);
     }
 
-    private function stopTimer(string $eventName, GraphqlExecutionContext $context): void
+    private function stopTimer(string $eventName, int|float $startedAt, GraphqlExecutionContext $context): void
     {
-        $event = $this->stopwatch?->stop($eventName);
-        $context->trace->duration = $event ? $event->getDuration() : 0.0;
+        $this->stopwatch?->stop($eventName);
+        $context->trace->duration = (hrtime(true) - $startedAt) / 1e6;
     }
 
     /**

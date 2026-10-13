@@ -40,6 +40,7 @@ final class GraphqlOrmExtension extends Extension
          *   headers: array<string, string>,
          *   metadata_cache_pool: string|null,
          *   naming_strategy: string,
+         *   slow_query_threshold: int|float|null,
          *   headers_provider: string|null,
          *   lazy_loading: bool,
          *   max_depth: int,
@@ -98,9 +99,15 @@ final class GraphqlOrmExtension extends Extension
 
         $debug = $container->hasParameter('kernel.debug') && $container->getParameter('kernel.debug');
 
+        // A float node keeps an integer (500) as is.
+        $slowQueryThreshold = $config['slow_query_threshold'] !== null ? (float) $config['slow_query_threshold'] : null;
+        $container->getDefinition(GraphqlManager::class)->setArgument('$slowQueryThreshold', $slowQueryThreshold);
+
         // The collector keeps every query in memory: only useful when the profiler can display it.
         if (!$debug) {
             $container->removeDefinition(GraphqlOrmDataCollector::class);
+        } else {
+            $container->getDefinition(GraphqlOrmDataCollector::class)->setArgument('$slowQueryThreshold', $slowQueryThreshold);
         }
 
         $container->getDefinition(GraphqlEntityMetadataFactory::class)->setArgument('$namingStrategy', new Reference($config['naming_strategy']));

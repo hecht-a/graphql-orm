@@ -23,6 +23,12 @@
             <b>Errors</b>
             <span class="sf-toolbar-status sf-toolbar-status-red">{{ collector.errorCount|default(0) }}</span>
         </div>
+        {% if collector.slowQueryCount|default(0) > 0 %}
+            <div class="sf-toolbar-info-piece">
+                <b>Slow</b>
+                <span class="sf-toolbar-status sf-toolbar-status-yellow" title="over {{ collector.slowQueryThreshold }} ms">{{ collector.slowQueryCount }}</span>
+            </div>
+        {% endif %}
         {% if collector.repeatedQueries is not empty %}
             <div class="sf-toolbar-info-piece">
                 <b>Repeated</b>
@@ -35,7 +41,7 @@
         link: profiler_url,
         icon: icon,
         text: text,
-        status: collector.errorCount > 0 ? 'red' : (collector.repeatedQueries is not empty ? 'yellow')
+        status: collector.errorCount > 0 ? 'red' : (collector.repeatedQueries is not empty or collector.slowQueryCount|default(0) > 0 ? 'yellow')
     }) }}
 
 {% endblock %}
@@ -95,6 +101,16 @@
             <div class="sf-profiler-block" id="graphql-orm-query-{{ loop.index }}">
                 <h3>
                     Query #{{ loop.index }}
+                    {% if query.slow is defined and query.slow %}
+                        <span class="graphql-orm-slow-badge" title="over {{ collector.slowQueryThreshold }} ms" style="
+                            background:#ffcc00;
+                            color:#222;
+                            padding:2px 6px;
+                            border-radius:4px;
+                            font-size:12px;
+                            margin-left:6px;
+                            ">slow: {{ query.duration|number_format(0) }} ms</span>
+                    {% endif %}
                     {% if query.errors %}
                         <span style="
                             background:#ff6b6b;

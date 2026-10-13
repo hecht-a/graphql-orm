@@ -75,6 +75,21 @@ final class GraphqlClientTest extends TestCase
     }
 
     #[Test]
+    public function itMeasuresTheDurationWithoutStopwatch(): void
+    {
+        $body = (function (): \Generator {
+            usleep(30_000);
+
+            yield '{"data":{"tasks":[]}}';
+        })();
+        $context = new GraphqlExecutionContext();
+
+        $this->createClient(new MockResponse($body))->query(self::QUERY, $context);
+
+        self::assertGreaterThanOrEqual(25.0, $context->trace->duration);
+    }
+
+    #[Test]
     public function itThrowsABundleExceptionWhenTheResponseHasErrorsAndNoData(): void
     {
         $client = $this->createClient(new MockResponse(

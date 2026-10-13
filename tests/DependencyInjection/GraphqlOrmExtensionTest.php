@@ -113,6 +113,15 @@ final class GraphqlOrmExtensionTest extends TestCase
     }
 
     #[Test]
+    public function itPassesTheSlowQueryThresholdToTheManagerAndTheProfiler(): void
+    {
+        $container = $this->createContainer(debug: true, config: ['slow_query_threshold' => 500]);
+
+        self::assertSame(500.0, $container->getDefinition(GraphqlManager::class)->getArgument('$slowQueryThreshold'));
+        self::assertSame(500.0, $container->getDefinition(GraphqlOrmDataCollector::class)->getArgument('$slowQueryThreshold'));
+    }
+
+    #[Test]
     public function itCompilesWithoutAFilesystemServiceFromTheFramework(): void
     {
         $container = $this->createContainer(debug: true);

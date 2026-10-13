@@ -20,8 +20,12 @@ final class GraphqlOrmDataCollector extends DataCollector
      */
     public const REPEATED_QUERY_THRESHOLD = 3;
 
+    /**
+     * @param float|null $slowQueryThreshold duration in milliseconds from which a query is reported as slow
+     */
     public function __construct(
         private readonly QueryRedactor $redactor = new QueryRedactor(),
+        private readonly ?float $slowQueryThreshold = null,
     ) {
     }
 
@@ -46,6 +50,7 @@ final class GraphqlOrmDataCollector extends DataCollector
             'hydrated_entities' => $trace->hydratedEntities,
             'hydrated_relations' => $trace->hydratedRelations,
             'duration' => $trace->duration,
+            'slow' => $this->slowQueryThreshold !== null && $trace->duration >= $this->slowQueryThreshold,
         ];
         $this->data['queries'] = $queries;
     }
@@ -92,6 +97,16 @@ final class GraphqlOrmDataCollector extends DataCollector
         $queries = $this->data['queries'] ?? [];
 
         return $queries;
+    }
+
+    public function getSlowQueryCount(): int
+    {
+        return \count(array_filter($this->getQueries(), fn (array $query) => ($query['slow'] ?? false) === true));
+    }
+
+    public function getSlowQueryThreshold(): ?float
+    {
+        return $this->slowQueryThreshold;
     }
 
     public function getQueryCount(): int

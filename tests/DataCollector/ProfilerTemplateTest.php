@@ -46,6 +46,34 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itHighlightsTheSlowQueries(): void
+    {
+        $collector = new GraphqlOrmDataCollector(slowQueryThreshold: 500.0);
+
+        foreach ([120.0, 750.0] as $duration) {
+            $trace = new GraphqlQueryTrace();
+            $trace->graphql = 'query { tasks { id } }';
+            $trace->duration = $duration;
+            $collector->addQuery($trace);
+        }
+
+        $html = $this->render($collector);
+
+        self::assertStringContainsString('Slow', $html);
+        self::assertStringContainsString('over 500 ms', $html);
+        self::assertSame(1, substr_count($html, 'graphql-orm-slow-badge'));
+    }
+
+    #[Test]
+    public function itDoesNotMentionSlowQueriesWhenThereAreNone(): void
+    {
+        $html = $this->render($this->collector(['query { tasks { id } }']));
+
+        self::assertStringNotContainsString('graphql-orm-slow-badge', $html);
+        self::assertStringNotContainsString('<b>Slow</b>', $html);
+    }
+
+    #[Test]
     public function itRendersTheAstOfAQuery(): void
     {
         $trace = new GraphqlQueryTrace();

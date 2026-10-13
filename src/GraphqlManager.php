@@ -50,6 +50,7 @@ class GraphqlManager
         private ?RootArgumentTypeResolver $argumentTypeResolver = null,
         private ?EventDispatcherInterface $eventDispatcher = null,
         private bool $lazyLoading = false,
+        private ?float $slowQueryThreshold = null,
     ) {
     }
 
@@ -261,6 +262,15 @@ class GraphqlManager
             $this->logger->error('GraphQL query returned errors', [
                 ...$context,
                 'errors' => $trace->errors,
+            ]);
+
+            return;
+        }
+
+        if ($this->slowQueryThreshold !== null && $trace->duration >= $this->slowQueryThreshold) {
+            $this->logger->warning('Slow GraphQL query', [
+                ...$context,
+                'slow_query_threshold_ms' => $this->slowQueryThreshold,
             ]);
 
             return;
