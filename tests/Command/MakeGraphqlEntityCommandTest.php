@@ -45,6 +45,19 @@ final class MakeGraphqlEntityCommandTest extends TestCase
     }
 
     #[Test]
+    public function itTypesTheGeneratedRepositoryThroughGenericsOnly(): void
+    {
+        $tester = $this->createTester();
+        $tester->setInputs(['no']);
+
+        $tester->execute(['name' => 'Task']);
+
+        $repositoryCode = (string) file_get_contents($this->outputDir . '/Repository/TaskRepository.php');
+        self::assertStringContainsString('@extends GraphqlEntityRepository<Task>', $repositoryCode);
+        self::assertStringNotContainsString('@method', $repositoryCode);
+    }
+
+    #[Test]
     public function itRejectsAGraphqlFieldNameThatWouldBreakTheGeneratedCode(): void
     {
         $tester = $this->createTester();

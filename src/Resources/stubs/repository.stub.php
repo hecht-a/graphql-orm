@@ -8,8 +8,6 @@ use GraphqlOrm\Repository\GraphqlEntityRepository;
 
 /**
  * @extends GraphqlEntityRepository<{{ entity_short }}>
- * @method {{ entity_short }}[] findAll()
- * @method {{ entity_short }}[] findBy(array $criteria)
  */
 class {{ repo_class_name }} extends GraphqlEntityRepository
 {

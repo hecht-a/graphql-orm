@@ -10,9 +10,6 @@ use GraphqlOrm\Tests\Fixtures\FakeEntity\User;
 
 /**
  * @extends GraphqlEntityRepository<User>
- *
- * @method User[] findAll()
- * @method User[] findBy(array<string, mixed> $criteria)
  */
 class UserRepository extends GraphqlEntityRepository
 {
