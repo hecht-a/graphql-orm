@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `findBy()` signature and missed `find()` and `findOneBy()`, while `@extends GraphqlEntityRepository<Entity>` already
   types every method. Existing repositories can drop them as well.
 - The description of `graphqlorm:make:entity` was in French, unlike the other commands.
+- Schema validation on the first request was remembered in a static property, shared by every container of the process:
+  a second kernel (functional tests, a rebuilt container in worker mode) skipped it. It now runs once per container.
 
 ---
 
