@@ -12,8 +12,6 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\Finder\Finder;
 
 /**
  * @internal
@@ -26,10 +24,7 @@ final readonly class DebugEntityCommand
 {
     public function __construct(
         private GraphqlEntityMetadataFactory $metadataFactory,
-        #[Autowire('%graphql_orm.mapping.entity.dir%')]
-        private string $entityDir,
-        #[Autowire('%graphql_orm.mapping.entity.namespace%')]
-        private string $entityNamespace,
+        private EntityClassLocator $entityClassLocator,
     ) {
     }
 
@@ -43,13 +38,13 @@ final readonly class DebugEntityCommand
     ): int {
         $io = new SymfonyStyle($input, $output);
 
-        $fqcn = $this->resolveClass($entity);
+        $fqcn = $this->entityClassLocator->resolve($entity);
 
         if ($fqcn === null) {
             $io->error(\sprintf(
                 'Entity "%s" not found. Available entities: %s',
                 $entity,
-                implode(', ', $this->findExistingEntities()),
+                implode(', ', $this->entityClassLocator->available()),
             ));
 
             return Command::FAILURE;
@@ -154,26 +149,6 @@ final readonly class DebugEntityCommand
     }
 
     /**
-     * @return class-string|null
-     */
-    private function resolveClass(string $entity): ?string
-    {
-        if (class_exists($entity)) {
-            /** @var class-string $entity */
-            return $entity;
-        }
-
-        $fqcn = rtrim($this->entityNamespace, '\\') . '\\' . ltrim($entity, '\\');
-
-        if (class_exists($fqcn)) {
-            /** @var class-string $fqcn */
-            return $fqcn;
-        }
-
-        return null;
-    }
-
-    /**
      * @param class-string $class
      */
     private function resolvePhpType(string $class, string $property): string
@@ -206,28 +181,5 @@ final readonly class DebugEntityCommand
         }
 
         return 'mixed';
-    }
-
-    /**
-     * @return string[]
-     */
-    private function findExistingEntities(): array
-    {
-        if (!is_dir($this->entityDir)) {
-            return [];
-        }
-
-        $finder = new Finder();
-        $finder->files()->in($this->entityDir)->name('*.php')->depth(0);
-
-        $entities = [];
-
-        foreach ($finder as $file) {
-            $entities[] = pathinfo($file->getFilename(), PATHINFO_FILENAME);
-        }
-
-        sort($entities);
-
-        return $entities;
     }
 }

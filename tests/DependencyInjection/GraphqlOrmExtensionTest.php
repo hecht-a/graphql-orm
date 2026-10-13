@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GraphqlOrm\Tests\DependencyInjection;
 
 use GraphqlOrm\Client\GraphqlClient;
+use GraphqlOrm\Command\FindCommand;
 use GraphqlOrm\Command\MakeGraphqlEntityCommand;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\DependencyInjection\GraphqlOrmExtension;
@@ -119,6 +120,15 @@ final class GraphqlOrmExtensionTest extends TestCase
 
         self::assertSame(500.0, $container->getDefinition(GraphqlManager::class)->getArgument('$slowQueryThreshold'));
         self::assertSame(500.0, $container->getDefinition(GraphqlOrmDataCollector::class)->getArgument('$slowQueryThreshold'));
+    }
+
+    #[Test]
+    public function itRegistersTheFindCommand(): void
+    {
+        $container = $this->createContainer(debug: false);
+        $container->compile();
+
+        self::assertInstanceOf(FindCommand::class, $container->get(FindCommand::class));
     }
 
     #[Test]

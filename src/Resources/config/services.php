@@ -6,6 +6,8 @@ use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Client\GraphqlClientInterface;
 use GraphqlOrm\Codegen\StubRenderer;
 use GraphqlOrm\Command\DebugEntityCommand;
+use GraphqlOrm\Command\EntityClassLocator;
+use GraphqlOrm\Command\FindCommand;
 use GraphqlOrm\Command\MakeGraphqlEntityCommand;
 use GraphqlOrm\Command\SchemaValidateCommand;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
@@ -98,6 +100,11 @@ return static function (ContainerConfigurator $config) {
         ->tag('console.command');
 
     $services->set(SchemaValidateCommand::class)
+        ->tag('console.command');
+
+    $services->set(EntityClassLocator::class);
+
+    $services->set(FindCommand::class)
         ->tag('console.command');
 
     $services->set(SchemaIntrospector::class);
