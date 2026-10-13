@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Dialect;
 
+use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\Exception\LogicException;
+use GraphqlOrm\Query\Ast\FieldNode;
+use GraphqlOrm\Query\Ast\SelectionSetNode;
 use GraphqlOrm\Query\Expr\FilterExpressionInterface;
 use GraphqlOrm\Query\QueryOptions;
 use GraphqlOrm\Query\Walker\GraphqlWalkerInterface;
@@ -17,7 +20,7 @@ use GraphqlOrm\Query\Walker\RelayGraphqlWalker;
  * Relay standardizes neither filtering nor ordering: criteria and filters are sent as root arguments, ordering is
  * rejected.
  */
-final class RelayDialect implements GraphqlQueryDialect, CursorPaginationDialect
+final class RelayDialect implements GraphqlQueryDialect, CursorPaginationDialect, CountingDialect
 {
     public function extractCollection(array $data): array
     {
@@ -90,5 +93,23 @@ final class RelayDialect implements GraphqlQueryDialect, CursorPaginationDialect
         $pageInfo = $root['pageInfo'] ?? null;
 
         return \is_array($pageInfo) ? $pageInfo : [];
+    }
+
+    /**
+     * `tasks { totalCount }`: not part of the Relay specification, but exposed by most Relay servers.
+     */
+    public function countField(string $root, array $arguments, ?string $identifierField): FieldNode
+    {
+        $selection = new SelectionSetNode();
+        $selection->add(new FieldNode('totalCount'));
+
+        return new FieldNode($root, $arguments, $selection);
+    }
+
+    public function readCount(array $data, string $countRoot): int
+    {
+        $count = \is_array($data[$countRoot] ?? null) ? ($data[$countRoot]['totalCount'] ?? null) : null;
+
+        return \is_int($count) ? $count : throw InvalidGraphqlResponseException::expectedArray($data[$countRoot] ?? null);
     }
 }

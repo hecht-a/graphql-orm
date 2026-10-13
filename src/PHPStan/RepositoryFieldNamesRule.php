@@ -12,7 +12,7 @@ use PHPStan\Analyser\Scope;
 use PHPStan\Rules\Rule;
 
 /**
- * Checks the criteria and ordering keys of the repository find methods, which are sent as is to the API.
+ * Checks the criteria and ordering keys of the repository find and count methods, which are sent as is to the API.
  *
  * @implements Rule<MethodCall>
  *
@@ -20,7 +20,7 @@ use PHPStan\Rules\Rule;
  */
 final readonly class RepositoryFieldNamesRule implements Rule
 {
-    private const FIND_METHODS = ['findBy', 'findOneBy'];
+    private const FIND_METHODS = ['findBy', 'findOneBy', 'count'];
 
     public function __construct(
         private FieldNameChecker $checker,

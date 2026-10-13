@@ -38,6 +38,14 @@ final class DataApiBuilderTest extends IntegrationTestCase
     }
 
     #[Test]
+    public function itCountsEntities(): void
+    {
+        self::assertSame(4, $this->repository(Task::class)->count());
+        self::assertSame(3, $this->repository(Task::class)->count(['done' => false]));
+        self::assertSame(1, $this->repository(Task::class)->count(['done' => true]));
+    }
+
+    #[Test]
     public function itHydratesEntitiesWithTheirRelationsAndDates(): void
     {
         $task = $this->tasks()->find(1);

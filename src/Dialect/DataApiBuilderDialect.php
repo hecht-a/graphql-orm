@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Dialect;
 
+use GraphqlOrm\Exception\InvalidGraphqlResponseException;
+use GraphqlOrm\Exception\LogicException;
+use GraphqlOrm\Query\Ast\FieldNode;
+use GraphqlOrm\Query\Ast\SelectionSetNode;
+use GraphqlOrm\Query\EnumLiteral;
 use GraphqlOrm\Query\Expr\FilterExpressionInterface;
 use GraphqlOrm\Query\QueryOptions;
 use GraphqlOrm\Query\Walker\DABGraphqlWalker;
 use GraphqlOrm\Query\Walker\GraphqlWalkerInterface;
 
-final class DataApiBuilderDialect implements GraphqlQueryDialect, CursorPaginationDialect, BatchLoadingDialect
+final class DataApiBuilderDialect implements GraphqlQueryDialect, CursorPaginationDialect, BatchLoadingDialect, CountingDialect
 {
     public function extractCollection(array $data): array
     {
@@ -77,5 +82,44 @@ final class DataApiBuilderDialect implements GraphqlQueryDialect, CursorPaginati
         $cursor = $root['endCursor'] ?? null;
 
         return \is_string($cursor) ? $cursor : null;
+    }
+
+    /**
+     * `tasks(filter) { groupBy { aggregations { count(field: id) } } }`: the count of an aggregation without grouping.
+     *
+     * @throws LogicException when the entity has no identifier, the field Data API Builder counts
+     */
+    public function countField(string $root, array $arguments, ?string $identifierField): FieldNode
+    {
+        if ($identifierField === null) {
+            throw new LogicException('Data API Builder counts the values of a field: count() needs an entity identifier.');
+        }
+
+        $aggregations = new SelectionSetNode();
+        $aggregations->add(new FieldNode('count', ['field' => new EnumLiteral($identifierField)]));
+        $groupBy = new SelectionSetNode();
+        $groupBy->add(new FieldNode('aggregations', [], $aggregations));
+        $selection = new SelectionSetNode();
+        $selection->add(new FieldNode('groupBy', [], $groupBy));
+
+        return new FieldNode($root, $arguments, $selection);
+    }
+
+    public function readCount(array $data, string $countRoot): int
+    {
+        $groups = \is_array($data[$countRoot] ?? null) ? ($data[$countRoot]['groupBy'] ?? null) : null;
+
+        if (!\is_array($groups)) {
+            throw InvalidGraphqlResponseException::expectedArray($groups);
+        }
+
+        $count = 0;
+
+        foreach ($groups as $group) {
+            $groupCount = \is_array($group) && \is_array($group['aggregations'] ?? null) ? ($group['aggregations']['count'] ?? null) : null;
+            $count += \is_int($groupCount) ? $groupCount : throw InvalidGraphqlResponseException::expectedArray($group);
+        }
+
+        return $count;
     }
 }

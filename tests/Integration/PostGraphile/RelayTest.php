@@ -36,6 +36,12 @@ final class RelayTest extends IntegrationTestCase
     }
 
     #[Test]
+    public function itCountsEntities(): void
+    {
+        self::assertSame(4, $this->repository(RelayTask::class)->count());
+    }
+
+    #[Test]
     public function itHydratesTheNodesWithTheirRelationsAndDates(): void
     {
         $tasks = $this->repository(RelayTask::class)->findAll();

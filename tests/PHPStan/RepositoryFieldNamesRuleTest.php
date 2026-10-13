@@ -33,6 +33,7 @@ final class RepositoryFieldNamesRuleTest extends RuleTestCase
             [\sprintf('Field "titel" is not mapped on %s. Did you mean "title"?', Task::class), 19, self::UNMAPPED_TIP],
             [\sprintf('Field "dueDate" is the PHP property of %s: use its GraphQL name "due_date".', Task::class), 21],
             [\sprintf('Field "user_id" is not mapped on %s. Did you mean "user"?', Task::class), 22, self::UNMAPPED_TIP],
+            [\sprintf('Field "dueDate" is the PHP property of %s: use its GraphQL name "due_date".', Task::class), 24],
         ]);
     }
 
@@ -44,6 +45,7 @@ final class RepositoryFieldNamesRuleTest extends RuleTestCase
         $this->analyse([__DIR__ . '/data/repository-field-names.php'], [
             [\sprintf('Field "dueDate" is the PHP property of %s: use its GraphQL name "due_date".', Task::class), 18],
             [\sprintf('Field "dueDate" is the PHP property of %s: use its GraphQL name "due_date".', Task::class), 21],
+            [\sprintf('Field "dueDate" is the PHP property of %s: use its GraphQL name "due_date".', Task::class), 24],
         ]);
     }
 }

@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Repository;
 
+use GraphqlOrm\Dialect\CountingDialect;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\GraphqlManager;
+use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\Direction;
 use GraphqlOrm\Query\GraphqlQuery;
 use GraphqlOrm\Query\GraphqlQueryBuilder;
+use GraphqlOrm\Query\GraphqlQueryCompiler;
 use GraphqlOrm\Query\GraphqlQueryStringBuilder;
 use GraphqlOrm\Query\QueryOptions;
+use GraphqlOrm\Query\Walker\DefaultGraphqlWalker;
 
 /**
  * @template T of object
@@ -100,6 +104,37 @@ class GraphqlEntityRepository
         $result = (new GraphqlQuery($query, $this->entityClass, $this->manager, $options))->getResult();
 
         return $result;
+    }
+
+    /**
+     * Counts the entities matching the criteria, with a query of its own; values are sent inline, not as variables.
+     *
+     * @param array<string, mixed> $criteria GraphQL field name => expected value
+     *
+     * @throws LogicException when the dialect cannot count
+     */
+    public function count(array $criteria = []): int
+    {
+        $dialect = $this->manager->getDialect();
+
+        if (!$dialect instanceof CountingDialect) {
+            throw new LogicException(\sprintf('"%s" cannot count entities: count() needs a dialect implementing %s.', $dialect::class, CountingDialect::class));
+        }
+
+        $metadata = $this->manager->getMetadataFactory()->getMetadata($this->entityClass);
+        $field = $dialect->countField($metadata->name, $dialect->applyCriteria($criteria), $metadata->identifier?->mappedFrom);
+
+        $query = new QueryNode();
+        $query->fields[] = $field;
+        // The count field has no collection envelope: it is printed as is, whatever the dialect.
+        $graphql = (new GraphqlQueryCompiler(new DefaultGraphqlWalker()))->compile($query, new QueryOptions());
+
+        [$count] = $this->manager->execute(
+            $graphql,
+            fn (array $result): array => [$dialect->readCount(\is_array($result['data'] ?? null) ? $result['data'] : [], $field->name)],
+        );
+
+        return $count;
     }
 
     /**

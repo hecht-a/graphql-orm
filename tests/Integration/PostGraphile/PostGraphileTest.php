@@ -34,6 +34,14 @@ final class PostGraphileTest extends IntegrationTestCase
     }
 
     #[Test]
+    public function itCountsEntities(): void
+    {
+        self::assertSame(4, $this->repository(RelayTask::class)->count());
+        self::assertSame(3, $this->repository(RelayTask::class)->count(['done' => false]));
+        self::assertSame(1, $this->repository(RelayTask::class)->count(['done' => true]));
+    }
+
+    #[Test]
     public function itFindsEntitiesByCondition(): void
     {
         $task = $this->repository(RelayTask::class)->find(3);

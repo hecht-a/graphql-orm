@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace GraphqlOrm\Dialect;
 
 use GraphqlOrm\Exception\InvalidArgumentException;
+use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\Exception\LogicException;
+use GraphqlOrm\Query\Ast\FieldNode;
+use GraphqlOrm\Query\Ast\SelectionSetNode;
 use GraphqlOrm\Query\Expr\FilterExpressionInterface;
 use GraphqlOrm\Query\QueryOptions;
 use GraphqlOrm\Query\Walker\GraphqlWalkerInterface;
@@ -17,7 +20,7 @@ use GraphqlOrm\Query\Walker\HasuraGraphqlWalker;
  *
  * Hasura paginates with an offset: `paginate()` needs a `limit()`, the cursor of a page being the offset of the next one.
  */
-final class HasuraDialect implements GraphqlQueryDialect, BatchLoadingDialect, OffsetPaginationDialect
+final class HasuraDialect implements GraphqlQueryDialect, BatchLoadingDialect, OffsetPaginationDialect, CountingDialect
 {
     private const OPERATORS = [
         'eq' => '_eq',
@@ -172,5 +175,26 @@ final class HasuraDialect implements GraphqlQueryDialect, BatchLoadingDialect, O
     private function escapeLike(mixed $value): string
     {
         return addcslashes(\is_scalar($value) ? (string) $value : '', '\\%_');
+    }
+
+    /**
+     * `tasks_aggregate(where) { aggregate { count } }`.
+     */
+    public function countField(string $root, array $arguments, ?string $identifierField): FieldNode
+    {
+        $aggregate = new SelectionSetNode();
+        $aggregate->add(new FieldNode('count'));
+        $selection = new SelectionSetNode();
+        $selection->add(new FieldNode('aggregate', [], $aggregate));
+
+        return new FieldNode($root . '_aggregate', $arguments, $selection);
+    }
+
+    public function readCount(array $data, string $countRoot): int
+    {
+        $aggregate = \is_array($data[$countRoot] ?? null) ? ($data[$countRoot]['aggregate'] ?? null) : null;
+        $count = \is_array($aggregate) ? ($aggregate['count'] ?? null) : null;
+
+        return \is_int($count) ? $count : throw InvalidGraphqlResponseException::expectedArray($data[$countRoot] ?? null);
     }
 }

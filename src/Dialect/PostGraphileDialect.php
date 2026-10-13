@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GraphqlOrm\Dialect;
 
 use GraphqlOrm\Exception\LogicException;
+use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Direction;
 use GraphqlOrm\Query\EnumLiteral;
 use GraphqlOrm\Query\Expr\FilterExpressionInterface;
@@ -19,7 +20,7 @@ use GraphqlOrm\Query\Walker\RelayGraphqlWalker;
  * The query builder filters need postgraphile-plugin-connection-filter, which core PostGraphile does not provide: they
  * are rejected. Without a list filter, lazy relations are loaded one query each.
  */
-final class PostGraphileDialect implements GraphqlQueryDialect, CursorPaginationDialect
+final class PostGraphileDialect implements GraphqlQueryDialect, CursorPaginationDialect, CountingDialect
 {
     private RelayDialect $relay;
 
@@ -92,5 +93,15 @@ final class PostGraphileDialect implements GraphqlQueryDialect, CursorPagination
     private function constantCase(string $field): string
     {
         return strtoupper((string) preg_replace('/(?<=[a-z0-9])(?=[A-Z])/', '_', $field));
+    }
+
+    public function countField(string $root, array $arguments, ?string $identifierField): FieldNode
+    {
+        return $this->relay->countField($root, $arguments, $identifierField);
+    }
+
+    public function readCount(array $data, string $countRoot): int
+    {
+        return $this->relay->readCount($data, $countRoot);
     }
 }
