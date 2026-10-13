@@ -5,8 +5,6 @@
 ```php
 /**
  * @extends GraphqlEntityRepository<Task>
- * @method Task[] findAll()
- * @method Task[] findBy(array $criteria)
  */
 class TaskRepository extends GraphqlEntityRepository
 {
