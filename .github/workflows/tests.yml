@@ -36,14 +36,13 @@ jobs:
       fail-fast: false
       matrix:
         php-versions:
-          - 8.3
           - 8.4
           - 8.5
         dependencies:
           - highest
         include:
           # Catches requirements declared lower than what the code actually needs.
-          - php-versions: 8.3
+          - php-versions: 8.4
             dependencies: lowest
     steps:
       - name: checkout
@@ -66,7 +65,7 @@ jobs:
       - name: setup
         uses: shivammathur/setup-php@2.36.0
         with:
-          php-version: 8.3
+          php-version: 8.4
           coverage: none
       - name: composer install
         run: composer update --prefer-stable

@@ -13,7 +13,7 @@ automatic hydration, relation handling, schema validation, and deep Symfony inte
 composer require hecht-a/graphql-orm
 ```
 
-Requirements: PHP 8.3+ and Symfony 7.4 or 8.x.
+Requirements: PHP 8.4+ and Symfony 7.4 or 8.x.
 
 The bundle relies on the HTTP client service provided by FrameworkBundle (`framework.http_client`, enabled by default
 when `symfony/http-client` is installed).

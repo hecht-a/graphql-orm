@@ -2,6 +2,8 @@
 
 ## Quality checks
 
+The Castor tasks need Castor 1.8 or later, whose embedded PHP (8.5) satisfies the PHP 8.4 requirement of the bundle.
+
 ```bash
 vendor/bin/phpunit          # unit tests
 castor qa:cs:check          # coding standards (castor qa:cs:fix to fix them)
