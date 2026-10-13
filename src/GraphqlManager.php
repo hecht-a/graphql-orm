@@ -68,9 +68,8 @@ class GraphqlManager
 
     /**
      * Sends the query and returns a function completing it: waiting for the response, hydrating it, recording it. With
-     * a client unable to send concurrently, the query is only sent when completed.
-     *
-     * @internal used by GraphqlQuery::concurrently()
+     * a client unable to send concurrently, the query is only sent when completed. GraphqlQuery::concurrently() sends
+     * several queries this way before completing them.
      *
      * @template R of array<mixed>|PaginatedResult<object>
      *
