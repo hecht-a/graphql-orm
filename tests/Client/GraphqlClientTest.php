@@ -11,6 +11,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpClient\Retry\GenericRetryStrategy;
+use Symfony\Component\HttpClient\RetryableHttpClient;
 
 final class GraphqlClientTest extends TestCase
 {
@@ -39,6 +41,37 @@ final class GraphqlClientTest extends TestCase
 
         self::assertSame(['tasks' => [['id' => 1]]], $result['data']);
         self::assertSame([['message' => 'Field "secret" is restricted']], $context->trace->errors);
+    }
+
+    #[Test]
+    public function itRetriesTheQueriesWithTheRetryableClientOfSymfonyWhenPostIsAllowed(): void
+    {
+        $responses = new MockHttpClient([
+            new MockResponse('', ['http_code' => 504]),
+            new MockResponse('', ['http_code' => 500]),
+            new MockResponse('{"data":{"tasks":[{"id":1}]}}'),
+        ]);
+        $retrying = new RetryableHttpClient($responses, new GenericRetryStrategy([500 => ['POST'], 504 => ['POST']], delayMs: 0), maxRetries: 2);
+
+        $result = (new GraphqlClient($retrying, self::ENDPOINT))->query(self::QUERY, new GraphqlExecutionContext());
+
+        self::assertSame(['data' => ['tasks' => [['id' => 1]]]], $result);
+        self::assertSame(3, $responses->getRequestsCount());
+    }
+
+    #[Test]
+    public function itIsNotRetriedOnAServerErrorByTheDefaultStrategyOfSymfony(): void
+    {
+        $responses = new MockHttpClient([
+            new MockResponse('', ['http_code' => 500]),
+            new MockResponse('{"data":{"tasks":[]}}'),
+        ]);
+        $client = new GraphqlClient(new RetryableHttpClient($responses, new GenericRetryStrategy(delayMs: 0)), self::ENDPOINT);
+
+        $exception = $this->catchQueryException($client);
+
+        self::assertInstanceOf(GraphqlOrmException::class, $exception);
+        self::assertSame(1, $responses->getRequestsCount());
     }
 
     #[Test]
