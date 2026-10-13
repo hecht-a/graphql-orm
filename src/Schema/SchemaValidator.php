@@ -12,13 +12,6 @@ use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
  */
 final readonly class SchemaValidator
 {
-    private const DEFAULT_QUERY_TYPE = 'Query';
-
-    /**
-     * Field wrapping the entities of a paginated root field (e.g. Data API Builder connections).
-     */
-    private const CONNECTION_ITEMS_FIELD = 'items';
-
     /**
      * @var array<string, string[]>
      */
@@ -37,12 +30,12 @@ final readonly class SchemaValidator
     }
 
     /**
-     * @param class-string[]                                                                                    $entityClasses
-     * @param array<string, array{kind: string, fields: array<string, array{kind: string, name: string|null}>}> $schemaTypes
+     * @param class-string[]                                                                                                                  $entityClasses
+     * @param array<string, array{kind: string, fields: array<string, array{kind: string, name: string|null, nullable?: bool, list?: bool}>}> $schemaTypes
      *
      * @return string[]
      */
-    public function validate(array $entityClasses, array $schemaTypes, string $queryType = self::DEFAULT_QUERY_TYPE): array
+    public function validate(array $entityClasses, array $schemaTypes, string $queryType = GraphqlSchema::DEFAULT_QUERY_TYPE): array
     {
         $violations = [];
 
@@ -64,15 +57,14 @@ final readonly class SchemaValidator
     }
 
     /**
-     * @param array<string, array{kind: string, fields: array<string, array{kind: string, name: string|null}>}> $schemaTypes
+     * @param array<string, array{kind: string, fields: array<string, array{kind: string, name: string|null, nullable?: bool, list?: bool}>}> $schemaTypes
      *
      * @return string[]
      */
     private function validateEntity(GraphqlEntityMetadata $metadata, array $schemaTypes, string $queryType): array
     {
         $violations = [];
-        $typeName = $this->resolveFromQueryRoot($metadata->name, $schemaTypes, $queryType)
-            ?? $this->resolveGraphqlTypeName($metadata->name, $schemaTypes);
+        $typeName = (new GraphqlSchema($schemaTypes, $queryType))->entityTypeOfRoot($metadata->name);
 
         if ($typeName === null) {
             $violations[] = \sprintf(
@@ -123,50 +115,6 @@ final readonly class SchemaValidator
         }
 
         return $violations;
-    }
-
-    /**
-     * Follows the root query field to the type it returns, unwrapping a connection envelope if any.
-     *
-     * @param array<string, array{kind: string, fields: array<string, array{kind: string, name: string|null}>}> $schemaTypes
-     */
-    private function resolveFromQueryRoot(string $rootName, array $schemaTypes, string $queryType): ?string
-    {
-        $rootType = $schemaTypes[$queryType]['fields'][$rootName]['name'] ?? null;
-
-        if ($rootType === null || ($schemaTypes[$rootType]['kind'] ?? null) !== 'OBJECT') {
-            return null;
-        }
-
-        $itemType = $schemaTypes[$rootType]['fields'][self::CONNECTION_ITEMS_FIELD]['name'] ?? null;
-
-        if ($itemType !== null && ($schemaTypes[$itemType]['kind'] ?? null) === 'OBJECT') {
-            return $itemType;
-        }
-
-        return $rootType;
-    }
-
-    /**
-     * Fallback when the root query field is unknown: guesses the type name from the root name.
-     *
-     * @param array<string, array{kind: string, fields: array<string, array{kind: string, name: string|null}>}> $schemaTypes
-     */
-    private function resolveGraphqlTypeName(string $rootName, array $schemaTypes): ?string
-    {
-        $candidates = [
-            ucfirst($rootName),
-            ucfirst(rtrim($rootName, 's')),
-            $rootName,
-        ];
-
-        foreach ($candidates as $candidate) {
-            if (isset($schemaTypes[$candidate]) && $schemaTypes[$candidate]['kind'] === 'OBJECT') {
-                return $candidate;
-            }
-        }
-
-        return null;
     }
 
     /**
