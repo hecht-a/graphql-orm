@@ -18,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `GraphqlQuery::getArrayResult()`: rows as the API sent them, without hydration, the collection envelopes of the
   dialect removed.
 
+### Fixed
+
+- Queries without variables sent `"variables": []`, which Data API Builder 2 (Hot Chocolate) rejects with an HTTP 400:
+  variables are now always sent as a JSON object.
+- An entity first met as a nested relation reduced to its identifier (beyond `max_depth`) was returned as is when its
+  complete row came later in the same response, leaving its other properties uninitialized: it is now completed, and
+  its `#[AfterHydrate]` hooks run once it is.
+
 ---
 
 ## [3.0.0] — 2026-10-12
