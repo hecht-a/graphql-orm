@@ -62,5 +62,6 @@ $tasks = $qb
 - [Schema validation](docs/schema-validation.md)
 - [Logging](docs/logging.md)
 - [Profiler](docs/profiler.md)
+- [Events](docs/events.md) — metrics, tracing
 - [Hydration hooks](docs/hydration-hooks.md) — `#[BeforeHydrate]`, `#[AfterHydrate]`
 - [Console commands](docs/commands.md)

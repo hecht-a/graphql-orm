@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Query events (`QueryStartedEvent`, `QueryExecutedEvent`, `QueryFailedEvent`, all extending `QueryEvent`) dispatched
+  through the Symfony event dispatcher, with the query values masked. New dependency: `psr/event-dispatcher`.
 - `GraphqlQuery::getArrayResult()`: rows as the API sent them, without hydration, the collection envelopes of the
   dialect removed.
 
