@@ -8,6 +8,9 @@ use GraphqlOrm\Client\GraphqlClientInterface;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\DefaultDialect;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
+use GraphqlOrm\Event\QueryExecutedEvent;
+use GraphqlOrm\Event\QueryFailedEvent;
+use GraphqlOrm\Event\QueryStartedEvent;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Logging\QueryRedactor;
@@ -19,6 +22,7 @@ use GraphqlOrm\Query\GraphqlQueryTrace;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
 use GraphqlOrm\Query\QueryOptions;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -36,6 +40,7 @@ class GraphqlManager
         private ?LoggerInterface $logger = null,
         private ?QueryRedactor $redactor = null,
         private ?RootArgumentTypeResolver $argumentTypeResolver = null,
+        private ?EventDispatcherInterface $eventDispatcher = null,
     ) {
     }
 
@@ -65,15 +70,24 @@ class GraphqlManager
         $context->trace->graphql = $compiled;
         $context->trace->variables = $variables;
 
+        $this->eventDispatcher?->dispatch(new QueryStartedEvent($this->redact(clone $context->trace)));
+
+        $failure = null;
+
         try {
             $result = $this->client->query($compiled, $context, $variables);
 
             $entities = $hydration($result, $context);
             $context->trace->hydratedCount = \count($entities instanceof PaginatedResult ? $entities->items : $entities);
+        } catch (\Throwable $exception) {
+            $failure = $exception;
+
+            throw $exception;
         } finally {
-            $trace = $this->redact($context->trace);
+            $trace = $this->redact(clone $context->trace);
             $this->collector?->addQuery($trace);
             $this->log($trace);
+            $this->eventDispatcher?->dispatch($failure !== null ? new QueryFailedEvent($trace, $failure) : new QueryExecutedEvent($trace));
         }
 
         return $entities;

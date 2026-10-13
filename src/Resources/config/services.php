@@ -43,7 +43,8 @@ return static function (ContainerConfigurator $config) {
         ->arg('$maxDepth', '%graphql_orm.max_depth%')
         ->arg('$dialect', service('graphql_orm.dialect'))
         ->arg('$logger', service('monolog.logger.graphql_orm')->nullOnInvalid())
-        ->arg('$redactor', service(QueryRedactor::class));
+        ->arg('$redactor', service(QueryRedactor::class))
+        ->arg('$eventDispatcher', service('event_dispatcher')->nullOnInvalid());
 
     $services->set(QueryRedactor::class);
 

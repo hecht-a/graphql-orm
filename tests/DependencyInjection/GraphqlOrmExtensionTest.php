@@ -13,6 +13,7 @@ use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\MetadataCacheWarmer;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
+use GraphqlOrm\Tests\Fixtures\FakeEventDispatcher;
 use GraphqlOrm\Tests\Fixtures\FakeHeadersProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -152,6 +153,20 @@ final class GraphqlOrmExtensionTest extends TestCase
 
         self::assertNull($this->metadataFactoryCache($container));
         self::assertFalse($container->hasDefinition(MetadataCacheWarmer::class));
+    }
+
+    #[Test]
+    public function itDispatchesQueryEventsThroughTheEventDispatcher(): void
+    {
+        $container = $this->createContainer(debug: false);
+        $container->register('event_dispatcher', FakeEventDispatcher::class);
+
+        $container->compile();
+
+        self::assertSame(
+            $container->get('event_dispatcher'),
+            (new \ReflectionProperty(GraphqlManager::class, 'eventDispatcher'))->getValue($container->get(GraphqlManager::class)),
+        );
     }
 
     #[Test]
