@@ -72,6 +72,26 @@ than equalities.
 Data API Builder counts the values of a field: the entity needs an identifier. The values of a count query are sent
 inline, not as GraphQL variables.
 
+## Aggregates
+
+`sum()`, `avg()`, `min()` and `max()` aggregate a field, a GraphQL name or a PHP property, over the entities matching
+the criteria, with a query of their own. They return `null` when no entity matches:
+
+```php
+$taskRepository->sum('estimate');                    // int|float|null
+$taskRepository->avg('estimate', ['done' => false]);
+$taskRepository->max('dueDate');                     // '2026-02-01T09:00:00+00:00'
+```
+
+| Dialect                 | Aggregate query                                                         |
+|-------------------------|-------------------------------------------------------------------------|
+| `DataApiBuilderDialect` | `tasks(filter: ...) { groupBy { aggregations { sum(field: estimate) } } }`: numeric fields only |
+| `HasuraDialect`         | `tasks_aggregate(where: ...) { aggregate { sum { estimate } } }`         |
+| Other dialects          | none: the methods throw a `LogicException`                              |
+
+`min()` and `max()` return the value as the API sent it: a date is a string. A sum or an average sent as a string
+(large or decimal numbers) is converted to a number.
+
 ## When a query fails
 
 A failing query throws a `GraphqlRequestException` holding the errors of the server, whether it answered with a

@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Query builder filters through relations: `$expr->eq('user.name', 'User B')` is sent nested, as
   `{user: {name: {eq: ...}}}`; on a collection (`tasks.done`), it matches the entities having at least one related
   entity that matches. Data API Builder and Hasura.
+- `GraphqlEntityRepository::sum()`, `avg()`, `min()` and `max()`, aggregating a field over the entities matching the
+  criteria, with the dialects implementing the new `AggregatingDialect` interface: `DataApiBuilderDialect` (numeric
+  fields) and `HasuraDialect`. The PHPStan rules check their field and criteria. A repository already declaring a
+  method of the same name must give it the same signature, or rename it.
 
 ---
 
