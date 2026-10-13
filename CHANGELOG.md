@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The profiler reports repeated queries, those differing only by their values and sent 3 times or more (the sign of an
+  N+1 problem), in yellow in the toolbar and listed at the top of the panel.
 - `GraphqlEntityRepository::count($criteria)`, with the dialects implementing the new `CountingDialect` interface:
   `DataApiBuilderDialect` (aggregation), `HasuraDialect` (`_aggregate`), `PostGraphileDialect` and `RelayDialect`
   (`totalCount`). The PHPStan rules check its criteria as those of `findBy()`. A repository already declaring its own
@@ -18,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Schema validation (`graphqlorm:schema:validate`, first request listener) also reports a field the schema declares
   nullable mapped on a property that does not accept `null`, a relation to another type than the one of its target
   entity or mapped on a scalar, and a collection mapped on a single object (or the reverse).
+
+### Fixed
+
+- The profiler template defined its AST macro inside a block, deprecated since Twig 3.28 and an error with Twig 4.
 
 ---
 
