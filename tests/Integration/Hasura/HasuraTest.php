@@ -131,6 +131,20 @@ final class HasuraTest extends IntegrationTestCase
     }
 
     #[Test]
+    public function itFiltersThroughRelations(): void
+    {
+        $qb = $this->repository(Task::class)->createQueryBuilder();
+        $tasks = $qb->where($qb->expr()->orX($qb->expr()->eq('user.name', 'User B'), $qb->expr()->eq('id', 1)))->orderBy('id', Direction::ASC)->getQuery()->getResult();
+        $users = $this->repository(User::class)->createQueryBuilder();
+        $withDoneTasks = $users->where($users->expr()->eq('tasks.done', true))->getQuery()->getResult();
+
+        self::assertIsArray($tasks);
+        self::assertSame([1, 3], self::ids($tasks));
+        self::assertIsArray($withDoneTasks);
+        self::assertSame([1], self::ids($withDoneTasks));
+    }
+
+    #[Test]
     public function itCountsEntities(): void
     {
         self::assertSame(4, $this->repository(Task::class)->count());

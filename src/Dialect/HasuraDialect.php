@@ -146,10 +146,23 @@ final class HasuraDialect implements GraphqlQueryDialect, BatchLoadingDialect, O
                 continue;
             }
 
-            $where[$key] = \is_array($value) ? $this->translateComparison($value) : $value;
+            $where[$key] = match (true) {
+                !\is_array($value) => $value,
+                self::isComparison($value) => $this->translateComparison($value),
+                // The filter of a relation: `{user: {name: {eq: ...}}}`.
+                default => $this->translate($value),
+            };
         }
 
         return $where;
+    }
+
+    /**
+     * @param array<mixed> $value
+     */
+    private static function isComparison(array $value): bool
+    {
+        return array_diff_key($value, self::OPERATORS) === [];
     }
 
     /**

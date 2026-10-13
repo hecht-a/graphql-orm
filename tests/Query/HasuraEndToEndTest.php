@@ -14,6 +14,8 @@ use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeUserWithCollection;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
+use GraphqlOrm\Tests\Integration\Entity\Task;
+use GraphqlOrm\Tests\Integration\Entity\User;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -86,6 +88,28 @@ final class HasuraEndToEndTest extends TestCase
         $rows = $this->repository($client, FakeTask::class)->createQueryBuilder()->limit(2)->paginate()->getQuery()->getArrayResult();
 
         self::assertSame([['id' => 1, 'title' => 'A'], ['id' => 2, 'title' => 'B']], $rows);
+    }
+
+    #[Test]
+    public function itFiltersThroughRelations(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['tasks' => []]]);
+        $qb = $this->repository($client, Task::class)->createQueryBuilder();
+
+        $qb->where($qb->expr()->orX($qb->expr()->eq('user.name', 'User B'), $qb->expr()->startsWith('user.name', 'A')))->getQuery()->getResult();
+
+        self::assertStringContainsString('where: { _or: [{ user: { name: { _eq: "User B" } } }, { user: { name: { _like: "A%" } } }] }', $client->lastQuery);
+    }
+
+    #[Test]
+    public function itFiltersThroughCollections(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['users' => []]]);
+        $qb = $this->repository($client, User::class)->createQueryBuilder();
+
+        $qb->where($qb->expr()->isNull('tasks.dueDate'))->getQuery()->getResult();
+
+        self::assertStringContainsString('where: { tasks: { due_date: { _is_null: true } } }', $client->lastQuery);
     }
 
     /**

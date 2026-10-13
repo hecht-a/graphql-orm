@@ -198,6 +198,20 @@ final class DataApiBuilderTest extends IntegrationTestCase
     }
 
     #[Test]
+    public function itFiltersThroughRelations(): void
+    {
+        $qb = $this->tasks()->createQueryBuilder();
+        $tasks = $qb->where($qb->expr()->orX($qb->expr()->eq('user.name', 'User B'), $qb->expr()->eq('id', 1)))->orderBy('id', Direction::ASC)->getQuery()->getResult();
+        $users = $this->users()->createQueryBuilder();
+        $withDoneTasks = $users->where($users->expr()->eq('tasks.done', true))->getQuery()->getResult();
+
+        self::assertIsArray($tasks);
+        self::assertSame([1, 3], self::ids($tasks));
+        self::assertIsArray($withDoneTasks);
+        self::assertSame([1], self::ids($withDoneTasks));
+    }
+
+    #[Test]
     public function itNavigatesBetweenPages(): void
     {
         $firstPage = $this->tasks()->createQueryBuilder()->orderBy('id', Direction::ASC)->limit(3)->paginate()->getQuery()->getResult();

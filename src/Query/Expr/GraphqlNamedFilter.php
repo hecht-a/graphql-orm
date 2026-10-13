@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace GraphqlOrm\Query\Expr;
 
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
+use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 
 /**
- * A filter whose fields, named after their GraphQL name or their PHP property, are given their GraphQL name.
+ * A filter whose fields, named after their GraphQL name or their PHP property, are given their GraphQL name. A path
+ * through relations (`user.name`) is nested, as GraphQL filters are: `{user: {name: {eq: ...}}}`.
  *
  * @internal
  */
@@ -18,6 +20,7 @@ final readonly class GraphqlNamedFilter implements FilterExpressionInterface
     public function __construct(
         private FilterExpressionInterface $filter,
         private GraphqlEntityMetadata $metadata,
+        private GraphqlEntityMetadataFactory $metadataFactory,
     ) {
     }
 
@@ -72,9 +75,30 @@ final readonly class GraphqlNamedFilter implements FilterExpressionInterface
                 continue;
             }
 
-            $renamed[$this->metadata->graphqlName($key)] = $value;
+            $renamed = [...$renamed, ...$this->nest($this->metadata, explode('.', $key), $value)];
         }
 
         return $renamed;
+    }
+
+    /**
+     * @param non-empty-list<string> $segments the field path, its segments being GraphQL names or PHP properties
+     *
+     * @return array<string, mixed>
+     */
+    private function nest(?GraphqlEntityMetadata $metadata, array $segments, mixed $comparison): array
+    {
+        $segment = array_shift($segments);
+        $field = $metadata?->field($segment);
+        $name = $field->mappedFrom ?? $segment;
+
+        if ($segments === []) {
+            return [$name => $comparison];
+        }
+
+        // An unmapped segment, or one that is no relation, is nested as written: the API tells whether it exists.
+        $target = $field?->relation !== null ? $this->metadataFactory->getMetadata($field->relation) : null;
+
+        return [$name => $this->nest($target, $segments, $comparison)];
     }
 }
