@@ -59,10 +59,18 @@ class EntityHydrator
             $uniqueField = null;
         }
 
-        if ($uniqueField !== null) {
-            if (isset($context->identityMap[$metadata->class][$uniqueField])) {
-                return $context->identityMap[$metadata->class][$uniqueField];
+        $known = $uniqueField !== null ? ($context->identityMap[$metadata->class][$uniqueField] ?? null) : null;
+
+        // An entity met again, e.g. first as a nested relation reduced to its identifier, gets the fields of this row.
+        if ($known !== null) {
+            $wasComplete = $this->areMappedFieldsInitialized($known, $metadata);
+            $this->hydrateFields($known, $metadata, $data, $context, $depth);
+
+            if (!$wasComplete) {
+                $this->callAfterHydrateMethods($known, $metadata);
             }
+
+            return $known;
         }
 
         ++$context->trace->hydratedEntities;
@@ -74,7 +82,17 @@ class EntityHydrator
         }
 
         $this->callBeforeHydrateMethods($entity, $data);
+        $this->hydrateFields($entity, $metadata, $data, $context, $depth);
+        $this->callAfterHydrateMethods($entity, $metadata);
 
+        return $entity;
+    }
+
+    /**
+     * @param array<string|int, mixed> $data
+     */
+    private function hydrateFields(object $entity, GraphqlEntityMetadata $metadata, array $data, GraphqlExecutionContext $context, int $depth): void
+    {
         foreach ($metadata->fields as $field) {
             if (!\array_key_exists($field->mappedFrom, $data)) {
                 continue;
@@ -120,10 +138,6 @@ class EntityHydrator
 
             $property->setValue($entity, $value);
         }
-
-        $this->callAfterHydrateMethods($entity, $metadata);
-
-        return $entity;
     }
 
     /**
