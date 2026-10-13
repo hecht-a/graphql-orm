@@ -6,6 +6,7 @@ namespace GraphqlOrm\Hydrator;
 
 use GraphqlOrm\Attribute\AfterHydrate;
 use GraphqlOrm\Attribute\BeforeHydrate;
+use GraphqlOrm\Attribute\Fetch;
 use GraphqlOrm\Exception\CastException;
 use GraphqlOrm\Exception\EntityNotFoundException;
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
@@ -58,6 +59,20 @@ class EntityHydrator
         GraphqlExecutionContext $context,
         int $depth = 0,
     ): object {
+        return $this->hydrateEntity($metadata, $data, $context, $depth, lazy: false);
+    }
+
+    /**
+     * @param array<string|int, mixed> $data
+     * @param bool                     $lazy whether the relation holding this row is fetched lazily
+     */
+    private function hydrateEntity(
+        GraphqlEntityMetadata $metadata,
+        array $data,
+        GraphqlExecutionContext $context,
+        int $depth,
+        bool $lazy,
+    ): object {
         $context->trace->hydrationMaxDepth = max(
             $context->trace->hydrationMaxDepth,
             $depth
@@ -91,7 +106,7 @@ class EntityHydrator
 
         ++$context->trace->hydratedEntities;
 
-        if ($identifier !== null && $uniqueField !== null && $context->lazyLoader !== null && $this->isReducedToIdentifier($metadata, $data, $identifier->mappedFrom)) {
+        if ($identifier !== null && $uniqueField !== null && $context->lazyLoader !== null && ($lazy || $context->lazyLoading) && $this->isReducedToIdentifier($metadata, $data, $identifier->mappedFrom)) {
             $ghost = $this->lazyGhost($metadata, $identifier, $uniqueField, $context);
             $property = $this->property($metadata->class, $identifier->property);
             $property->setRawValueWithoutLazyInitialization($ghost, $this->normalizeValue($data[$identifier->mappedFrom], $property));
@@ -152,22 +167,24 @@ class EntityHydrator
                     ++$context->trace->hydratedCollections;
 
                     $value = array_map(
-                        fn (mixed $row) => $this->hydrate(
+                        fn (mixed $row) => $this->hydrateEntity(
                             $relationMetadata,
                             \is_array($row) ? $row : throw InvalidGraphqlResponseException::expectedArray($row),
                             $context,
-                            $depth + 1
+                            $depth + 1,
+                            $field->fetch === Fetch::Lazy,
                         ),
                         $context->dialect->extractCollection($value)
                     );
                 } elseif ($value) {
                     ++$context->trace->hydratedRelations;
 
-                    $value = $this->hydrate(
+                    $value = $this->hydrateEntity(
                         $relationMetadata,
                         $value,
                         $context,
-                        $depth + 1
+                        $depth + 1,
+                        $field->fetch === Fetch::Lazy,
                     );
                 }
             }

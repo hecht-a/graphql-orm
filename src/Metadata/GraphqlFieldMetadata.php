@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Metadata;
 
+use GraphqlOrm\Attribute\Fetch;
+
 /**
  * @internal
  */
@@ -17,6 +19,7 @@ final readonly class GraphqlFieldMetadata
         public bool $isCollection = false,
         public bool $isIdentifier = false,
         public bool $ignoreValidation = false,
+        public Fetch $fetch = Fetch::Eager,
     ) {
     }
 }

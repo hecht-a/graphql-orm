@@ -13,6 +13,8 @@ final class FakeGraphqlClient implements GraphqlClientInterface
     /** @var array<string, mixed> */
     public array $lastVariables = [];
     public int $callCount = 0;
+    /** @var list<string> every query received, in order */
+    public array $queries = [];
     /** @var list<array<string, mixed>> */
     private array $responses;
 
@@ -27,6 +29,7 @@ final class FakeGraphqlClient implements GraphqlClientInterface
     public function query(string $query, GraphqlExecutionContext $context, array $variables = []): array
     {
         $this->lastQuery = $query;
+        $this->queries[] = $query;
         $this->lastVariables = $variables;
 
         return $this->responses[$this->callCount++] ?? [];

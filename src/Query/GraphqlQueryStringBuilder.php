@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Query;
 
+use GraphqlOrm\Attribute\Fetch;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
@@ -143,7 +144,7 @@ final class GraphqlQueryStringBuilder
 
             foreach ($metadata->fields as $field) {
                 if ($field->relation !== null) {
-                    if ($depth >= $this->manager->getMaxDepth()) {
+                    if ($depth >= $this->manager->getMaxDepth() || $field->fetch === Fetch::Lazy) {
                         $selection->add($this->relationFallbackAst($field));
 
                         continue;

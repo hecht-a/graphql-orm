@@ -115,9 +115,9 @@ class GraphqlManager
             $context->identityMap = $this->identityMap->entities();
         }
 
-        if ($this->lazyLoading) {
-            $context->lazyLoader = $this->loadLazily(...);
-        }
+        // Always set: a relation mapped with Fetch::Lazy is a lazy ghost even without lazy_loading.
+        $context->lazyLoader = $this->loadLazily(...);
+        $context->lazyLoading = $this->lazyLoading;
 
         if ($graphql instanceof QueryNode) {
             $compiledQuery = $this->compile($graphql, $options);

@@ -14,6 +14,8 @@ final readonly class GraphqlField
         public ?string $targetEntity = null,
         public bool $identifier = false,
         public bool $ignoreValidation = false,
+        /** When a relation is loaded: Fetch::Lazy selects it by its identifier and loads it on first access */
+        public Fetch $fetch = Fetch::Eager,
     ) {
     }
 }

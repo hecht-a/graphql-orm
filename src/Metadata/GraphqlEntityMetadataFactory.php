@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Metadata;
 
+use GraphqlOrm\Attribute\Fetch;
 use GraphqlOrm\Attribute\GraphqlEntity;
 use GraphqlOrm\Attribute\GraphqlField;
+use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Exception\NotAGraphqlEntityException;
 use GraphqlOrm\Exception\TooManyIdentifiersException;
 use GraphqlOrm\Metadata\Naming\DefaultNamingStrategy;
@@ -102,8 +104,13 @@ class GraphqlEntityMetadataFactory
                 relation: $relation,
                 isCollection: $isCollection,
                 isIdentifier: $instance->identifier,
-                ignoreValidation: $instance->ignoreValidation
+                ignoreValidation: $instance->ignoreValidation,
+                fetch: $instance->fetch,
             );
+
+            if ($field->fetch === Fetch::Lazy && $field->relation === null) {
+                throw new InvalidArgumentException(\sprintf('"%s::$%s" is not a relation: only a relation can be fetched lazily.', $class, $field->property));
+            }
 
             if ($field->isIdentifier) {
                 if ($identifier !== null) {

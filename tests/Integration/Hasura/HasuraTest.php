@@ -19,9 +19,11 @@ use GraphqlOrm\Query\Pagination\PaginatedResult;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Schema\SchemaValidator;
 use GraphqlOrm\Tests\Integration\Entity\BrokenTask;
+use GraphqlOrm\Tests\Integration\Entity\LazyTask;
 use GraphqlOrm\Tests\Integration\Entity\SnakeCaseTask;
 use GraphqlOrm\Tests\Integration\Entity\Task;
 use GraphqlOrm\Tests\Integration\Entity\User;
+use GraphqlOrm\Tests\Integration\Entity\UserWithLazyTasks;
 use GraphqlOrm\Tests\Integration\IntegrationTestCase;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
@@ -201,6 +203,20 @@ final class HasuraTest extends IntegrationTestCase
         self::assertSame($task->user, $user);
         // The user came in full with the tasks (max_depth 2): neither find() sends a query.
         self::assertSame(1, $collector->getQueryCount());
+    }
+
+    #[Test]
+    public function itLoadsTheLazyRelationsOnFirstAccess(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $tasks = $this->repository(LazyTask::class, collector: $collector)->findBy(['id' => [1, 3]], ['id' => Direction::ASC]);
+        $users = $this->repository(UserWithLazyTasks::class, collector: $collector)->findBy(['id' => 1]);
+
+        self::assertSame(2, $collector->getQueryCount());
+        self::assertSame(['User A', 'User B'], [$tasks[0]->user?->name, $tasks[1]->user?->name]);
+        self::assertSame(['Write the docs', 'Review the tests'], array_map(fn (Task $task) => $task->title, $users[0]->tasks));
+        // One query for both users, one for both tasks: the ghosts of a response are loaded together.
+        self::assertSame(4, $collector->getQueryCount());
     }
 
     #[Test]
