@@ -137,6 +137,30 @@ Each query is recorded in the profiler, the logs and the events as usual. When s
 then the first failure is thrown. The concurrency is the one of the Symfony HTTP client (curl): a client implementing
 only `GraphqlClientInterface` runs the queries one after the other.
 
+## Batched queries
+
+`GraphqlQuery::batch()` sends several queries in **one** GraphQL document, one HTTP request, the server resolving
+their root fields:
+
+```php
+[$tasks, $users] = GraphqlQuery::batch(
+    $taskRepository->createQueryBuilder()->where($expr->eq('done', false))->getQuery(),
+    $userRepository->createQueryBuilder()->getQuery(),
+);
+```
+
+| | `concurrently()` | `batch()` |
+|---|---|---|
+| HTTP requests | one per query, in flight together | one |
+| Root fields | any | different for each query |
+| Pagination | yes | no |
+| Values | as usual (variables when enabled) | inline |
+| A query in error | fails alone | fails alone, unless the document is invalid (it then fails them all) |
+
+The queries must come from the same manager, and be built with a query builder or the find methods. Two queries on
+the same root field, or a paginated one, throw a `LogicException`: run them with `concurrently()`. The document is
+recorded as one query in the profiler, the logs and the events.
+
 ## Array results
 
 `getArrayResult()` returns the rows as the API sent them, without creating entities: lighter for an export or a JSON

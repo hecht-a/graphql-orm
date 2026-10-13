@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pages out of it. Disabled by default.
 - `#[GraphqlField(fetch: Fetch::Lazy)]`: a relation selected by its identifier only, whatever `max_depth`, and loaded
   on first access, the ghosts of a response together, as Doctrine `fetch: LAZY`. It needs no `lazy_loading`.
+- `GraphqlQuery::batch()`: several queries on different root fields in one GraphQL document, one HTTP request. A root
+  field in error fails its query only; paginated queries and queries on the same root field are rejected.
 
 ### Changed
 
