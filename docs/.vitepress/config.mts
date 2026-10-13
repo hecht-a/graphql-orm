@@ -52,6 +52,7 @@ export default defineConfig({
                     { text: 'Logging', link: '/logging' },
                     { text: 'Profiler', link: '/profiler' },
                     { text: 'PHPStan rules', link: '/phpstan' },
+                    { text: 'Testing', link: '/testing' },
                 ],
             },
             {

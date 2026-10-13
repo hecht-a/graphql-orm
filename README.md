@@ -69,6 +69,7 @@ The documentation is published at **https://hecht-a.github.io/graphql-orm/**, an
 - [Forms](docs/forms.md) — `GraphqlEntityType`, a choice among entities
 - [Console commands](docs/commands.md)
 - [PHPStan rules](docs/phpstan.md) — field names checked at analysis time
+- [Testing](docs/testing.md) — `MockGraphqlServer`, a GraphQL server for the tests of your application
 
 ## License
 

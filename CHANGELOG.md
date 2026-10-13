@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`mapping`) or disables the resolution (`disabled`), as Doctrine `#[MapEntity]` does.
 - `GraphqlEntityType`, a form field whose choices are entities, loaded with `findAll()` or the `query_builder` option,
   as Doctrine `EntityType`. Registered when symfony/form is installed.
+- `MockGraphqlServer`, set as the `http_client` of the bundle in the tests of an application: it answers the queries
+  with the responses queued (`respond()`, `respondWithErrors()`, `respondWithHttpStatus()`) and records them.
 
 ---
 
