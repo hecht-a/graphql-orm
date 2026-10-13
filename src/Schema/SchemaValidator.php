@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Schema;
 
+use GraphqlOrm\Exception\GraphqlOrmException;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 
 /**
  * @internal
@@ -52,7 +54,8 @@ final readonly class SchemaValidator
     private function validateEntity(GraphqlEntityMetadata $metadata, array $schemaTypes, string $queryType): array
     {
         $violations = [];
-        $typeName = (new GraphqlSchema($schemaTypes, $queryType))->entityTypeOfRoot($metadata->name);
+        $schema = new GraphqlSchema($schemaTypes, $queryType);
+        $typeName = $schema->entityTypeOfRoot($metadata->name);
 
         if ($typeName === null) {
             $violations[] = \sprintf(
@@ -86,11 +89,14 @@ final readonly class SchemaValidator
                 continue;
             }
 
+            $schemaField = $schemaFields[$field->mappedFrom];
+            $violations = [...$violations, ...$this->validateNullability($metadata->class, $field, $schemaField)];
+
             if ($field->relation !== null) {
+                $violations = [...$violations, ...$this->validateRelation($metadata->class, $field, $schemaField, $schema)];
+
                 continue;
             }
-
-            $schemaField = $schemaFields[$field->mappedFrom];
 
             if ($schemaField['kind'] !== 'SCALAR' && $schemaField['kind'] !== 'ENUM') {
                 continue;
@@ -103,6 +109,94 @@ final readonly class SchemaValidator
         }
 
         return $violations;
+    }
+
+    /**
+     * A field the schema declares nullable, hydrated into a property that does not accept null, fails with a TypeError
+     * as soon as the API returns null. Nothing is checked when the schema does not tell the nullability.
+     *
+     * @param class-string                                                         $entityClass
+     * @param array{kind: string, name: string|null, nullable?: bool, list?: bool} $schemaField
+     *
+     * @return string[]
+     */
+    private function validateNullability(string $entityClass, GraphqlFieldMetadata $field, array $schemaField): array
+    {
+        if (($schemaField['nullable'] ?? false) !== true || $field->isCollection) {
+            return [];
+        }
+
+        $type = (new \ReflectionProperty($entityClass, $field->property))->getType();
+
+        if (!$type instanceof \ReflectionNamedType || $type->allowsNull()) {
+            return [];
+        }
+
+        $typeName = $type->isBuiltin() ? $type->getName() : substr((string) strrchr('\\' . $type->getName(), '\\'), 1);
+
+        return [\sprintf(
+            '[%s] Field "%s" is nullable in the schema but property "%s" does not accept null: declare it as "?%s".',
+            $entityClass,
+            $field->mappedFrom,
+            $field->property,
+            $typeName,
+        )];
+    }
+
+    /**
+     * A relation must return an object of the type of its target entity, as a list (or connection) for a collection and
+     * a single object otherwise.
+     *
+     * @param class-string                                                         $entityClass
+     * @param array{kind: string, name: string|null, nullable?: bool, list?: bool} $schemaField
+     *
+     * @return string[]
+     */
+    private function validateRelation(string $entityClass, GraphqlFieldMetadata $field, array $schemaField, GraphqlSchema $schema): array
+    {
+        if ($schemaField['kind'] !== 'OBJECT' || $schemaField['name'] === null) {
+            return [\sprintf('[%s] Field "%s" is a relation to %s but is a %s in the schema.', $entityClass, $field->mappedFrom, $field->relation, $schemaField['kind'])];
+        }
+
+        $itemType = $schema->connectionItemType($schemaField['name']);
+        $returnsList = ($schemaField['list'] ?? false) || $itemType !== null;
+
+        if ($field->isCollection && !$returnsList) {
+            return [\sprintf('[%s] Field "%s" is a collection but returns a single object in the schema: map it on a single relation.', $entityClass, $field->mappedFrom)];
+        }
+
+        if (!$field->isCollection && $returnsList) {
+            return [\sprintf('[%s] Field "%s" is a single relation but returns a list in the schema: map it on a collection (array property).', $entityClass, $field->mappedFrom)];
+        }
+
+        $expectedType = $this->entityType((string) $field->relation, $schema);
+        $actualType = $itemType ?? $schemaField['name'];
+
+        if ($expectedType !== null && $expectedType !== $actualType) {
+            return [\sprintf(
+                '[%s] Field "%s" is a relation to %s (GraphQL type "%s") but returns the GraphQL type "%s".',
+                $entityClass,
+                $field->mappedFrom,
+                $field->relation,
+                $expectedType,
+                $actualType,
+            )];
+        }
+
+        return [];
+    }
+
+    /**
+     * The GraphQL type of an entity, found from its root query field; null when it cannot be told.
+     */
+    private function entityType(string $entityClass, GraphqlSchema $schema): ?string
+    {
+        try {
+            /** @var class-string $entityClass */
+            return $schema->entityTypeOfRoot($this->metadataFactory->getMetadata($entityClass)->name);
+        } catch (GraphqlOrmException) {
+            return null;
+        }
     }
 
     /**

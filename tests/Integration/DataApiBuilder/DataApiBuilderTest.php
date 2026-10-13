@@ -16,6 +16,7 @@ use GraphqlOrm\Schema\GraphqlSchema;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Schema\SchemaIntrospector;
 use GraphqlOrm\Schema\SchemaValidator;
+use GraphqlOrm\Tests\Integration\Entity\BrokenTask;
 use GraphqlOrm\Tests\Integration\Entity\Task;
 use GraphqlOrm\Tests\Integration\Entity\User;
 use GraphqlOrm\Tests\Integration\IntegrationTestCase;
@@ -175,6 +176,19 @@ final class DataApiBuilderTest extends IntegrationTestCase
         $violations = (new SchemaValidator(new GraphqlEntityMetadataFactory()))->validate([Task::class, User::class], $schema['types'], $schema['queryType']);
 
         self::assertSame([], $violations);
+    }
+
+    #[Test]
+    public function itReportsAWrongMappingFromTheRealSchema(): void
+    {
+        $schema = $this->schema();
+
+        $violations = (new SchemaValidator(new GraphqlEntityMetadataFactory()))->validate([BrokenTask::class], $schema->types, $schema->queryType);
+
+        self::assertSame([
+            \sprintf('[%s] Field "due_date" is nullable in the schema but property "dueDate" does not accept null: declare it as "?DateTimeImmutable".', BrokenTask::class),
+            \sprintf('[%s] Field "user" is a collection but returns a single object in the schema: map it on a single relation.', BrokenTask::class),
+        ], $violations);
     }
 
     #[Test]

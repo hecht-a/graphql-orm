@@ -156,7 +156,7 @@ final class SchemaValidationListenerTest extends TestCase
      */
     private static function schema(bool $withPrice): array
     {
-        $scalar = fn (string $name) => ['kind' => 'SCALAR', 'name' => $name, 'ofType' => null];
+        $scalar = fn (string $name) => ['kind' => 'NON_NULL', 'name' => null, 'ofType' => ['kind' => 'SCALAR', 'name' => $name, 'ofType' => null]];
         $fields = [
             ['name' => 'id', 'type' => $scalar('Int')],
             ['name' => 'name', 'type' => $scalar('String')],
