@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `findBy($criteria, [])`: an empty ordering, accepted by Doctrine, was sent as an empty `orderBy` argument, which Data
   API Builder rejects.
+- `GraphqlManager::send()`, added in 4.6.0, was flagged `@internal`, which made the Symfony debug class loader report a
+  deprecation for every class extending or mocking the manager.
 
 ---
 
