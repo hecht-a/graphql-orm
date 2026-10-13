@@ -108,6 +108,21 @@ final class DataApiBuilderTest extends IntegrationTestCase
     }
 
     #[Test]
+    public function itGoesBackToTheFirstPageFromAPaginationStartedAtACursor(): void
+    {
+        $firstPage = $this->tasks()->createQueryBuilder()->orderBy('id', Direction::ASC)->limit(2)->paginate()->getQuery()->getResult();
+        self::assertInstanceOf(PaginatedResult::class, $firstPage);
+        self::assertNotNull($firstPage->endCursor);
+
+        $secondPage = $this->tasks()->createQueryBuilder()->orderBy('id', Direction::ASC)->limit(2)->paginate($firstPage->endCursor)->getQuery()->getResult();
+        self::assertInstanceOf(PaginatedResult::class, $secondPage);
+        $backToFirst = $secondPage->previous();
+
+        self::assertSame([3, 4], self::ids($secondPage->items));
+        self::assertSame([1, 2], self::ids($backToFirst->items ?? []));
+    }
+
+    #[Test]
     public function itReturnsArrayResultsWithoutEnvelopes(): void
     {
         $rows = $this->users()->createQueryBuilder()->select('name', 'tasks.title')->getQuery()->getArrayResult();

@@ -51,6 +51,27 @@ final class QueryResultTest extends TestCase
     }
 
     #[Test]
+    public function itGoesBackToTheFirstPageFromAPaginationStartedAtACursor(): void
+    {
+        $client = new FakeGraphqlClient(
+            ['data' => ['tasks' => ['items' => [['id' => 2, 'title' => 'B']], 'hasNextPage' => false, 'endCursor' => 'c2']]],
+            ['data' => ['tasks' => ['items' => [['id' => 1, 'title' => 'A']], 'hasNextPage' => true, 'endCursor' => 'c1']]],
+        );
+        $secondPage = $this->createRepository($client, new DataApiBuilderDialect(), FakeTask::class)
+            ->createQueryBuilder()
+            ->limit(1)
+            ->paginate('c1')
+            ->getQuery()
+            ->getResult();
+        self::assertInstanceOf(PaginatedResult::class, $secondPage);
+
+        $firstPage = $secondPage->previous();
+
+        self::assertSame(1, $firstPage?->items[0]->id);
+        self::assertStringNotContainsString('after', $client->lastQuery);
+    }
+
+    #[Test]
     public function itHasNoNextPageWithoutAnEndCursor(): void
     {
         $client = new FakeGraphqlClient(

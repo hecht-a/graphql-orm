@@ -56,6 +56,10 @@ final class DABGraphqlWalker extends AbstractGraphqlWalker
             $arguments['first'] = $this->options->limit;
         }
 
+        // The root arguments hold the cursor the query was built with: the one of the page being fetched replaces it,
+        // and the first page has none.
+        unset($arguments['after']);
+
         if ($this->options->cursor !== null) {
             $arguments['after'] = $this->options->cursor;
         }

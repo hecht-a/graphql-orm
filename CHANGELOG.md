@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- `DataApiBuilderDialect`: going back to the first page of a pagination started at a cursor (`paginate($cursor)`)
+  sent that cursor again, returning the same page instead of the first one.
+
+---
+
 ## [4.1.1] — 2026-10-13
 
 ### Fixed
