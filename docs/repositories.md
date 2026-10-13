@@ -44,8 +44,9 @@ $tasks = $qb
     ->getResult();
 ```
 
-Criteria and ordering keys are GraphQL field names (`mappedFrom`), not PHP property names. Each criterion is an
-equality; the dialect decides how it is sent:
+Criteria and ordering keys are the GraphQL names of the fields (`mappedFrom`) or the PHP properties of the entity:
+`findBy(['dueDate' => null])` and `findBy(['due_date' => null])` send the same query. A property having the GraphQL
+name of another field designates that field. Each criterion is an equality; the dialect decides how it is sent:
 
 | Dialect                 | `findBy(['status' => 'active', 'deletedAt' => null])`                      |
 |-------------------------|-----------------------------------------------------------------------------|
@@ -99,7 +100,7 @@ public function show(
     #[MapGraphqlEntity(id: 'taskId')] Task $task,
 ): Response
 
-// Other fields, found with findOneBy(): route parameter => GraphQL field name
+// Other fields, found with findOneBy(): route parameter => GraphQL field name or PHP property
 #[Route('/projects/{slug}')]
 public function project(#[MapGraphqlEntity(mapping: ['slug' => 'slug'])] Project $project): Response
 

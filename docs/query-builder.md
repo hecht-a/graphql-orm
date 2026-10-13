@@ -46,10 +46,11 @@ $expr->andX($expr->eq('status', 'active'), $expr->isNull('dueDate'))
 $expr->orX($expr->eq('priority', 'high'), $expr->eq('priority', 'critical'))
 ```
 
-Field names are those of the GraphQL schema, and dates and enums are sent as in the variables: the tasks overdue are
+Fields are named after their GraphQL name or their PHP property, as in the find methods, and dates and enums are sent
+as in the variables: the tasks overdue are
 
 ```php
-$qb->where($expr->andX($expr->isNotNull('due_date'), $expr->lt('due_date', new \DateTimeImmutable())));
+$qb->where($expr->andX($expr->isNotNull('dueDate'), $expr->lt('dueDate', new \DateTimeImmutable())));
 ```
 
 `notIn()` needs at least one value. Data API Builder has no "not in" operator, hence one inequality per value; like

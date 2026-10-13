@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- The PHP property names of an entity are accepted wherever a field is named, besides the GraphQL names: criteria and
+  ordering of the find methods and `count()`, query builder filters and ordering, `#[MapGraphqlEntity]` mapping.
+  `findBy(['dueDate' => null])` sends `due_date`. A property having the GraphQL name of another field designates that
+  field, as before.
+
+### Changed
+
+- PHPStan rules: a PHP property name is no longer reported where a field is named; the `graphqlOrm.propertyName`
+  identifier is gone (remove the `@phpstan-ignore graphqlOrm.propertyName` comments, if any).
+
+---
+
 ## [4.4.0] — 2026-10-13
 
 ### Added

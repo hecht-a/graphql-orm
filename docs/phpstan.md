@@ -21,9 +21,6 @@ the bundle reads them at runtime.
 
 ```php
 /** @var TaskRepository $tasks extends GraphqlEntityRepository<Task> */
-$tasks->findBy(['dueDate' => null]);
-// Field "dueDate" is the PHP property of App\GraphQL\Entity\Task: use its GraphQL name "due_date".
-
 $tasks->findBy(['titel' => 'A']);
 // Field "titel" is not mapped on App\GraphQL\Entity\Task. Did you mean "title"?
 
@@ -33,8 +30,8 @@ $tasks->createQueryBuilder()->select('title.length');
 
 | Call                                         | Keys or arguments checked | Expected name                  |
 |----------------------------------------------|---------------------------|--------------------------------|
-| `findBy()`, `findOneBy()`, `count()`         | criteria and ordering keys | GraphQL name (`mappedFrom`)   |
-| `GraphqlQueryBuilder::orderBy()`             | field                      | GraphQL name (`mappedFrom`)   |
+| `findBy()`, `findOneBy()`, `count()`         | criteria and ordering keys | GraphQL or PHP property name  |
+| `GraphqlQueryBuilder::orderBy()`             | field                      | GraphQL or PHP property name  |
 | `GraphqlQueryBuilder::select()`, `addSelect()` | paths, segment by segment | GraphQL or PHP property name |
 
 Only constant values are checked: a field name computed at runtime is not. The entity is taken from the generic type
@@ -51,8 +48,7 @@ it:
 $tasks->findBy(['user_id' => $userId]); // @phpstan-ignore graphqlOrm.unmappedField
 ```
 
-To allow all of them, and only report what is certainly wrong (a PHP property name instead of a GraphQL name, a path
-through a field that is not a relation):
+To allow all of them, and only report what is certainly wrong (a path through a field that is not a relation):
 
 ```neon
 parameters:
@@ -64,6 +60,5 @@ parameters:
 
 | Identifier                 | Meaning                                                    |
 |----------------------------|------------------------------------------------------------|
-| `graphqlOrm.propertyName`  | PHP property name used where the GraphQL name is sent      |
 | `graphqlOrm.unmappedField` | field not mapped on the entity (`reportUnmappedFields`)    |
 | `graphqlOrm.notARelation`  | path going through a field that is not a relation          |
