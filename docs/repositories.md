@@ -72,6 +72,20 @@ than equalities.
 Data API Builder counts the values of a field: the entity needs an identifier. The values of a count query are sent
 inline, not as GraphQL variables.
 
+## When a query fails
+
+A failing query throws a `GraphqlRequestException` holding the errors of the server, whether it answered with a
+`200` or, as Data API Builder and PostGraphile do for an invalid query, with a `400`. When the query names fields the
+entity does not map, they are pointed out, one per line, with the closest mapped field:
+
+```
+GraphQL endpoint "https://api.example.com/graphql" answered with HTTP status 400: The specified input object field `titel` does not exist.
+Field "titel" is not mapped on App\GraphQL\Entity\Task: did you mean "title"?
+```
+
+Such fields are still sent, as the API may accept fields the entity does not map (a foreign key such as `user_id`):
+they are only pointed out when the query fails. The [PHPStan rules](phpstan.md) report them before running.
+
 ## In a controller
 
 An argument typed with an entity receives the entity whose identifier is in the route, found with `find()`:

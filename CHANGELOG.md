@@ -13,11 +13,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ordering of the find methods and `count()`, query builder filters and ordering, `#[MapGraphqlEntity]` mapping.
   `findBy(['dueDate' => null])` sends `due_date`. A property having the GraphQL name of another field designates that
   field, as before.
+- A failing query naming fields the entity does not map points them out, with the closest mapped field:
+  `Field "titel" is not mapped on App\Task: did you mean "title"?`. They are still sent, the API may accept them.
 
 ### Changed
 
 - PHPStan rules: a PHP property name is no longer reported where a field is named; the `graphqlOrm.propertyName`
   identifier is gone (remove the `@phpstan-ignore graphqlOrm.propertyName` comments, if any).
+
+### Fixed
+
+- An invalid query answered with an HTTP `400` (Data API Builder, PostGraphile) threw "answered with HTTP status 400"
+  without the errors of the server: they are now in the exception message and the profiler.
 
 ---
 
