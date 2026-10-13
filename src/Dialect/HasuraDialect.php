@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Dialect;
 
+use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\Query\Expr\FilterExpressionInterface;
 use GraphqlOrm\Query\QueryOptions;
@@ -14,9 +15,9 @@ use GraphqlOrm\Query\Walker\HasuraGraphqlWalker;
  * Hasura (and APIs following its conventions): collections are plain lists, filtered with `where` and its `_`-prefixed
  * operators, ordered with `order_by` and limited with `limit`.
  *
- * Hasura paginates with an offset, not a cursor: `paginate()` is rejected.
+ * Hasura paginates with an offset: `paginate()` needs a `limit()`, the cursor of a page being the offset of the next one.
  */
-final class HasuraDialect implements GraphqlQueryDialect, BatchLoadingDialect
+final class HasuraDialect implements GraphqlQueryDialect, BatchLoadingDialect, OffsetPaginationDialect
 {
     private const OPERATORS = [
         'eq' => '_eq',
@@ -45,20 +46,52 @@ final class HasuraDialect implements GraphqlQueryDialect, BatchLoadingDialect
     }
 
     /**
-     * @throws LogicException when cursor pagination is requested
+     * @throws LogicException           when paginating without page size
+     * @throws InvalidArgumentException when the cursor is not an offset
      */
     public function applyQueryOptions(array $arguments, QueryOptions $options): array
     {
-        if ($options->paginate) {
-            throw new LogicException(\sprintf('Hasura paginates with an offset, not a cursor: paginate() is not supported by "%s".', self::class));
-        }
-
         if ($options->orderBy !== null) {
             $arguments['order_by'] = array_map(HasuraOrderDirection::fromDirection(...), $options->orderBy);
         }
 
         if ($options->limit !== null) {
             $arguments['limit'] = $options->limit;
+        }
+
+        return self::withPagination($arguments, $options);
+    }
+
+    /**
+     * The `limit` (one extra row) and `offset` of the page to fetch, also applied by the walker as each page reuses the
+     * arguments the query was built with.
+     *
+     * @param array<string, mixed> $arguments
+     *
+     * @return array<string, mixed>
+     *
+     * @throws LogicException           when paginating without page size
+     * @throws InvalidArgumentException when the cursor is not an offset
+     */
+    public static function withPagination(array $arguments, QueryOptions $options): array
+    {
+        if (!$options->paginate) {
+            return $arguments;
+        }
+
+        if ($options->limit === null) {
+            throw new LogicException('Hasura paginates with an offset: paginate() needs a page size, set with limit().');
+        }
+
+        $arguments['limit'] = $options->limit + 1;
+        unset($arguments['offset']);
+
+        if ($options->cursor !== null) {
+            if (!ctype_digit($options->cursor)) {
+                throw new InvalidArgumentException(\sprintf('The cursor "%s" is not an offset: Hasura paginates with offsets.', $options->cursor));
+            }
+
+            $arguments['offset'] = (int) $options->cursor;
         }
 
         return $arguments;

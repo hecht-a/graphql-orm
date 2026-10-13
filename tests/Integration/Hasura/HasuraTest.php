@@ -8,9 +8,9 @@ use GraphqlOrm\Codegen\SchemaPropertyMapper;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\Dialect\HasuraDialect;
-use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Query\Direction;
+use GraphqlOrm\Query\Pagination\PaginatedResult;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Schema\SchemaValidator;
 use GraphqlOrm\Tests\Integration\Entity\Task;
@@ -129,10 +129,19 @@ final class HasuraTest extends IntegrationTestCase
     }
 
     #[Test]
-    public function itRejectsCursorPagination(): void
+    public function itNavigatesPagesWithAnOffset(): void
     {
-        $this->expectException(LogicException::class);
-        $this->repository(Task::class)->createQueryBuilder()->paginate()->getQuery();
+        $firstPage = $this->repository(Task::class)->createQueryBuilder()->orderBy('id', Direction::ASC)->limit(3)->paginate()->getQuery()->getResult();
+        self::assertInstanceOf(PaginatedResult::class, $firstPage);
+
+        $secondPage = $firstPage->next();
+        $backToFirst = $secondPage?->previous();
+
+        self::assertSame([1, 2, 3], self::ids($firstPage->items));
+        self::assertTrue($firstPage->hasNextPage);
+        self::assertSame([4], self::ids($secondPage->items ?? []));
+        self::assertFalse($secondPage?->hasNextPage);
+        self::assertSame([1, 2, 3], self::ids($backToFirst->items ?? []));
     }
 
     #[Test]

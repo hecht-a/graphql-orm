@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GraphqlOrm\Query;
 
 use GraphqlOrm\Dialect\CursorPaginationDialect;
+use GraphqlOrm\Dialect\OffsetPaginationDialect;
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\GraphqlManager;
@@ -63,12 +64,15 @@ final readonly class GraphqlQuery
                     throw InvalidGraphqlResponseException::expectedArray($root);
                 }
 
+                $rows = $this->rows($root);
+                $hasNextPage = $this->trimExtraRow($rows);
+
                 /** @var T[] $items the rows are hydrated as instances of the queried entity */
                 $items = array_map(
                     fn (array $row) => $this->manager
                         ->getHydrator()
                         ->hydrate($metadata, $row, $context),
-                    $this->rows($root)
+                    $rows
                 );
 
                 if (!$this->options->paginate) {
@@ -77,7 +81,9 @@ final readonly class GraphqlQuery
 
                 $dialect = $this->manager->getDialect();
 
-                if ($dialect instanceof CursorPaginationDialect) {
+                if ($dialect instanceof OffsetPaginationDialect) {
+                    $endCursor = $hasNextPage ? (string) ((int) $this->options->cursor + (int) $this->options->limit) : null;
+                } elseif ($dialect instanceof CursorPaginationDialect) {
                     $hasNextPage = $dialect->hasNextPage($root);
                     $endCursor = $dialect->endCursor($root);
                 } else {
@@ -127,13 +133,34 @@ final readonly class GraphqlQuery
                     throw InvalidGraphqlResponseException::expectedArray($root);
                 }
 
+                $rows = $this->rows($root);
+                $this->trimExtraRow($rows);
+
                 return array_map(
                     fn (array $row) => $this->withoutEnvelopes($metadata, $row),
-                    $this->rows($root)
+                    $rows
                 );
             },
             $this->options
         );
+    }
+
+    /**
+     * With an offset pagination, one row more than the page size is requested: it tells a next page exists, and is
+     * dropped.
+     *
+     * @param list<array<mixed>> $rows
+     */
+    private function trimExtraRow(array &$rows): bool
+    {
+        if (!$this->options->paginate || $this->options->limit === null || !$this->manager->getDialect() instanceof OffsetPaginationDialect) {
+            return false;
+        }
+
+        $hasNextPage = \count($rows) > $this->options->limit;
+        $rows = \array_slice($rows, 0, $this->options->limit);
+
+        return $hasNextPage;
     }
 
     /**

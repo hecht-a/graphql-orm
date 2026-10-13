@@ -6,6 +6,7 @@ namespace GraphqlOrm\Tests\Dialect;
 
 use GraphqlOrm\Dialect\HasuraDialect;
 use GraphqlOrm\Dialect\HasuraOrderDirection;
+use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\Query\Direction;
 use GraphqlOrm\Query\Expr\ExpressionBuilder;
@@ -93,12 +94,39 @@ final class HasuraDialectTest extends TestCase
     }
 
     #[Test]
-    public function itRejectsCursorPaginationWhichHasuraDoesNotProvide(): void
+    public function itPaginatesWithAnOffsetAndOneExtraRow(): void
+    {
+        $options = new QueryOptions();
+        $options->paginate = true;
+        $options->limit = 2;
+
+        $firstPage = $this->dialect->applyQueryOptions([], $options);
+        $options->cursor = '4';
+        $thirdPage = $this->dialect->applyQueryOptions([], $options);
+
+        self::assertSame(['limit' => 3], $firstPage);
+        self::assertSame(['limit' => 3, 'offset' => 4], $thirdPage);
+    }
+
+    #[Test]
+    public function itNeedsAPageSizeToPaginate(): void
     {
         $options = new QueryOptions();
         $options->paginate = true;
 
         $this->expectException(LogicException::class);
+        $this->dialect->applyQueryOptions([], $options);
+    }
+
+    #[Test]
+    public function itRejectsACursorThatIsNotAnOffset(): void
+    {
+        $options = new QueryOptions();
+        $options->paginate = true;
+        $options->limit = 2;
+        $options->cursor = 'W3siaWQiOjJ9XQ==';
+
+        $this->expectException(InvalidArgumentException::class);
         $this->dialect->applyQueryOptions([], $options);
     }
 

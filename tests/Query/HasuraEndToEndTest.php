@@ -9,6 +9,7 @@ use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Query\Direction;
+use GraphqlOrm\Query\Pagination\PaginatedResult;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeUserWithCollection;
@@ -50,6 +51,41 @@ final class HasuraEndToEndTest extends TestCase
         $qb->where($qb->expr()->orX($qb->expr()->contains('title', 'docs'), $qb->expr()->eq('id', 3)))->getQuery()->getResult();
 
         self::assertStringContainsString('tasks(where: { _or: [{ title: { _like: "%docs%" } }, { id: { _eq: 3 } }] }) {', $client->lastQuery);
+    }
+
+    #[Test]
+    public function itNavigatesPagesWithAnOffset(): void
+    {
+        $client = new FakeGraphqlClient(
+            ['data' => ['tasks' => [['id' => 1, 'title' => 'A'], ['id' => 2, 'title' => 'B'], ['id' => 3, 'title' => 'C']]]],
+            ['data' => ['tasks' => [['id' => 3, 'title' => 'C']]]],
+            ['data' => ['tasks' => [['id' => 1, 'title' => 'A'], ['id' => 2, 'title' => 'B'], ['id' => 3, 'title' => 'C']]]],
+        );
+        $firstPage = $this->repository($client, FakeTask::class)->createQueryBuilder()->limit(2)->paginate()->getQuery()->getResult();
+        self::assertInstanceOf(PaginatedResult::class, $firstPage);
+
+        $secondPage = $firstPage->next();
+        $secondQuery = $client->lastQuery;
+        $backToFirst = $secondPage?->previous();
+
+        self::assertSame([1, 2], array_map(fn (FakeTask $task) => $task->id, $firstPage->items));
+        self::assertTrue($firstPage->hasNextPage);
+        self::assertSame('2', $firstPage->endCursor);
+        self::assertSame([3], array_map(fn (FakeTask $task) => $task->id, $secondPage->items ?? []));
+        self::assertFalse($secondPage?->hasNextPage);
+        self::assertStringContainsString('tasks(limit: 3, offset: 2) {', $secondQuery);
+        self::assertSame([1, 2], array_map(fn (FakeTask $task) => $task->id, $backToFirst->items ?? []));
+        self::assertStringContainsString('tasks(limit: 3) {', $client->lastQuery);
+    }
+
+    #[Test]
+    public function itReturnsThePageRowsAsArrays(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['tasks' => [['id' => 1, 'title' => 'A'], ['id' => 2, 'title' => 'B'], ['id' => 3, 'title' => 'C']]]]);
+
+        $rows = $this->repository($client, FakeTask::class)->createQueryBuilder()->limit(2)->paginate()->getQuery()->getArrayResult();
+
+        self::assertSame([['id' => 1, 'title' => 'A'], ['id' => 2, 'title' => 'B']], $rows);
     }
 
     /**
