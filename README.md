@@ -53,6 +53,8 @@ $tasks = $qb
 
 ## Documentation
 
+The documentation is published at **https://hecht-a.github.io/graphql-orm/**, and its pages live in `docs/`:
+
 - [Configuration](docs/configuration.md)
 - [Entity mapping](docs/entity-mapping.md)
 - [Repositories](docs/repositories.md)

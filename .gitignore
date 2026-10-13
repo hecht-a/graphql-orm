@@ -4,3 +4,6 @@ vendor
 .php-cs-fixer.cache
 cache
 .phpunit.result.cache
+docs/node_modules
+docs/.vitepress/cache
+docs/.vitepress/dist

@@ -1,0 +1,5 @@
+# Kept out of the Composer package: the documentation site tooling and the repository tooling.
+/docs/.vitepress export-ignore
+/docs/package.json export-ignore
+/docs/package-lock.json export-ignore
+/.github export-ignore

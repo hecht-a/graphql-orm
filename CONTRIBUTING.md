@@ -41,6 +41,19 @@ docker compose -f tests/Integration/compose.yaml down
 - When running PHPUnit in a container, join the compose network and use the service names as hosts, e.g.
   `--network <project>_default` and `GRAPHQL_ORM_HASURA_ENDPOINT=http://hasura:8080/v1/graphql`.
 
+## Documentation site
+
+The pages of `docs/` are published on GitHub Pages with [VitePress](https://vitepress.dev) by the `Documentation`
+workflow, on each push to `main` touching them or `CHANGELOG.md`. To preview the site locally (Node 22):
+
+```bash
+cd docs
+npm ci
+npx vitepress dev
+```
+
+Links between pages stay relative Markdown links (`[Pagination](pagination.md)`), so that they work on GitHub too.
+
 ## Commits
 
 Commit messages follow `type: message` (`feat`, `fix`, `docs`, `refactor`, `test`, `build`, `chore`), and user-facing

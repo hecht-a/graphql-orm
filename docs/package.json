@@ -1,0 +1,12 @@
+{
+    "private": true,
+    "description": "Documentation site of hecht-a/graphql-orm, published on GitHub Pages",
+    "scripts": {
+        "dev": "vitepress dev",
+        "build": "vitepress build",
+        "preview": "vitepress preview"
+    },
+    "devDependencies": {
+        "vitepress": "1.6.4"
+    }
+}
