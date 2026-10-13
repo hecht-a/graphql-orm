@@ -18,6 +18,7 @@ use GraphqlOrm\Execution\IdentityMap;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Query\Ast\AstExporter;
 use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\CompiledQuery;
 use GraphqlOrm\Query\GraphqlQueryCompiler;
@@ -122,9 +123,7 @@ class GraphqlManager
             $compiledQuery = $this->compile($graphql, $options);
             $compiled = $compiledQuery->graphql;
             $variables = [...$variables, ...$compiledQuery->variables];
-            /** @var array<string|int, mixed> $ast */
-            $ast = json_decode(json_encode($graphql, JSON_THROW_ON_ERROR), true);
-            $context->trace->ast = $ast;
+            $context->trace->ast = AstExporter::export($graphql);
         } else {
             $compiled = $graphql;
         }
