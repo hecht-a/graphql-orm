@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Query builder comparisons: `gt()`, `gte()`, `lt()`, `lte()` (`_gt`... with Hasura), `isNotNull()` and `notIn()`, sent
   as one inequality per value, Data API Builder having no "not in" operator.
+- `GraphqlQuery::toIterable()`, a generator going through every page of a paginated query, fetching each page once the
+  previous one is read.
 
 ---
 
