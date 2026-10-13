@@ -28,17 +28,32 @@ $qb->where($expr->eq('status', 'active'));
 // Available operators
 $expr->eq('field', $value)           // field == value
 $expr->neq('field', $value)          // field != value
+$expr->gt('field', $value)           // field > value
+$expr->gte('field', $value)          // field >= value
+$expr->lt('field', $value)           // field < value
+$expr->lte('field', $value)          // field <= value
 $expr->contains('field', $value)     // field contains value
 $expr->notContains('field', $value)  // field does not contain value
 $expr->startsWith('field', $value)   // field starts with value
 $expr->endsWith('field', $value)     // field ends with value
 $expr->in('field', [$a, $b])         // field in [a, b]
+$expr->notIn('field', [$a, $b])      // field not in [a, b], sent as field != a and field != b
 $expr->isNull('field')               // field is null
+$expr->isNotNull('field')            // field is not null
 
 // Logical combinators
 $expr->andX($expr->eq('status', 'active'), $expr->isNull('dueDate'))
 $expr->orX($expr->eq('priority', 'high'), $expr->eq('priority', 'critical'))
 ```
+
+Field names are those of the GraphQL schema, and dates and enums are sent as in the variables: the tasks overdue are
+
+```php
+$qb->where($expr->andX($expr->isNotNull('due_date'), $expr->lt('due_date', new \DateTimeImmutable())));
+```
+
+`notIn()` needs at least one value. Data API Builder has no "not in" operator, hence one inequality per value; like
+SQL `NOT IN`, it does not match `null`.
 
 ## Ordering and limit
 
