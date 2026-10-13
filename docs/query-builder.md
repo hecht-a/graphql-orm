@@ -70,6 +70,24 @@ $result = $repository->createQueryBuilder()
     ->getResult();
 ```
 
+## Array results
+
+`getArrayResult()` returns the rows as the API sent them, without creating entities: lighter for an export or a JSON
+response.
+
+```php
+$rows = $repository->createQueryBuilder()
+    ->select('id', 'title', 'user.name')
+    ->getQuery()
+    ->getArrayResult();
+
+// [['id' => 1, 'title' => 'Write docs', 'user' => ['id' => 10, 'name' => 'John']], ...]
+```
+
+Keys are GraphQL field names and values are not converted (no enums nor dates). The collection envelopes of the
+dialect, such as the `items` of Data API Builder, are removed, nested collections included. A paginated query returns
+the rows of the requested page.
+
 ## Inspecting the generated query
 
 ```php

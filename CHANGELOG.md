@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- `GraphqlQuery::getArrayResult()`: rows as the API sent them, without hydration, the collection envelopes of the
+  dialect removed.
+
+---
+
 ## [3.0.0] — 2026-10-12
 
 ### Upgrading from 2.x
