@@ -140,6 +140,10 @@ final class GraphqlEntityRepositoryTest extends TestCase
             ->willReturnCallback(fn (QueryNode|string $_, callable $hydration) => $hydration($response, new GraphqlExecutionContext()));
 
         $manager
+            ->method('send')
+            ->willReturnCallback(fn (QueryNode|string $_, callable $hydration) => fn () => $hydration($response, new GraphqlExecutionContext()));
+
+        $manager
             ->method('getDialect')
             ->willReturn(new DefaultDialect());
 

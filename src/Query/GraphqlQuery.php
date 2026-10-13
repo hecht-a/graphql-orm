@@ -19,7 +19,7 @@ use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
 
 /**
- * @template T of object
+ * @template-covariant T of object
  */
 final readonly class GraphqlQuery
 {
@@ -50,11 +50,61 @@ final readonly class GraphqlQuery
      */
     public function getResult(): array|PaginatedResult
     {
+        return $this->pendingResult()();
+    }
+
+    /**
+     * Runs the queries concurrently, each request being sent before any response is read, and returns their results
+     * (as getResult()) in the same order. When some fail, the others still complete, then the first failure is thrown.
+     *
+     * @param GraphqlQuery<object> ...$queries
+     *
+     * @return list<array<object>|PaginatedResult<object>> the result of each query, as getResult() returns it
+     *
+     * @throws \Throwable the first failure, once every query completed
+     */
+    public static function concurrently(self ...$queries): array
+    {
+        $pending = [];
+        $failure = null;
+
+        foreach ($queries as $query) {
+            try {
+                $pending[] = $query->pendingResult();
+            } catch (\Throwable $exception) {
+                $failure ??= $exception;
+            }
+        }
+
+        $results = [];
+
+        foreach ($pending as $complete) {
+            try {
+                $results[] = $complete();
+            } catch (\Throwable $exception) {
+                $failure ??= $exception;
+            }
+        }
+
+        if ($failure !== null) {
+            throw $failure;
+        }
+
+        return $results;
+    }
+
+    /**
+     * Sends the query and returns a function completing it.
+     *
+     * @return \Closure(): (T[]|PaginatedResult<T>)
+     */
+    private function pendingResult(): \Closure
+    {
         $metadata = $this->manager
             ->getMetadataFactory()
             ->getMetadata($this->entityClass);
 
-        return $this->execute(
+        return $this->pending(
             function (array $result, GraphqlExecutionContext $context) use ($metadata) {
                 $data = $result['data'] ?? null;
                 $root = \is_array($data) ? ($data[$metadata->name] ?? null) : null;
@@ -185,11 +235,33 @@ final readonly class GraphqlQuery
      */
     private function execute(callable $hydration): array|PaginatedResult
     {
+        return $this->pending($hydration)();
+    }
+
+    /**
+     * @template R of array<mixed>|PaginatedResult<object>
+     *
+     * @param callable(array<string, mixed>, GraphqlExecutionContext): R $hydration
+     *
+     * @return \Closure(): R
+     *
+     * @throws GraphqlRequestException when the query cannot be sent, with the unmapped fields it names
+     */
+    private function pending(callable $hydration): \Closure
+    {
         try {
-            return $this->manager->execute($this->graphql, $hydration, $this->options);
+            $complete = $this->manager->send($this->graphql, $hydration, $this->options);
         } catch (GraphqlRequestException $exception) {
             throw $exception->withHints($this->unmappedFieldHints);
         }
+
+        return function () use ($complete): array|PaginatedResult {
+            try {
+                return $complete();
+            } catch (GraphqlRequestException $exception) {
+                throw $exception->withHints($this->unmappedFieldHints);
+            }
+        };
     }
 
     /**

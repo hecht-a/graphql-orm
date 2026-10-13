@@ -10,8 +10,9 @@ use GraphqlOrm\Execution\GraphqlExecutionContext;
 use Symfony\Component\Stopwatch\Stopwatch;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
-final readonly class GraphqlClient implements GraphqlClientInterface
+final readonly class GraphqlClient implements ConcurrentGraphqlClientInterface
 {
     private const FIRST_HTTP_ERROR_STATUS = 400;
 
@@ -33,8 +34,13 @@ final readonly class GraphqlClient implements GraphqlClientInterface
     /**
      * @return array<string, mixed>
      */
-    public function query(string $query, GraphqlExecutionContext $context, array $variables = [],
-    ): array {
+    public function query(string $query, GraphqlExecutionContext $context, array $variables = []): array
+    {
+        return $this->send($query, $context, $variables)();
+    }
+
+    public function send(string $query, GraphqlExecutionContext $context, array $variables = []): \Closure
+    {
         $eventName = 'graphql_orm.query.' . $context->trace->id;
 
         $context->trace->caller = $this->findCaller(
@@ -49,6 +55,7 @@ final readonly class GraphqlClient implements GraphqlClientInterface
         $this->stopwatch?->start($eventName, 'graphql_orm');
 
         try {
+            // The request is sent here; reading its response, later, is what waits for it.
             $response = $this
                 ->httpClient
                 ->request(
@@ -65,14 +72,27 @@ final readonly class GraphqlClient implements GraphqlClientInterface
                         ...$this->httpClientOptions,
                     ]
                 );
+        } catch (TransportExceptionInterface $e) {
+            $this->stopTimer($eventName, $context);
 
+            throw GraphqlRequestException::transportFailed($this->endpoint, $e);
+        }
+
+        return fn (): array => $this->receive($response, $eventName, $context);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function receive(ResponseInterface $response, string $eventName, GraphqlExecutionContext $context): array
+    {
+        try {
             $statusCode = $response->getStatusCode();
             $content = $response->getContent(false);
         } catch (TransportExceptionInterface $e) {
             throw GraphqlRequestException::transportFailed($this->endpoint, $e);
         } finally {
-            $event = $this->stopwatch?->stop($eventName);
-            $context->trace->duration = $event ? $event->getDuration() : 0.0;
+            $this->stopTimer($eventName, $context);
         }
 
         $context->trace->responseSize = \strlen($content);
@@ -86,6 +106,12 @@ final readonly class GraphqlClient implements GraphqlClientInterface
         }
 
         return $this->decode($content, $context);
+    }
+
+    private function stopTimer(string $eventName, GraphqlExecutionContext $context): void
+    {
+        $event = $this->stopwatch?->stop($eventName);
+        $context->trace->duration = $event ? $event->getDuration() : 0.0;
     }
 
     /**

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace GraphqlOrm\Query\Pagination;
 
 /**
- * @template T of object
+ * @template-covariant T of object
  */
 final readonly class PaginatedResult
 {

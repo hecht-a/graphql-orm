@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm;
 
+use GraphqlOrm\Client\ConcurrentGraphqlClientInterface;
 use GraphqlOrm\Client\GraphqlClientInterface;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\BatchLoadingDialect;
@@ -62,6 +63,24 @@ class GraphqlManager
      */
     public function execute(QueryNode|string $graphql, callable $hydration, QueryOptions $options = new QueryOptions(), array $variables = []): array|PaginatedResult
     {
+        return $this->send($graphql, $hydration, $options, $variables)();
+    }
+
+    /**
+     * Sends the query and returns a function completing it: waiting for the response, hydrating it, recording it. With
+     * a client unable to send concurrently, the query is only sent when completed.
+     *
+     * @internal used by GraphqlQuery::concurrently()
+     *
+     * @template R of array<mixed>|PaginatedResult<object>
+     *
+     * @param callable(array<string, mixed>, GraphqlExecutionContext): R $hydration turns the response into the result
+     * @param array<string, mixed>                                       $variables
+     *
+     * @return \Closure(): R
+     */
+    public function send(QueryNode|string $graphql, callable $hydration, QueryOptions $options = new QueryOptions(), array $variables = []): \Closure
+    {
         $context = new GraphqlExecutionContext(dialect: $this->dialect);
 
         if ($this->lazyLoading) {
@@ -84,25 +103,43 @@ class GraphqlManager
 
         $this->eventDispatcher?->dispatch(new QueryStartedEvent($this->redact(clone $context->trace)));
 
-        $failure = null;
-
         try {
-            $result = $this->client->query($compiled, $context, $variables);
-
-            $entities = $hydration($result, $context);
-            $context->trace->hydratedCount = \count($entities instanceof PaginatedResult ? $entities->items : $entities);
+            $response = $this->client instanceof ConcurrentGraphqlClientInterface
+                ? $this->client->send($compiled, $context, $variables)
+                : fn (): array => $this->client->query($compiled, $context, $variables);
         } catch (\Throwable $exception) {
-            $failure = $exception;
+            $this->record($context, $exception);
 
             throw $exception;
-        } finally {
-            $trace = $this->redact(clone $context->trace);
-            $this->collector?->addQuery($trace);
-            $this->log($trace);
-            $this->eventDispatcher?->dispatch($failure !== null ? new QueryFailedEvent($trace, $failure) : new QueryExecutedEvent($trace));
         }
 
-        return $entities;
+        return function () use ($response, $hydration, $context): array|PaginatedResult {
+            $failure = null;
+
+            try {
+                $entities = $hydration($response(), $context);
+                $context->trace->hydratedCount = \count($entities instanceof PaginatedResult ? $entities->items : $entities);
+            } catch (\Throwable $exception) {
+                $failure = $exception;
+
+                throw $exception;
+            } finally {
+                $this->record($context, $failure);
+            }
+
+            return $entities;
+        };
+    }
+
+    /**
+     * Records a completed query in the profiler and the logs, and dispatches its outcome.
+     */
+    private function record(GraphqlExecutionContext $context, ?\Throwable $failure): void
+    {
+        $trace = $this->redact(clone $context->trace);
+        $this->collector?->addQuery($trace);
+        $this->log($trace);
+        $this->eventDispatcher?->dispatch($failure !== null ? new QueryFailedEvent($trace, $failure) : new QueryExecutedEvent($trace));
     }
 
     /**

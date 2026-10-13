@@ -13,6 +13,7 @@ use GraphqlOrm\Exception\NonUniqueResultException;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\Naming\SnakeCaseNamingStrategy;
 use GraphqlOrm\Query\Direction;
+use GraphqlOrm\Query\GraphqlQuery;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Schema\SchemaValidator;
@@ -155,6 +156,18 @@ final class HasuraTest extends IntegrationTestCase
         self::assertSame(2, $tasks->max('id', ['done' => true]));
         self::assertNull($tasks->max('id', ['title' => 'No such task']));
         self::assertSame('2026-02-01T09:00:00+00:00', $tasks->max('dueDate'));
+    }
+
+    #[Test]
+    public function itRunsQueriesConcurrently(): void
+    {
+        [$tasks, $users] = GraphqlQuery::concurrently(
+            $this->repository(Task::class)->createQueryBuilder()->orderBy('id', Direction::ASC)->getQuery(),
+            $this->repository(User::class)->createQueryBuilder()->orderBy('id', Direction::ASC)->getQuery(),
+        );
+
+        self::assertSame([1, 2, 3, 4], self::ids($tasks instanceof PaginatedResult ? $tasks->items : $tasks));
+        self::assertSame([1, 2], self::ids($users instanceof PaginatedResult ? $users->items : $users));
     }
 
     #[Test]

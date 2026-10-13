@@ -13,6 +13,7 @@ use GraphqlOrm\Exception\NonUniqueResultException;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\Naming\SnakeCaseNamingStrategy;
 use GraphqlOrm\Query\Direction;
+use GraphqlOrm\Query\GraphqlQuery;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Schema\GraphqlSchema;
@@ -221,6 +222,18 @@ final class DataApiBuilderTest extends IntegrationTestCase
         self::assertSame(1, $tasks->min('id'));
         self::assertSame(2, $tasks->max('id', ['done' => true]));
         self::assertNull($tasks->max('id', ['title' => 'No such task']));
+    }
+
+    #[Test]
+    public function itRunsQueriesConcurrently(): void
+    {
+        [$tasks, $users] = GraphqlQuery::concurrently(
+            $this->tasks()->createQueryBuilder()->orderBy('id', Direction::ASC)->getQuery(),
+            $this->users()->createQueryBuilder()->orderBy('id', Direction::ASC)->getQuery(),
+        );
+
+        self::assertSame([1, 2, 3, 4], self::ids($tasks instanceof PaginatedResult ? $tasks->items : $tasks));
+        self::assertSame([1, 2], self::ids($users instanceof PaginatedResult ? $users->items : $users));
     }
 
     #[Test]
