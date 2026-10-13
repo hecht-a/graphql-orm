@@ -6,6 +6,7 @@ namespace GraphqlOrm\Dialect;
 
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\Exception\LogicException;
+use GraphqlOrm\Query\Aggregate;
 use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Ast\SelectionSetNode;
 use GraphqlOrm\Query\EnumLiteral;
@@ -14,7 +15,7 @@ use GraphqlOrm\Query\QueryOptions;
 use GraphqlOrm\Query\Walker\DABGraphqlWalker;
 use GraphqlOrm\Query\Walker\GraphqlWalkerInterface;
 
-final class DataApiBuilderDialect implements GraphqlQueryDialect, CursorPaginationDialect, BatchLoadingDialect, CountingDialect
+final class DataApiBuilderDialect implements GraphqlQueryDialect, CursorPaginationDialect, BatchLoadingDialect, CountingDialect, AggregatingDialect
 {
     public function extractCollection(array $data): array
     {
@@ -121,5 +122,35 @@ final class DataApiBuilderDialect implements GraphqlQueryDialect, CursorPaginati
         }
 
         return $count;
+    }
+
+    /**
+     * `tasks(filter) { groupBy { aggregations { sum(field: estimate) } } }`: Data API Builder only aggregates numbers.
+     */
+    public function aggregateField(string $root, array $arguments, Aggregate $aggregate, string $field): FieldNode
+    {
+        $aggregations = new SelectionSetNode();
+        $aggregations->add(new FieldNode($aggregate->value, ['field' => new EnumLiteral($field)]));
+        $groupBy = new SelectionSetNode();
+        $groupBy->add(new FieldNode('aggregations', [], $aggregations));
+        $selection = new SelectionSetNode();
+        $selection->add(new FieldNode('groupBy', [], $groupBy));
+
+        return new FieldNode($root, $arguments, $selection);
+    }
+
+    public function readAggregate(array $data, string $aggregateRoot, Aggregate $aggregate, string $field): int|float|string|null
+    {
+        $groups = \is_array($data[$aggregateRoot] ?? null) ? ($data[$aggregateRoot]['groupBy'] ?? null) : null;
+
+        if (!\is_array($groups)) {
+            throw InvalidGraphqlResponseException::expectedArray($groups);
+        }
+
+        // Without grouping, the aggregation has at most one group, and none when no entity matches.
+        $group = $groups[0] ?? null;
+        $value = \is_array($group) && \is_array($group['aggregations'] ?? null) ? ($group['aggregations'][$aggregate->value] ?? null) : null;
+
+        return $value === null || \is_scalar($value) && !\is_bool($value) ? $value : throw InvalidGraphqlResponseException::expectedArray($group);
     }
 }

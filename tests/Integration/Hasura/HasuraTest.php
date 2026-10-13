@@ -145,6 +145,19 @@ final class HasuraTest extends IntegrationTestCase
     }
 
     #[Test]
+    public function itAggregatesAField(): void
+    {
+        $tasks = $this->repository(Task::class);
+
+        self::assertSame(10, $tasks->sum('id'));
+        self::assertEqualsWithDelta(8 / 3, $tasks->avg('id', ['done' => false]), 0.0001);
+        self::assertSame(1, $tasks->min('id'));
+        self::assertSame(2, $tasks->max('id', ['done' => true]));
+        self::assertNull($tasks->max('id', ['title' => 'No such task']));
+        self::assertSame('2026-02-01T09:00:00+00:00', $tasks->max('dueDate'));
+    }
+
+    #[Test]
     public function itCountsEntities(): void
     {
         self::assertSame(4, $this->repository(Task::class)->count());

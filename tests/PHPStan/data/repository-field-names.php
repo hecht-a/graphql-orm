@@ -22,4 +22,6 @@ function repositoryFieldNames(GraphqlEntityRepository $tasks, array $criteria): 
     $tasks->findOneBy(['user_id' => 1]);
     $tasks->findBy($criteria);
     $tasks->count(['dueDate' => null]);
+    $tasks->sum('id', ['dueDate' => null]);
+    $tasks->max('titel', ['user_id' => 1]);
 }

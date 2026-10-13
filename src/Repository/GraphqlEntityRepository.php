@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Repository;
 
+use GraphqlOrm\Dialect\AggregatingDialect;
 use GraphqlOrm\Dialect\CountingDialect;
 use GraphqlOrm\Exception\GraphqlRequestException;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\GraphqlManager;
+use GraphqlOrm\Query\Aggregate;
+use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\Direction;
 use GraphqlOrm\Query\GraphqlQuery;
@@ -115,7 +118,8 @@ class GraphqlEntityRepository
      *
      * @param array<string, mixed> $criteria GraphQL field name or PHP property => expected value
      *
-     * @throws LogicException when the dialect cannot count
+     * @throws LogicException          when the dialect cannot count
+     * @throws GraphqlRequestException when the query fails
      */
     public function count(array $criteria = []): int
     {
@@ -128,21 +132,126 @@ class GraphqlEntityRepository
         $metadata = $this->manager->getMetadataFactory()->getMetadata($this->entityClass);
         $field = $dialect->countField($metadata->name, $dialect->applyCriteria($metadata->withGraphqlNames($criteria)), $metadata->identifier?->mappedFrom);
 
+        return $this->executeInline($field, fn (array $data): int => $dialect->readCount($data, $field->name), array_keys($criteria));
+    }
+
+    /**
+     * Sums a field over the entities matching the criteria, with a query of its own; null when none matches.
+     *
+     * @param string               $field    GraphQL field name or PHP property
+     * @param array<string, mixed> $criteria GraphQL field name or PHP property => expected value
+     *
+     * @throws LogicException          when the dialect cannot aggregate
+     * @throws GraphqlRequestException when the query fails
+     */
+    public function sum(string $field, array $criteria = []): int|float|null
+    {
+        return self::number($this->aggregate(Aggregate::Sum, $field, $criteria));
+    }
+
+    /**
+     * Averages a field over the entities matching the criteria, with a query of its own; null when none matches.
+     *
+     * @param string               $field    GraphQL field name or PHP property
+     * @param array<string, mixed> $criteria GraphQL field name or PHP property => expected value
+     *
+     * @throws LogicException          when the dialect cannot aggregate
+     * @throws GraphqlRequestException when the query fails
+     */
+    public function avg(string $field, array $criteria = []): int|float|null
+    {
+        return self::number($this->aggregate(Aggregate::Avg, $field, $criteria));
+    }
+
+    /**
+     * The smallest value of a field over the entities matching the criteria, as sent by the API (a date is a string);
+     * null when none matches.
+     *
+     * @param string               $field    GraphQL field name or PHP property
+     * @param array<string, mixed> $criteria GraphQL field name or PHP property => expected value
+     *
+     * @throws LogicException          when the dialect cannot aggregate
+     * @throws GraphqlRequestException when the query fails
+     */
+    public function min(string $field, array $criteria = []): int|float|string|null
+    {
+        return $this->aggregate(Aggregate::Min, $field, $criteria);
+    }
+
+    /**
+     * The largest value of a field over the entities matching the criteria, as sent by the API (a date is a string);
+     * null when none matches.
+     *
+     * @param string               $field    GraphQL field name or PHP property
+     * @param array<string, mixed> $criteria GraphQL field name or PHP property => expected value
+     *
+     * @throws LogicException          when the dialect cannot aggregate
+     * @throws GraphqlRequestException when the query fails
+     */
+    public function max(string $field, array $criteria = []): int|float|string|null
+    {
+        return $this->aggregate(Aggregate::Max, $field, $criteria);
+    }
+
+    /**
+     * @param array<string, mixed> $criteria
+     *
+     * @throws LogicException when the dialect cannot aggregate
+     */
+    private function aggregate(Aggregate $aggregate, string $field, array $criteria): int|float|string|null
+    {
+        $dialect = $this->manager->getDialect();
+
+        if (!$dialect instanceof AggregatingDialect) {
+            throw new LogicException(\sprintf('"%s" cannot aggregate entities: %s() needs a dialect implementing %s.', $dialect::class, $aggregate->value, AggregatingDialect::class));
+        }
+
+        $metadata = $this->manager->getMetadataFactory()->getMetadata($this->entityClass);
+        $graphqlField = $metadata->graphqlName($field);
+        $root = $dialect->aggregateField($metadata->name, $dialect->applyCriteria($metadata->withGraphqlNames($criteria)), $aggregate, $graphqlField);
+
+        return $this->executeInline(
+            $root,
+            fn (array $data): int|float|string|null => $dialect->readAggregate($data, $root->name, $aggregate, $graphqlField),
+            [$field, ...array_keys($criteria)],
+        );
+    }
+
+    /**
+     * A number sent as a string, as some servers do for large or decimal sums, is converted.
+     */
+    private static function number(int|float|string|null $value): int|float|null
+    {
+        return \is_string($value) ? (is_numeric($value) ? $value + 0 : null) : $value;
+    }
+
+    /**
+     * Sends a count or aggregate field, printed as is whatever the dialect (it has no collection envelope), with its
+     * values inline rather than as variables.
+     *
+     * @template R
+     *
+     * @param \Closure(array<mixed>): R $read  reads the result from the `data` of the response
+     * @param list<string>              $paths the field names sent, pointed out when the query fails
+     *
+     * @return R
+     */
+    private function executeInline(FieldNode $field, \Closure $read, array $paths): mixed
+    {
         $query = new QueryNode();
         $query->fields[] = $field;
-        // The count field has no collection envelope: it is printed as is, whatever the dialect.
         $graphql = (new GraphqlQueryCompiler(new DefaultGraphqlWalker()))->compile($query, new QueryOptions());
 
         try {
-            [$count] = $this->manager->execute(
+            [$result] = $this->manager->execute(
                 $graphql,
-                fn (array $result): array => [$dialect->readCount(\is_array($result['data'] ?? null) ? $result['data'] : [], $field->name)],
+                fn (array $response): array => [$read(\is_array($response['data'] ?? null) ? $response['data'] : [])],
             );
         } catch (GraphqlRequestException $exception) {
-            throw $exception->withHints((new UnmappedFieldHints($this->manager->getMetadataFactory()))->for($this->entityClass, array_keys($criteria)));
+            throw $exception->withHints((new UnmappedFieldHints($this->manager->getMetadataFactory()))->for($this->entityClass, $paths));
         }
 
-        return $count;
+        return $result;
     }
 
     /**

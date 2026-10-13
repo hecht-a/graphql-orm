@@ -38,6 +38,8 @@ final class RepositoryFieldNamesRuleTest extends RuleTestCase
         $this->analyse([__DIR__ . '/data/repository-field-names.php'], [
             [\sprintf('Field "titel" is not mapped on %s. Did you mean "title"?', Task::class), 19, self::UNMAPPED_TIP],
             [\sprintf('Field "user_id" is not mapped on %s. Did you mean "user"?', Task::class), 22, self::UNMAPPED_TIP],
+            [\sprintf('Field "titel" is not mapped on %s. Did you mean "title"?', Task::class), 26, self::UNMAPPED_TIP],
+            [\sprintf('Field "user_id" is not mapped on %s. Did you mean "user"?', Task::class), 26, self::UNMAPPED_TIP],
         ]);
     }
 

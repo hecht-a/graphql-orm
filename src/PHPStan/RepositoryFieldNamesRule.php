@@ -22,6 +22,8 @@ final readonly class RepositoryFieldNamesRule implements Rule
 {
     private const FIND_METHODS = ['findBy', 'findOneBy', 'count'];
 
+    private const AGGREGATE_METHODS = ['sum', 'avg', 'min', 'max'];
+
     public function __construct(
         private FieldNameChecker $checker,
     ) {
@@ -34,15 +36,29 @@ final readonly class RepositoryFieldNamesRule implements Rule
 
     public function processNode(Node $node, Scope $scope): array
     {
-        if (!$node->name instanceof Identifier || !\in_array($node->name->toString(), self::FIND_METHODS, true)) {
+        if (!$node->name instanceof Identifier) {
+            return [];
+        }
+
+        $method = $node->name->toString();
+        $aggregatedField = EntityClassResolver::argument($node, 0, 'field');
+        $fields = match (true) {
+            \in_array($method, self::FIND_METHODS, true) => [
+                ...EntityClassResolver::constantKeys(EntityClassResolver::argument($node, 0, 'criteria'), $scope),
+                ...EntityClassResolver::constantKeys(EntityClassResolver::argument($node, 1, 'orderBy'), $scope),
+            ],
+            \in_array($method, self::AGGREGATE_METHODS, true) => [
+                ...($aggregatedField !== null ? EntityClassResolver::constantStrings($aggregatedField, $scope) : []),
+                ...EntityClassResolver::constantKeys(EntityClassResolver::argument($node, 1, 'criteria'), $scope),
+            ],
+            default => null,
+        };
+
+        if ($fields === null) {
             return [];
         }
 
         $entityClasses = EntityClassResolver::entityClasses($node, $scope, GraphqlEntityRepository::class);
-        $fields = [
-            ...EntityClassResolver::constantKeys(EntityClassResolver::argument($node, 0, 'criteria'), $scope),
-            ...EntityClassResolver::constantKeys(EntityClassResolver::argument($node, 1, 'orderBy'), $scope),
-        ];
 
         $errors = [];
 

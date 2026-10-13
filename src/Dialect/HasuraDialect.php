@@ -7,6 +7,7 @@ namespace GraphqlOrm\Dialect;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\Exception\LogicException;
+use GraphqlOrm\Query\Aggregate;
 use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Ast\SelectionSetNode;
 use GraphqlOrm\Query\Expr\FilterExpressionInterface;
@@ -20,7 +21,7 @@ use GraphqlOrm\Query\Walker\HasuraGraphqlWalker;
  *
  * Hasura paginates with an offset: `paginate()` needs a `limit()`, the cursor of a page being the offset of the next one.
  */
-final class HasuraDialect implements GraphqlQueryDialect, BatchLoadingDialect, OffsetPaginationDialect, CountingDialect
+final class HasuraDialect implements GraphqlQueryDialect, BatchLoadingDialect, OffsetPaginationDialect, CountingDialect, AggregatingDialect
 {
     private const OPERATORS = [
         'eq' => '_eq',
@@ -213,5 +214,29 @@ final class HasuraDialect implements GraphqlQueryDialect, BatchLoadingDialect, O
         $count = \is_array($aggregate) ? ($aggregate['count'] ?? null) : null;
 
         return \is_int($count) ? $count : throw InvalidGraphqlResponseException::expectedArray($data[$countRoot] ?? null);
+    }
+
+    /**
+     * `tasks_aggregate(where) { aggregate { sum { estimate } } }`.
+     */
+    public function aggregateField(string $root, array $arguments, Aggregate $aggregate, string $field): FieldNode
+    {
+        $fields = new SelectionSetNode();
+        $fields->add(new FieldNode($field));
+        $function = new SelectionSetNode();
+        $function->add(new FieldNode($aggregate->value, [], $fields));
+        $selection = new SelectionSetNode();
+        $selection->add(new FieldNode('aggregate', [], $function));
+
+        return new FieldNode($root . '_aggregate', $arguments, $selection);
+    }
+
+    public function readAggregate(array $data, string $aggregateRoot, Aggregate $aggregate, string $field): int|float|string|null
+    {
+        $result = \is_array($data[$aggregateRoot] ?? null) ? ($data[$aggregateRoot]['aggregate'] ?? null) : null;
+        $values = \is_array($result) ? ($result[$aggregate->value] ?? null) : null;
+        $value = \is_array($values) ? ($values[$field] ?? null) : throw InvalidGraphqlResponseException::expectedArray($result);
+
+        return $value === null || \is_scalar($value) && !\is_bool($value) ? $value : throw InvalidGraphqlResponseException::expectedArray($values);
     }
 }

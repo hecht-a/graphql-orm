@@ -212,6 +212,18 @@ final class DataApiBuilderTest extends IntegrationTestCase
     }
 
     #[Test]
+    public function itAggregatesAField(): void
+    {
+        $tasks = $this->tasks();
+
+        self::assertSame(10, $tasks->sum('id'));
+        self::assertEqualsWithDelta(8 / 3, $tasks->avg('id', ['done' => false]), 0.0001);
+        self::assertSame(1, $tasks->min('id'));
+        self::assertSame(2, $tasks->max('id', ['done' => true]));
+        self::assertNull($tasks->max('id', ['title' => 'No such task']));
+    }
+
+    #[Test]
     public function itNavigatesBetweenPages(): void
     {
         $firstPage = $this->tasks()->createQueryBuilder()->orderBy('id', Direction::ASC)->limit(3)->paginate()->getQuery()->getResult();
