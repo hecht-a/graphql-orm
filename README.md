@@ -65,3 +65,4 @@ $tasks = $qb
 - [Events](docs/events.md) — metrics, tracing
 - [Hydration hooks](docs/hydration-hooks.md) — `#[BeforeHydrate]`, `#[AfterHydrate]`
 - [Console commands](docs/commands.md)
+- [PHPStan rules](docs/phpstan.md) — field names checked at analysis time

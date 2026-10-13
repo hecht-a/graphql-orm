@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `HasuraDialect`, for Hasura and APIs following its conventions: `where` with `_`-prefixed operators (`%` and `_` of
   searched values escaped), `order_by`, `limit`, plain lists; `paginate()` is rejected, Hasura paginating with an
   offset.
+- PHPStan rules (`extension.neon`, enabled by phpstan/extension-installer) checking the field names given to
+  `findBy()`, `findOneBy()` and the query builder against the entity mapping: PHP property name instead of GraphQL
+  name, unmapped field with a suggestion (`graphqlOrm.reportUnmappedFields` to allow them), path through a field that
+  is not a relation.
 - `CursorPaginationDialect` interface, telling where `hasNextPage` and `endCursor` lie; implemented by
   `DataApiBuilderDialect` and `RelayDialect`.
 - `AbstractGraphqlWalker::walkCollection()`, to print the envelope of nested collections.
@@ -23,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `phpstan/phpdoc-parser` is required in `^2.2` (was `^2.0`), the first version compatible with PHPStan 2.2 which
+  shares it.
 - `DefaultGraphqlWalker` is no longer `final`, so that dialects close to standard GraphQL can extend it.
 
 ---
