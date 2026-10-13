@@ -53,6 +53,7 @@ graphql_orm:
 | `variables.enabled`               | `false`                  | Send root arguments as typed GraphQL variables |
 | `variables.cache_pool`            | `cache.app`              | Cache pool storing the introspected argument types |
 | `variables.ttl`                   | `3600`                   | Seconds before the schema is introspected again |
+| `slow_query_threshold`            | `null`                   | Milliseconds from which a query is logged as a warning and highlighted in the profiler (see [slow queries](logging.md#slow-queries)) |
 | `redact_query_values`             | `true`                   | Mask query values in logs and profiler (see [logging.md](logging.md#masked-values)) |
 | `http_client`                     | `null`                   | HTTP client service id; defaults to the autowired `HttpClientInterface` |
 | `dialect`                         | `DefaultDialect`         | GraphQL dialect to use                  |

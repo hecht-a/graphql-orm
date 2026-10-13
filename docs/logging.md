@@ -38,6 +38,24 @@ Logs are written to your environment's default log file (`var/log/dev.log`, etc.
 }
 ```
 
+## Slow queries
+
+With `slow_query_threshold`, in milliseconds, a query lasting at least that long is logged as a warning, with the
+threshold, instead of a debug entry; a query in error stays an error:
+
+```yaml
+# config/packages/graphql_orm.yaml
+graphql_orm:
+    slow_query_threshold: 500
+```
+
+```
+app.WARNING: Slow GraphQL query {"duration_ms":1007.4,"slow_query_threshold_ms":500.0,"caller":...,"query":"..."}
+```
+
+The profiler counts them in the toolbar and marks each of them, see [profiler.md](profiler.md). The duration is
+measured by the bundle, with or without the Symfony stopwatch. No threshold is set by default.
+
 ## Masked values
 
 Query values may hold personal data (emails, customer numbers, amounts...). By default, string and number literals,

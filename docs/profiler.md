@@ -7,6 +7,8 @@ For each request, the panel shows:
 - Number of GraphQL queries executed
 - GraphQL errors (highlighted in red)
 - Repeated queries (highlighted in yellow): queries that differ only by their values, sent 3 times or more
+- Slow queries (highlighted in yellow): queries lasting at least `slow_query_threshold` milliseconds, when it is set
+  (see [logging.md](logging.md#slow-queries))
 - Per-query details:
 	- Endpoint
 	- Duration (measured via Symfony Stopwatch)

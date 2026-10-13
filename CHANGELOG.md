@@ -12,6 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A list criterion of the find methods, `count()` and the aggregates matches any of its values, as with Doctrine:
   `findBy(['id' => [1, 3]])` is sent as `in` (Data API Builder) or `_in` (Hasura); an empty list matches nothing.
   `PostGraphileDialect` rejects it with a `LogicException`, its conditions matching a single value.
+- `slow_query_threshold` (milliseconds): a query lasting at least that long is logged as a warning ("Slow GraphQL
+  query") and highlighted in the profiler, with a count in the toolbar. No threshold by default.
+
+### Changed
+
+- The duration of a query is measured by the client itself, so that it is known without the Symfony stopwatch, which
+  is still fed for the profiler timeline.
 
 ---
 
