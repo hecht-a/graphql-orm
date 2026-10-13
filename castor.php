@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+// Keeps the current working directory behaviour, and silences the Castor 1.8 deprecation asking to choose it.
+defined('CASTOR_USE_CHDIR') || define('CASTOR_USE_CHDIR', false);
+
 use Castor\Attribute\AsTask;
 
 use function Castor\PHPQa\php_cs_fixer;
@@ -26,7 +29,9 @@ function qa_cs_fix()
 #[AsTask('phpstan', namespace: 'qa', description: 'Run PHPStan for static analysis', aliases: ['phpstan'])]
 function qa_phpstan(bool $generateBaseline = false)
 {
-    $params = ['analyse', '--configuration', __DIR__ . '/phpstan.neon', '--memory-limit=-1', '-v'];
+    // --debug runs the analysis in a single process: PHPStan starts its parallel workers with PHP_BINARY, which is empty
+    // in the PHP embedded in the Castor binary, so they cannot start.
+    $params = ['analyse', '--configuration', __DIR__ . '/phpstan.neon', '--memory-limit=-1', '--debug', '--no-progress'];
     if ($generateBaseline) {
         $params[] = '--generate-baseline';
     }
