@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- `DefaultDialect` wrapped nested collections in an `items` envelope, a Data API Builder syntax that standard GraphQL
+  APIs reject: they are now selected as plain lists.
+- Schema validation reported a mismatch, and `make:entity --from-schema` generated a `string`, for the scalars named
+  after the database types by Hasura (`timestamptz`, `numeric`, `bigint`...) and for the `Datetime` of PostGraphile.
+- `make:entity --from-schema` used the table name of Hasura types as relation target class (`users`): it is now a
+  singular class name (`User`).
+
+### Changed
+
+- `symfony/string` is required: entity generation uses its inflector (it was already installed by `symfony/console`).
+
+---
+
 ## [4.1.0] — 2026-10-13
 
 ### Added
