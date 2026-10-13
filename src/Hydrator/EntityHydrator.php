@@ -7,6 +7,7 @@ namespace GraphqlOrm\Hydrator;
 use GraphqlOrm\Attribute\AfterHydrate;
 use GraphqlOrm\Attribute\BeforeHydrate;
 use GraphqlOrm\Exception\CastException;
+use GraphqlOrm\Exception\EntityNotFoundException;
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
@@ -22,11 +23,21 @@ class EntityHydrator
     private const MILLISECONDS_PER_SECOND = 1000;
 
     /**
+     * Field GraphQL servers may add to any object, ignored when telling whether a row holds more than the identifier.
+     */
+    private const TYPENAME_FIELD = '__typename';
+
+    /**
      * Reflection is resolved once per class, not once per hydrated row.
      *
      * @var array<string, array<string, \ReflectionProperty>>
      */
     private array $properties = [];
+
+    /**
+     * @var array<string, \ReflectionClass<object>>
+     */
+    private array $classes = [];
 
     /**
      * @var array<string, array<class-string, \ReflectionMethod[]>>
@@ -52,7 +63,8 @@ class EntityHydrator
             $depth
         );
 
-        $idField = $this->findUniqueField($metadata)?->mappedFrom;
+        $identifier = $this->findUniqueField($metadata);
+        $idField = $identifier?->mappedFrom;
         $uniqueField = $idField !== null ? ($data[$idField] ?? null) : null;
 
         if (!\is_int($uniqueField) && !\is_string($uniqueField)) {
@@ -65,6 +77,7 @@ class EntityHydrator
         if ($known !== null) {
             $wasComplete = $this->areMappedFieldsInitialized($known, $metadata);
             $this->hydrateFields($known, $metadata, $data, $context, $depth);
+            $this->markCompletedGhostAsInitialized($known, $metadata);
 
             if (!$wasComplete) {
                 $this->callAfterHydrateMethods($known, $metadata);
@@ -74,6 +87,14 @@ class EntityHydrator
         }
 
         ++$context->trace->hydratedEntities;
+
+        if ($identifier !== null && $uniqueField !== null && $context->lazyLoader !== null && $this->isReducedToIdentifier($metadata, $data, $identifier->mappedFrom)) {
+            $ghost = $this->lazyGhost($metadata, $identifier, $uniqueField, $context->lazyLoader);
+            $property = $this->property($metadata->class, $identifier->property);
+            $property->setRawValueWithoutLazyInitialization($ghost, $this->normalizeValue($data[$identifier->mappedFrom], $property));
+
+            return $context->identityMap[$metadata->class][$uniqueField] = $ghost;
+        }
 
         $entity = new ($metadata->class)();
 
@@ -136,8 +157,72 @@ class EntityHydrator
                 $property
             );
 
-            $property->setValue($entity, $value);
+            $this->isUninitializedGhost($entity)
+                ? $property->setRawValueWithoutLazyInitialization($entity, $value)
+                : $property->setValue($entity, $value);
         }
+    }
+
+    /**
+     * A relation beyond max_depth only gets its identifier selected: nothing else to hydrate from this row.
+     *
+     * @param array<string|int, mixed> $data
+     */
+    private function isReducedToIdentifier(GraphqlEntityMetadata $metadata, array $data, string $identifierField): bool
+    {
+        return \count($metadata->fields) > 1 && array_diff(array_keys($data), [$identifierField, self::TYPENAME_FIELD]) === [];
+    }
+
+    /**
+     * An entity of which only the identifier is set: its other properties are loaded on first access.
+     *
+     * @param \Closure(class-string, int|string): ?object $loader
+     */
+    private function lazyGhost(GraphqlEntityMetadata $metadata, GraphqlFieldMetadata $identifierField, int|string $identifier, \Closure $loader): object
+    {
+        $class = $metadata->class;
+
+        // PHP gives the properties of the ghost their default values before calling the initializer: every property but
+        // the identifier, already set, is copied from the loaded entity.
+        return $this->classReflection($class)->newLazyGhost(function (object $ghost) use ($class, $identifierField, $identifier, $loader): void {
+            $loaded = $loader($class, $identifier) ?? throw EntityNotFoundException::forIdentifier($class, $identifier);
+
+            foreach ($this->classReflection($class)->getProperties() as $property) {
+                if (!$property->isStatic() && $property->getName() !== $identifierField->property && $property->isInitialized($loaded)) {
+                    $property->setValue($ghost, $property->getValue($loaded));
+                }
+            }
+        });
+    }
+
+    private function isUninitializedGhost(object $entity): bool
+    {
+        return $this->classReflection($entity::class)->isUninitializedLazyObject($entity);
+    }
+
+    /**
+     * A ghost whose mapped fields were all hydrated from a later row needs no query anymore.
+     */
+    private function markCompletedGhostAsInitialized(object $entity, GraphqlEntityMetadata $metadata): void
+    {
+        if ($this->isUninitializedGhost($entity) && $this->areMappedFieldsInitialized($entity, $metadata)) {
+            $this->classReflection($entity::class)->markLazyObjectAsInitialized($entity);
+        }
+    }
+
+    /**
+     * @template C of object
+     *
+     * @param class-string<C> $class
+     *
+     * @return \ReflectionClass<C>
+     */
+    private function classReflection(string $class): \ReflectionClass
+    {
+        /** @var \ReflectionClass<C> $reflection */
+        $reflection = $this->classes[$class] ??= new \ReflectionClass($class);
+
+        return $reflection;
     }
 
     /**

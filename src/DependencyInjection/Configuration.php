@@ -75,6 +75,10 @@ final class Configuration implements ConfigurationInterface
             ->info('Id of a service implementing HeadersProviderInterface, whose headers are computed before every request (e.g. an OAuth token) and override the static headers.')
             ->end()
 
+            ->booleanNode('lazy_loading')
+            ->defaultFalse()
+            ->info('Hydrate the relations reduced to their identifier (beyond max_depth) as lazy ghosts, loaded with an extra query on first access.')
+            ->end()
             ->integerNode('max_depth')
             ->defaultValue(2)
             ->min(1)

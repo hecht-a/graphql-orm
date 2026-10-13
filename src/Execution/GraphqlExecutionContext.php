@@ -11,6 +11,14 @@ use GraphqlOrm\Query\GraphqlQueryTrace;
 final class GraphqlExecutionContext
 {
     /**
+     * Loads an entity by its identifier, set when lazy loading is enabled: relations reduced to their identifier are
+     * then hydrated as lazy ghosts, loaded on first access.
+     *
+     * @var (\Closure(class-string, int|string): ?object)|null
+     */
+    public ?\Closure $lazyLoader = null;
+
+    /**
      * @param array<string, array<int|string, object>> $identityMap
      */
     public function __construct(

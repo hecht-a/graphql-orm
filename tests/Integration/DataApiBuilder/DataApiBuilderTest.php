@@ -142,6 +142,16 @@ final class DataApiBuilderTest extends TestCase
     }
 
     #[Test]
+    public function itLoadsRelationsLazily(): void
+    {
+        $task = $this->repository(Task::class, maxDepth: 0, lazyLoading: true)->find(1);
+
+        self::assertSame(1, $task?->user?->id);
+        self::assertSame('User A', $task->user->name);
+        self::assertSame([1, 2], array_map(fn (Task $userTask) => $userTask->id, $task->user->tasks));
+    }
+
+    #[Test]
     public function itValidatesTheMappingAgainstTheSchema(): void
     {
         $schema = (new SchemaIntrospector($this->client))->introspectSchema();
@@ -190,7 +200,7 @@ final class DataApiBuilderTest extends TestCase
      *
      * @return GraphqlEntityRepository<T>
      */
-    private function repository(string $entityClass, ?RootArgumentTypeResolver $argumentTypeResolver = null): GraphqlEntityRepository
+    private function repository(string $entityClass, ?RootArgumentTypeResolver $argumentTypeResolver = null, int $maxDepth = 2, bool $lazyLoading = false): GraphqlEntityRepository
     {
         $metadataFactory = new GraphqlEntityMetadataFactory();
         $manager = new GraphqlManager(
@@ -198,9 +208,10 @@ final class DataApiBuilderTest extends TestCase
             $this->client,
             new EntityHydrator($metadataFactory),
             null,
-            2,
+            $maxDepth,
             new DataApiBuilderDialect(),
             argumentTypeResolver: $argumentTypeResolver,
+            lazyLoading: $lazyLoading,
         );
 
         return new GraphqlEntityRepository($manager, $entityClass);

@@ -39,6 +39,7 @@ final class GraphqlOrmExtension extends Extension
          *   headers: array<string, string>,
          *   metadata_cache_pool: string|null,
          *   headers_provider: string|null,
+         *   lazy_loading: bool,
          *   max_depth: int,
          *   schema_validation: array{mode: string},
          *   mapping: array{
@@ -78,6 +79,10 @@ final class GraphqlOrmExtension extends Extension
 
             $container->getDefinition(GraphqlManager::class)
                 ->setArgument('$argumentTypeResolver', new Reference(RootArgumentTypeResolver::class));
+        }
+
+        if ($config['lazy_loading']) {
+            $container->getDefinition(GraphqlManager::class)->setArgument('$lazyLoading', true);
         }
 
         if (!$config['redact_query_values']) {

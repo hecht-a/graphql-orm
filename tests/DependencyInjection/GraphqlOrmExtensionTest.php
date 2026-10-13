@@ -170,6 +170,26 @@ final class GraphqlOrmExtensionTest extends TestCase
     }
 
     #[Test]
+    public function itDoesNotLoadRelationsLazilyByDefault(): void
+    {
+        $container = $this->createContainer(debug: false);
+
+        $container->compile();
+
+        self::assertFalse($this->managerLazyLoading($container));
+    }
+
+    #[Test]
+    public function itCanLoadRelationsLazily(): void
+    {
+        $container = $this->createContainer(debug: false, config: ['lazy_loading' => true]);
+
+        $container->compile();
+
+        self::assertTrue($this->managerLazyLoading($container));
+    }
+
+    #[Test]
     public function itDoesNotUseVariablesByDefault(): void
     {
         $container = $this->createContainer(debug: false);
@@ -196,6 +216,11 @@ final class GraphqlOrmExtensionTest extends TestCase
     private function metadataFactoryCache(ContainerBuilder $container): mixed
     {
         return (new \ReflectionProperty(GraphqlEntityMetadataFactory::class, 'cache'))->getValue($container->get(GraphqlEntityMetadataFactory::class));
+    }
+
+    private function managerLazyLoading(ContainerBuilder $container): mixed
+    {
+        return (new \ReflectionProperty(GraphqlManager::class, 'lazyLoading'))->getValue($container->get(GraphqlManager::class));
     }
 
     private function managerArgumentTypeResolver(ContainerBuilder $container): mixed

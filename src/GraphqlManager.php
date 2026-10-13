@@ -21,6 +21,7 @@ use GraphqlOrm\Query\GraphqlQueryCompiler;
 use GraphqlOrm\Query\GraphqlQueryTrace;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
 use GraphqlOrm\Query\QueryOptions;
+use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -41,6 +42,7 @@ class GraphqlManager
         private ?QueryRedactor $redactor = null,
         private ?RootArgumentTypeResolver $argumentTypeResolver = null,
         private ?EventDispatcherInterface $eventDispatcher = null,
+        private bool $lazyLoading = false,
     ) {
     }
 
@@ -55,6 +57,10 @@ class GraphqlManager
     public function execute(QueryNode|string $graphql, callable $hydration, QueryOptions $options = new QueryOptions(), array $variables = []): array|PaginatedResult
     {
         $context = new GraphqlExecutionContext(dialect: $this->dialect);
+
+        if ($this->lazyLoading) {
+            $context->lazyLoader = $this->loadLazily(...);
+        }
 
         if ($graphql instanceof QueryNode) {
             $compiledQuery = $this->compile($graphql, $options);
@@ -91,6 +97,16 @@ class GraphqlManager
         }
 
         return $entities;
+    }
+
+    /**
+     * Loads the entity behind a lazy ghost, with a query of its own (recorded in the profiler and the logs).
+     *
+     * @param class-string $class
+     */
+    private function loadLazily(string $class, int|string $identifier): ?object
+    {
+        return (new GraphqlEntityRepository($this, $class))->find($identifier);
     }
 
     public function getDialect(): GraphqlQueryDialect
