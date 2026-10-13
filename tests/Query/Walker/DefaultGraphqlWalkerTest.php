@@ -101,7 +101,6 @@ GQL,
 
         $ref = new \ReflectionClass($walker);
         $method = $ref->getMethod('formatValue');
-        $method->setAccessible(true);
 
         self::assertSame('"hello"', $method->invoke($walker, 'hello'));
         self::assertSame('true', $method->invoke($walker, true));
@@ -117,7 +116,6 @@ GQL,
 
         $ref = new \ReflectionClass($walker);
         $method = $ref->getMethod('formatValue');
-        $method->setAccessible(true);
 
         $method->invoke($walker, new \stdClass());
     }

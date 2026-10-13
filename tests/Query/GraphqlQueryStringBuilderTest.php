@@ -7,7 +7,6 @@ namespace GraphqlOrm\Tests\Query;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\GraphqlManager;
-use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
@@ -15,7 +14,9 @@ use GraphqlOrm\Query\GraphqlQueryStringBuilder;
 use GraphqlOrm\Query\QueryOptions;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\Task;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\User;
+use GraphqlOrm\Tests\Fixtures\FakeEntityHydrator;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
+use GraphqlOrm\Tests\Fixtures\FakeMetadataFactory;
 use GraphqlOrm\Tests\Fixtures\FakeRepository\TaskRepository;
 use GraphqlOrm\Tests\Fixtures\FakeRepository\UserRepository;
 use PHPUnit\Framework\TestCase;
@@ -135,7 +136,7 @@ GRAPHQL,
         $manager = new GraphqlManager(
             $metadataFactory,
             new FakeGraphqlClient(),
-            $this->createStub(EntityHydrator::class),
+            new FakeEntityHydrator(),
             new GraphqlOrmDataCollector(),
             3
         );
@@ -165,7 +166,7 @@ GRAPHQL,
         $manager = new GraphqlManager(
             $metadataFactory,
             new FakeGraphqlClient(),
-            $this->createStub(EntityHydrator::class),
+            new FakeEntityHydrator(),
             new GraphqlOrmDataCollector(),
             3
         );
@@ -221,8 +222,6 @@ GRAPHQL,
 
     private function createManager(): GraphqlManager
     {
-        $metadataFactory = $this->createStub(GraphqlEntityMetadataFactory::class);
-
         $taskMetadata = new GraphqlEntityMetadata(
             Task::class,
             'tasks',
@@ -246,17 +245,10 @@ GRAPHQL,
             $this->field('id', 'id')
         );
 
-        $metadataFactory
-            ->method('getMetadata')
-            ->willReturnMap([
-                [Task::class, $taskMetadata],
-                [User::class, $userMetadata],
-            ]);
-
         return new GraphqlManager(
-            $metadataFactory,
+            new FakeMetadataFactory($taskMetadata, $userMetadata),
             new FakeGraphqlClient(),
-            $this->createStub(EntityHydrator::class),
+            new FakeEntityHydrator(),
             new GraphqlOrmDataCollector(),
             3
         );
@@ -264,8 +256,6 @@ GRAPHQL,
 
     private function createCycleMetadataFactory(): GraphqlEntityMetadataFactory
     {
-        $metadataFactory = $this->createStub(GraphqlEntityMetadataFactory::class);
-
         $userMetadata = new GraphqlEntityMetadata(
             User::class,
             'users',
@@ -277,13 +267,7 @@ GRAPHQL,
             $this->field('id', 'id')
         );
 
-        $metadataFactory
-            ->method('getMetadata')
-            ->willReturnMap([
-                [User::class, $userMetadata],
-            ]);
-
-        return $metadataFactory;
+        return new FakeMetadataFactory($userMetadata);
     }
 
     /**

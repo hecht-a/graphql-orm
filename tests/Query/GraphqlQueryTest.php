@@ -9,11 +9,12 @@ use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
-use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\GraphqlQuery;
 use GraphqlOrm\Query\QueryOptions;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntity;
+use GraphqlOrm\Tests\Fixtures\FakeEntityHydrator;
+use GraphqlOrm\Tests\Fixtures\FakeMetadataFactory;
 use GraphqlOrm\Tests\Fixtures\FakeRepository\FakeRepository;
 use PHPUnit\Framework\TestCase;
 
@@ -53,12 +54,7 @@ final class GraphqlQueryTest extends TestCase
     public function testHydratesSingleObject(): void
     {
         $stdClass = new \stdClass();
-        $hydrator = $this->createMock(EntityHydrator::class);
-
-        $hydrator
-            ->expects(self::once())
-            ->method('hydrate')
-            ->willReturn($stdClass);
+        $hydrator = new FakeEntityHydrator($stdClass);
 
         $manager = $this->createManager([
             'data' => [
@@ -71,18 +67,14 @@ final class GraphqlQueryTest extends TestCase
         $query = new GraphqlQuery('query', FakeEntity::class, $manager, new QueryOptions());
 
         self::assertSame([$stdClass], $query->getResult());
+        self::assertSame(1, $hydrator->callCount);
     }
 
     public function testHydratesList(): void
     {
         $stdClass1 = new \stdClass();
         $stdClass2 = new \stdClass();
-        $hydrator = $this->createMock(EntityHydrator::class);
-
-        $hydrator
-            ->expects(self::exactly(2))
-            ->method('hydrate')
-            ->willReturnOnConsecutiveCalls($stdClass1, $stdClass2);
+        $hydrator = new FakeEntityHydrator($stdClass1, $stdClass2);
 
         $manager = $this->createManager([
             'data' => [
@@ -96,16 +88,13 @@ final class GraphqlQueryTest extends TestCase
         $query = new GraphqlQuery('query', FakeEntity::class, $manager, new QueryOptions());
 
         self::assertSame([$stdClass1, $stdClass2], $query->getResult());
+        self::assertSame(2, $hydrator->callCount);
     }
 
     public function testGetOneOrNullResult(): void
     {
         $stdClass = new \stdClass();
-        $hydrator = $this->createStub(EntityHydrator::class);
-
-        $hydrator
-            ->method('hydrate')
-            ->willReturn($stdClass);
+        $hydrator = new FakeEntityHydrator($stdClass);
 
         $manager = $this->createManager([
             'data' => [
@@ -134,13 +123,9 @@ final class GraphqlQueryTest extends TestCase
      */
     private function createManager(array $response, ?EntityHydrator $hydrator = null): GraphqlManager
     {
-        $metadataFactory = $this->createStub(GraphqlEntityMetadataFactory::class);
+        $metadataFactory = new FakeMetadataFactory(new GraphqlEntityMetadata(FakeEntity::class, 'tasks', FakeRepository::class, [], null));
 
-        $metadataFactory
-            ->method('getMetadata')
-            ->willReturn(new GraphqlEntityMetadata(FakeEntity::class, 'tasks', FakeRepository::class, [], null));
-
-        $hydrator ??= $this->createStub(EntityHydrator::class);
+        $hydrator ??= new FakeEntityHydrator();
 
         $manager = $this->createStub(GraphqlManager::class);
 

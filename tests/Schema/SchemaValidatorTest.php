@@ -13,6 +13,7 @@ use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntityWithUnknownType;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntityWithWrongScalar;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTaskWithTypedRelation;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeValidEntity;
+use GraphqlOrm\Tests\Fixtures\FakeMetadataFactory;
 use PHPUnit\Framework\TestCase;
 
 final class SchemaValidatorTest extends TestCase
@@ -102,8 +103,7 @@ final class SchemaValidatorTest extends TestCase
             ],
         );
 
-        $factory = $this->createStub(GraphqlEntityMetadataFactory::class);
-        $factory->method('getMetadata')->willReturn($metadata);
+        $factory = new FakeMetadataFactory($metadata);
 
         $validator = new SchemaValidator($factory);
         $violations = $validator->validate(
@@ -131,8 +131,7 @@ final class SchemaValidatorTest extends TestCase
             ],
         );
 
-        $factory = $this->createStub(GraphqlEntityMetadataFactory::class);
-        $factory->method('getMetadata')->willReturn($metadata);
+        $factory = new FakeMetadataFactory($metadata);
 
         $validator = new SchemaValidator($factory);
         $violations = $validator->validate(

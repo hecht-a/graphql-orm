@@ -7,11 +7,11 @@ namespace GraphqlOrm\Tests\Hydrator;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
-use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntityWithAfterHydrate;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntityWithMultipleAfterHydrate;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
+use GraphqlOrm\Tests\Fixtures\FakeMetadataFactory;
 use GraphqlOrm\Tests\Fixtures\FakeRepository\FakeRepository;
 use PHPUnit\Framework\TestCase;
 
@@ -36,8 +36,7 @@ final class AfterHydrateTest extends TestCase
             ],
         );
 
-        $factory = $this->createStub(GraphqlEntityMetadataFactory::class);
-        $factory->method('getMetadata')->willReturn($this->metadata);
+        $factory = new FakeMetadataFactory($this->metadata);
 
         $this->hydrator = new EntityHydrator($factory);
         $this->context = new GraphqlExecutionContext();
@@ -124,8 +123,7 @@ final class AfterHydrateTest extends TestCase
             ],
         );
 
-        $factory = $this->createStub(GraphqlEntityMetadataFactory::class);
-        $factory->method('getMetadata')->willReturn($metadata);
+        $factory = new FakeMetadataFactory($metadata);
 
         $hydrator = new EntityHydrator($factory);
 
@@ -151,8 +149,7 @@ final class AfterHydrateTest extends TestCase
             ],
         );
 
-        $factory = $this->createStub(GraphqlEntityMetadataFactory::class);
-        $factory->method('getMetadata')->willReturn($metadata);
+        $factory = new FakeMetadataFactory($metadata);
 
         $hydrator = new EntityHydrator($factory);
 

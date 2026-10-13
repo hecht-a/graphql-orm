@@ -7,10 +7,10 @@ namespace GraphqlOrm\Tests\Hydrator;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
-use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntityWithBeforeHydrate;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntityWithBothHooks;
+use GraphqlOrm\Tests\Fixtures\FakeMetadataFactory;
 use GraphqlOrm\Tests\Fixtures\FakeRepository\FakeRepository;
 use PHPUnit\Framework\TestCase;
 
@@ -25,8 +25,7 @@ final class BeforeHydrateTest extends TestCase
 
     private function makeHydrator(GraphqlEntityMetadata $metadata): EntityHydrator
     {
-        $factory = $this->createStub(GraphqlEntityMetadataFactory::class);
-        $factory->method('getMetadata')->willReturn($metadata);
+        $factory = new FakeMetadataFactory($metadata);
 
         return new EntityHydrator($factory);
     }

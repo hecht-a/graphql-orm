@@ -9,14 +9,14 @@ use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\Dialect\DefaultDialect;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\GraphqlManager;
-use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
-use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Query\GraphqlQuery;
 use GraphqlOrm\Query\GraphqlQueryBuilder;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntity;
+use GraphqlOrm\Tests\Fixtures\FakeEntityHydrator;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
+use GraphqlOrm\Tests\Fixtures\FakeMetadataFactory;
 use GraphqlOrm\Tests\Fixtures\FakeRepository\FakeRepository;
 use PHPUnit\Framework\TestCase;
 
@@ -114,40 +114,36 @@ final class GraphqlQueryBuilderTest extends TestCase
 
     private function createManager(GraphqlQueryDialect $dialect = new DefaultDialect()): GraphqlManager
     {
-        $metadataFactory = $this->createStub(GraphqlEntityMetadataFactory::class);
-
-        $metadataFactory
-            ->method('getMetadata')
-            ->willReturn(
-                new GraphqlEntityMetadata(
-                    FakeEntity::class,
-                    'tasks',
-                    FakeRepository::class,
-                    [
-                        new GraphqlFieldMetadata(
-                            'id',
-                            'id'
-                        ),
-                        new GraphqlFieldMetadata(
-                            'title',
-                            'title'
-                        ),
-                        new GraphqlFieldMetadata(
-                            'description',
-                            'description'
-                        ),
-                    ],
+        $metadataFactory = new FakeMetadataFactory(
+            new GraphqlEntityMetadata(
+                FakeEntity::class,
+                'tasks',
+                FakeRepository::class,
+                [
                     new GraphqlFieldMetadata(
                         'id',
                         'id'
-                    )
+                    ),
+                    new GraphqlFieldMetadata(
+                        'title',
+                        'title'
+                    ),
+                    new GraphqlFieldMetadata(
+                        'description',
+                        'description'
+                    ),
+                ],
+                new GraphqlFieldMetadata(
+                    'id',
+                    'id'
                 )
-            );
+            )
+        );
 
         return new GraphqlManager(
             $metadataFactory,
             new FakeGraphqlClient(),
-            $this->createStub(EntityHydrator::class),
+            new FakeEntityHydrator(),
             new GraphqlOrmDataCollector(),
             3,
             $dialect,

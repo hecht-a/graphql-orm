@@ -7,10 +7,10 @@ namespace GraphqlOrm\Tests\Hydrator;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
-use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\Task;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\User;
+use GraphqlOrm\Tests\Fixtures\FakeMetadataFactory;
 use GraphqlOrm\Tests\Fixtures\FakeRepository\TaskRepository;
 use GraphqlOrm\Tests\Fixtures\FakeRepository\UserRepository;
 use PHPUnit\Framework\TestCase;
@@ -27,10 +27,6 @@ final class EntityHydratorTest extends TestCase
 
     protected function setUp(): void
     {
-        $factory = $this->createStub(
-            GraphqlEntityMetadataFactory::class
-        );
-
         $this->taskMetadata = new GraphqlEntityMetadata(
             Task::class,
             'tasks',
@@ -76,21 +72,7 @@ final class EntityHydratorTest extends TestCase
             ]
         );
 
-        $factory
-            ->method('getMetadata')
-            ->willReturnCallback(
-                function (string $class) {
-                    return match ($class) {
-                        Task::class => $this->taskMetadata,
-
-                        User::class => $this->userMetadata,
-
-                        default => throw new \RuntimeException(),
-                    };
-                }
-            );
-
-        $this->hydrator = new EntityHydrator($factory);
+        $this->hydrator = new EntityHydrator(new FakeMetadataFactory($this->taskMetadata, $this->userMetadata));
 
         $this->context = new GraphqlExecutionContext();
     }
