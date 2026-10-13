@@ -86,6 +86,18 @@ $result = $repository->createQueryBuilder()
     ->getResult();
 ```
 
+
+## Single result
+
+```php
+$task = $qb->where($qb->expr()->eq('id', 3))->getQuery()->getOneOrNullResult(); // Task or null
+$task = $qb->where($qb->expr()->eq('id', 3))->getQuery()->getSingleResult();    // Task
+```
+
+`getOneOrNullResult()` requests one entity and returns it, or `null`. `getSingleResult()` expects exactly one: it
+requests two, to tell the result is unique, and throws a `NoResultException` when there is none, a
+`NonUniqueResultException` when there are several. Both keep an explicit `limit()`.
+
 ## Array results
 
 `getArrayResult()` returns the rows as the API sent them, without creating entities: lighter for an export or a JSON

@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Field "titel" is not mapped on App\Task: did you mean "title"?`. They are still sent, the API may accept them.
 - Profiler: "Copy as cURL" copies a query, with its variables, as a command to replay it from a terminal. Headers are
   not recorded, so no token ends up in it.
+- `GraphqlQuery::getSingleResult()`, the only entity a query returns, throwing a `NoResultException` when there is none
+  and a `NonUniqueResultException` when there are several, as Doctrine.
 
 ### Changed
 
