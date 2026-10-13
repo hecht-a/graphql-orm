@@ -35,6 +35,7 @@ $page = $repository->createQueryBuilder()
 |-------------------------|----------------------------------------------------------------------------|
 | `DataApiBuilderDialect` | server cursors: `first`, `after`, `hasNextPage`, `endCursor`               |
 | `RelayDialect`          | server cursors: `first`, `after`, `pageInfo { hasNextPage endCursor }`     |
+| `PostGraphileDialect`   | server cursors: `first`, `after`, `pageInfo { hasNextPage endCursor }`     |
 | `HasuraDialect`         | offsets: `limit`, `offset`; `limit()` is required                          |
 | `DefaultDialect`        | none: `paginate()` throws a `LogicException`                               |
 

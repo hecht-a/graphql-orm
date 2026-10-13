@@ -10,6 +10,7 @@ Dialects adapt query generation and response parsing to a specific GraphQL API f
 | Data API Builder | `DataApiBuilderDialect` | Microsoft Data API Builder |
 | Relay            | `RelayDialect`          | Relay cursor connections (GitHub, Shopify, Apollo, Hot Chocolate…) |
 | Hasura           | `HasuraDialect`         | Hasura and APIs following its `where` / `order_by` conventions |
+| PostGraphile     | `PostGraphileDialect`   | PostGraphile: Relay connections, `condition`, `orderBy` enums |
 
 Standard GraphQL defines no ordering nor pagination arguments: `DefaultDialect` throws a `LogicException` when
 `orderBy()` or `paginate()` is used, instead of silently ignoring it. Use a dialect matching your API, or write one
@@ -115,6 +116,30 @@ query {
 `_eq` (`_is_null` for `null`). Hasura paginates with an offset: `paginate()` needs a `limit()`, and the cursor of a page
 is the offset of the next one (see [pagination](pagination.md)).
 
+## PostGraphile dialect
+
+The `PostGraphileDialect` uses the Relay connections of PostGraphile (`edges { node }`, `first` / `after`, `pageInfo`),
+sends the criteria of the find methods as a `condition`, and orders with the `orderBy` enum values PostGraphile derives
+from the field names:
+
+```php
+$tasks = $repository->findBy(['done' => false], ['dueDate' => Direction::ASC], 10);
+```
+
+```graphql
+query {
+  allTasks(condition: { done: false }, orderBy: [DUE_DATE_ASC], first: 10) {
+    edges { node { id title dueDate } }
+  }
+}
+```
+
+Entities map the names PostGraphile gives: `#[GraphqlEntity('allTasks')]`, `dueDate`, `userByUserId` for a foreign
+key, `tasksByUserId` for the reverse connection. A `null` criterion matches `IS NULL`. The query builder filters need
+[postgraphile-plugin-connection-filter](https://github.com/graphile-contrib/postgraphile-plugin-connection-filter),
+which core PostGraphile does not provide: `where()` throws a `LogicException`, and lazy relations are loaded one query
+each.
+
 ## Custom dialect
 
 Implement `GraphqlQueryDialect` to support any API:
@@ -134,6 +159,9 @@ final class MyDialect implements GraphqlQueryDialect
 
 If the filter of your API supports `in()` on the identifier, implement the `BatchLoadingDialect` marker interface: the
 lazy relations of a response are then loaded with one query per class instead of one per entity.
+
+An enum value built at runtime, such as an ordering, is given as an `EnumLiteral`: walkers print it without quotes, and
+variables send it as a string.
 
 For an offset pagination, implement the `OffsetPaginationDialect` marker interface: send `limit()` + 1 rows and the
 cursor as offset, as `HasuraDialect::withPagination()` does; the extra row tells a next page exists and is dropped.

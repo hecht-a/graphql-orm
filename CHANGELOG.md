@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `PostGraphileDialect`: Relay connections, criteria of the find methods sent as a `condition`, ordering with the
+  `orderBy` enum values of the fields (`DUE_DATE_DESC`); the query builder filters, which need a plugin, are rejected.
+- `EnumLiteral`, an enum value built at runtime, printed without quotes by the walkers and sent as a string in the
+  variables.
 - `HasuraDialect` supports `paginate()` with offsets: the cursor of a page is the offset of the next one, and one extra
   row is requested so that `hasNextPage` is exact. `OffsetPaginationDialect` marker interface for such dialects.
 
