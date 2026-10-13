@@ -8,6 +8,7 @@ use GraphqlOrm\Codegen\SchemaPropertyMapper;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
+use GraphqlOrm\Exception\GraphqlRequestException;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Query\Direction;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
@@ -153,6 +154,18 @@ final class DataApiBuilderTest extends IntegrationTestCase
         self::assertIsArray($withDueDate);
         self::assertSame([3, 1], self::ids($withDueDate));
         self::assertSame(2, $this->tasks()->count(['dueDate' => null]));
+    }
+
+    #[Test]
+    public function itExplainsAQueryOnAMisspelledField(): void
+    {
+        try {
+            $this->tasks()->findBy(['titel' => 'A']);
+            self::fail('A misspelled field must fail.');
+        } catch (GraphqlRequestException $exception) {
+            self::assertStringContainsString('titel', $exception->getMessage());
+            self::assertStringContainsString(\sprintf('Field "titel" is not mapped on %s: did you mean "title"?', Task::class), $exception->getMessage());
+        }
     }
 
     #[Test]

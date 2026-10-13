@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GraphqlOrm\Repository;
 
 use GraphqlOrm\Dialect\CountingDialect;
+use GraphqlOrm\Exception\GraphqlRequestException;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\GraphqlManager;
@@ -15,6 +16,7 @@ use GraphqlOrm\Query\GraphqlQueryBuilder;
 use GraphqlOrm\Query\GraphqlQueryCompiler;
 use GraphqlOrm\Query\GraphqlQueryStringBuilder;
 use GraphqlOrm\Query\QueryOptions;
+use GraphqlOrm\Query\UnmappedFieldHints;
 use GraphqlOrm\Query\Walker\DefaultGraphqlWalker;
 
 /**
@@ -100,8 +102,10 @@ class GraphqlEntityRepository
             ->options($options)
             ->build();
 
+        $hints = (new UnmappedFieldHints($this->manager->getMetadataFactory()))->for($this->entityClass, [...array_keys($criteria), ...array_keys($orderBy ?? [])]);
+
         /** @var T[] $result */
-        $result = (new GraphqlQuery($query, $this->entityClass, $this->manager, $options))->getResult();
+        $result = (new GraphqlQuery($query, $this->entityClass, $this->manager, $options, $hints))->getResult();
 
         return $result;
     }
@@ -129,10 +133,14 @@ class GraphqlEntityRepository
         // The count field has no collection envelope: it is printed as is, whatever the dialect.
         $graphql = (new GraphqlQueryCompiler(new DefaultGraphqlWalker()))->compile($query, new QueryOptions());
 
-        [$count] = $this->manager->execute(
-            $graphql,
-            fn (array $result): array => [$dialect->readCount(\is_array($result['data'] ?? null) ? $result['data'] : [], $field->name)],
-        );
+        try {
+            [$count] = $this->manager->execute(
+                $graphql,
+                fn (array $result): array => [$dialect->readCount(\is_array($result['data'] ?? null) ? $result['data'] : [], $field->name)],
+            );
+        } catch (GraphqlRequestException $exception) {
+            throw $exception->withHints((new UnmappedFieldHints($this->manager->getMetadataFactory()))->for($this->entityClass, array_keys($criteria)));
+        }
 
         return $count;
     }

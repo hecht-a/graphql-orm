@@ -7,6 +7,7 @@ namespace GraphqlOrm\Tests\Integration\PostGraphile;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\Dialect\PostGraphileDialect;
+use GraphqlOrm\Exception\GraphqlRequestException;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\Query\Direction;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
@@ -70,6 +71,18 @@ final class PostGraphileTest extends IntegrationTestCase
         $tasks = $this->repository(RelayTask::class)->createQueryBuilder()->orderBy('id', Direction::DESC)->limit(3)->paginate()->getQuery()->toIterable();
 
         self::assertSame([4, 3, 2, 1], self::ids($tasks));
+    }
+
+    #[Test]
+    public function itExplainsAQueryOnAMisspelledField(): void
+    {
+        try {
+            $this->repository(RelayTask::class)->findBy(['titel' => 'A']);
+            self::fail('A misspelled field must fail.');
+        } catch (GraphqlRequestException $exception) {
+            self::assertStringContainsString('titel', $exception->getMessage());
+            self::assertStringContainsString(\sprintf('Field "titel" is not mapped on %s: did you mean "title"?', RelayTask::class), $exception->getMessage());
+        }
     }
 
     #[Test]

@@ -8,6 +8,7 @@ use GraphqlOrm\Codegen\SchemaPropertyMapper;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\Dialect\HasuraDialect;
+use GraphqlOrm\Exception\GraphqlRequestException;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Query\Direction;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
@@ -86,6 +87,18 @@ final class HasuraTest extends IntegrationTestCase
         self::assertIsArray($withDueDate);
         self::assertSame([3, 1], self::ids($withDueDate));
         self::assertSame(2, $this->repository(Task::class)->count(['dueDate' => null]));
+    }
+
+    #[Test]
+    public function itExplainsAQueryOnAMisspelledField(): void
+    {
+        try {
+            $this->repository(Task::class)->findBy(['titel' => 'A']);
+            self::fail('A misspelled field must fail.');
+        } catch (GraphqlRequestException $exception) {
+            self::assertStringContainsString('titel', $exception->getMessage());
+            self::assertStringContainsString(\sprintf('Field "titel" is not mapped on %s: did you mean "title"?', Task::class), $exception->getMessage());
+        }
     }
 
     #[Test]

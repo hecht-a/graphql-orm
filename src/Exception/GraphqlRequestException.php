@@ -35,6 +35,16 @@ final class GraphqlRequestException extends \RuntimeException implements Graphql
     }
 
     /**
+     * The same failure, with hints on its likely cause appended to the message, one per line.
+     *
+     * @param list<string> $hints
+     */
+    public function withHints(array $hints): self
+    {
+        return $hints === [] ? $this : new self($this->getMessage() . "\n" . implode("\n", $hints), $this->getCode(), $this);
+    }
+
+    /**
      * @param array<string|int, mixed> $errors
      *
      * @return list<string>

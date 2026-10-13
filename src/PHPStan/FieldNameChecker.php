@@ -6,7 +6,6 @@ namespace GraphqlOrm\PHPStan;
 
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
-use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\RuleErrorBuilder;
 
@@ -17,8 +16,6 @@ use PHPStan\Rules\RuleErrorBuilder;
  */
 final class FieldNameChecker
 {
-    private const MAX_SUGGESTION_DISTANCE = 3;
-
     /** @var array<string, GraphqlEntityMetadata|null> */
     private array $metadata = [];
 
@@ -90,7 +87,7 @@ final class FieldNameChecker
             return [];
         }
 
-        $suggestion = $this->suggest($name, array_map(fn (GraphqlFieldMetadata $field) => $field->mappedFrom, $metadata->fields));
+        $suggestion = $metadata->closestField($name);
 
         return [RuleErrorBuilder::message(\sprintf('Field "%s" is not mapped on %s.%s', $name, $metadata->class, $suggestion !== null ? \sprintf(' Did you mean "%s"?', $suggestion) : ''))
             ->identifier('graphqlOrm.unmappedField')
@@ -112,25 +109,5 @@ final class FieldNameChecker
         }
 
         return $this->metadata[$class];
-    }
-
-    /**
-     * @param string[] $candidates
-     */
-    private function suggest(string $name, array $candidates): ?string
-    {
-        $best = null;
-        $bestDistance = self::MAX_SUGGESTION_DISTANCE + 1;
-
-        foreach ($candidates as $candidate) {
-            $distance = levenshtein($name, $candidate);
-
-            if ($distance < $bestDistance) {
-                $best = $candidate;
-                $bestDistance = $distance;
-            }
-        }
-
-        return $best;
     }
 }

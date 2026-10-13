@@ -9,6 +9,8 @@ namespace GraphqlOrm\Metadata;
  */
 final readonly class GraphqlEntityMetadata
 {
+    private const MAX_SUGGESTION_DISTANCE = 3;
+
     /**
      * @param class-string           $class
      * @param GraphqlFieldMetadata[] $fields
@@ -49,6 +51,28 @@ final readonly class GraphqlEntityMetadata
     public function graphqlName(string $name): string
     {
         return $this->field($name)->mappedFrom ?? $name;
+    }
+
+    /**
+     * The GraphQL name or PHP property closest to a name that matches no field, if one is close enough to be a typo.
+     */
+    public function closestField(string $name): ?string
+    {
+        $best = null;
+        $bestDistance = self::MAX_SUGGESTION_DISTANCE + 1;
+
+        foreach ($this->fields as $field) {
+            foreach ([$field->mappedFrom, $field->property] as $candidate) {
+                $distance = levenshtein($name, $candidate);
+
+                if ($distance < $bestDistance) {
+                    $best = $candidate;
+                    $bestDistance = $distance;
+                }
+            }
+        }
+
+        return $best;
     }
 
     /**

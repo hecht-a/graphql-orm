@@ -6,6 +6,7 @@ namespace GraphqlOrm\Query;
 
 use GraphqlOrm\Dialect\CursorPaginationDialect;
 use GraphqlOrm\Dialect\OffsetPaginationDialect;
+use GraphqlOrm\Exception\GraphqlRequestException;
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
@@ -22,12 +23,14 @@ final readonly class GraphqlQuery
 {
     /**
      * @param class-string<T> $entityClass
+     * @param list<string>    $unmappedFieldHints appended to the message of a failure
      */
     public function __construct(
         private QueryNode|string $graphql,
         private string $entityClass,
         private GraphqlManager $manager,
         private QueryOptions $options,
+        private array $unmappedFieldHints = [],
     ) {
     }
 
@@ -49,8 +52,7 @@ final readonly class GraphqlQuery
             ->getMetadataFactory()
             ->getMetadata($this->entityClass);
 
-        return $this->manager->execute(
-            $this->graphql,
+        return $this->execute(
             function (array $result, GraphqlExecutionContext $context) use ($metadata) {
                 $data = $result['data'] ?? null;
                 $root = \is_array($data) ? ($data[$metadata->name] ?? null) : null;
@@ -101,7 +103,6 @@ final readonly class GraphqlQuery
                     $this->fetchPage(...)
                 );
             },
-            $this->options
         );
     }
 
@@ -147,8 +148,7 @@ final readonly class GraphqlQuery
             ->getMetadataFactory()
             ->getMetadata($this->entityClass);
 
-        return $this->manager->execute(
-            $this->graphql,
+        return $this->execute(
             function (array $result) use ($metadata): array {
                 $data = $result['data'] ?? null;
                 $root = \is_array($data) ? ($data[$metadata->name] ?? null) : null;
@@ -169,8 +169,25 @@ final readonly class GraphqlQuery
                     $rows
                 );
             },
-            $this->options
         );
+    }
+
+    /**
+     * @template R of array<mixed>|PaginatedResult<object>
+     *
+     * @param callable(array<string, mixed>, GraphqlExecutionContext): R $hydration
+     *
+     * @return R
+     *
+     * @throws GraphqlRequestException when the query fails, with the unmapped fields it names
+     */
+    private function execute(callable $hydration): array|PaginatedResult
+    {
+        try {
+            return $this->manager->execute($this->graphql, $hydration, $this->options);
+        } catch (GraphqlRequestException $exception) {
+            throw $exception->withHints($this->unmappedFieldHints);
+        }
     }
 
     /**
@@ -231,7 +248,7 @@ final readonly class GraphqlQuery
         $options->cursor = $cursor;
         $options->cursorStack = $cursorStack;
 
-        $page = (new self($this->graphql, $this->entityClass, $this->manager, $options))->getResult();
+        $page = (new self($this->graphql, $this->entityClass, $this->manager, $options, $this->unmappedFieldHints))->getResult();
 
         return $page instanceof PaginatedResult ? $page : null;
     }
@@ -293,6 +310,6 @@ final readonly class GraphqlQuery
             );
         }
 
-        return new self($query, $this->entityClass, $this->manager, $options);
+        return new self($query, $this->entityClass, $this->manager, $options, $this->unmappedFieldHints);
     }
 }

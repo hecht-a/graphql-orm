@@ -150,11 +150,18 @@ final class GraphqlQueryBuilder
             ->fields($fields, $manualSelect)
             ->build();
 
+        $paths = [
+            ...array_filter($this->selectedFields ?? [], \is_string(...)),
+            ...array_keys($options->orderBy ?? []),
+            ...($this->filter !== null ? GraphqlNamedFilter::fieldNames($this->filter->toArray()) : []),
+        ];
+
         return new GraphqlQuery(
             $ast,
             $this->entityClass,
             $this->manager,
-            $options
+            $options,
+            (new UnmappedFieldHints($this->manager->getMetadataFactory()))->for($this->entityClass, $paths),
         );
     }
 }

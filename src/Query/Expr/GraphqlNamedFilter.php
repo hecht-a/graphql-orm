@@ -27,6 +27,34 @@ final readonly class GraphqlNamedFilter implements FilterExpressionInterface
     }
 
     /**
+     * The fields a filter names, as written.
+     *
+     * @param array<mixed> $filter `{field: {operator: value}}` or `{and|or: [filter, ...]}`
+     *
+     * @return list<string>
+     */
+    public static function fieldNames(array $filter): array
+    {
+        $names = [];
+
+        foreach ($filter as $key => $value) {
+            $key = (string) $key;
+
+            if (\in_array($key, self::LOGICAL_OPERATORS, true) && \is_array($value)) {
+                foreach ($value as $operand) {
+                    $names = [...$names, ...(\is_array($operand) ? self::fieldNames($operand) : [])];
+                }
+
+                continue;
+            }
+
+            $names[] = $key;
+        }
+
+        return $names;
+    }
+
+    /**
      * @param array<mixed> $filter `{field: {operator: value}}` or `{and|or: [filter, ...]}`
      *
      * @return array<string, mixed>
