@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [4.3.0] — 2026-10-13
+
+### Upgrading from 4.2
+
+- A repository already declaring its own `count()` must give it the signature `count(array $criteria = []): int`, or
+  rename it: otherwise PHP fails with a fatal error on loading it.
+- Schema validation is stricter: `graphqlorm:schema:validate` may now fail on mappings it accepted, e.g. a nullable
+  field mapped on a non-nullable property. Each message says how to fix the mapping.
 
 ### Added
 
