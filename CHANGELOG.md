@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `graphqlorm:make:entity` no longer adds `@method` annotations to the generated repository: they described the 2.x
   `findBy()` signature and missed `find()` and `findOneBy()`, while `@extends GraphqlEntityRepository<Entity>` already
   types every method. Existing repositories can drop them as well.
+- The description of `graphqlorm:make:entity` was in French, unlike the other commands.
 
 ---
 

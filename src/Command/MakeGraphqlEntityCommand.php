@@ -27,7 +27,7 @@ use Symfony\Component\Finder\Finder;
  */
 #[AsCommand(
     name: 'graphqlorm:make:entity',
-    description: 'Génère une entité GraphqlOrm + son repository.'
+    description: 'Generate a GraphQL entity and its repository',
 )]
 final readonly class MakeGraphqlEntityCommand
 {
