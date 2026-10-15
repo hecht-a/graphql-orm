@@ -14,6 +14,19 @@ $qb->select('id', 'title', 'user.name', 'user.email');
 $qb->addSelect('dueDate');
 ```
 
+An entity hydrated from a selection is partial. Reading one of its properties that the query did not select, and that
+has no default value, throws a `PartialEntityException` naming the properties left out, rather than the error PHP gives
+for a typed property read before initialization:
+
+```php
+$task = $qb->select('title')->getQuery()->getOneOrNullResult();
+$task->title;   // selected
+$task->done;    // PartialEntityException: "App\Entity\Task" was hydrated without done, ... not selected by the query
+```
+
+A property with a default value keeps it. The same goes for a relation reduced to its identifier beyond `max_depth`.
+When the shared identity map later meets the entity in full, it is completed.
+
 ## Filtering
 
 Use `ExpressionBuilder` to build type-safe filter expressions:

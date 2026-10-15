@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Reading a property that the query did not select, and that has no default value, throws a `PartialEntityException`
+  naming the properties left out and how to load them (select them, raise `max_depth`, `Fetch::Lazy`), instead of the
+  "must not be accessed before initialization" error of PHP. A partial entity met again in full is completed.
 - `indexBy`, as Doctrine: `findBy([], indexBy: 'code')` and `$qb->indexBy('code')` key the result (or the items of a
   page) by a field of its entities, a GraphQL name or a PHP property. An unmapped field throws an
   `InvalidArgumentException` suggesting the closest one.
