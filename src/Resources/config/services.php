@@ -112,7 +112,8 @@ return static function (ContainerConfigurator $config) {
     $services->set(FindCommand::class)
         ->tag('console.command');
 
-    $services->set(SchemaIntrospector::class);
+    $services->set(SchemaIntrospector::class)
+        ->arg('$collector', service(GraphqlOrmDataCollector::class)->nullOnInvalid());
     $services->set(SchemaValidator::class);
 
     $services->set('graphql_orm.schema_validation_mode')

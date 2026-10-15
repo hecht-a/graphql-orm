@@ -91,6 +91,7 @@ final class GraphqlOrmExtension extends Extension
                     new Reference($config['variables']['cache_pool']),
                     $config['variables']['ttl'],
                     new Reference('monolog.logger.graphql_orm', ContainerInterface::NULL_ON_INVALID_REFERENCE),
+                    new Reference(GraphqlOrmDataCollector::class, ContainerInterface::NULL_ON_INVALID_REFERENCE),
                 ]);
 
             $container->getDefinition(GraphqlManager::class)
@@ -105,6 +106,7 @@ final class GraphqlOrmExtension extends Extension
                     new Reference($config['variables']['cache_pool']),
                     $config['variables']['ttl'],
                     new Reference('monolog.logger.graphql_orm', ContainerInterface::NULL_ON_INVALID_REFERENCE),
+                    new Reference(GraphqlOrmDataCollector::class, ContainerInterface::NULL_ON_INVALID_REFERENCE),
                 ]);
 
             $container->getDefinition('graphql_orm.dialect')->setArgument('$countableFields', new Reference(CountableFieldResolver::class));

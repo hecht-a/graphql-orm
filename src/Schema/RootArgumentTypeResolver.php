@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace GraphqlOrm\Schema;
 
 use GraphqlOrm\Client\GraphqlClientInterface;
+use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Exception\GraphqlOrmException;
-use GraphqlOrm\Execution\GraphqlExecutionContext;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
@@ -58,6 +58,7 @@ final readonly class RootArgumentTypeResolver
         private CacheInterface $cache,
         private int $ttl,
         private ?LoggerInterface $logger = null,
+        private ?GraphqlOrmDataCollector $collector = null,
     ) {
     }
 
@@ -88,7 +89,7 @@ final readonly class RootArgumentTypeResolver
     private function introspect(): ?array
     {
         try {
-            $result = $this->client->query(self::INTROSPECTION_QUERY, new GraphqlExecutionContext());
+            $result = IntrospectionQuery::send($this->client, self::INTROSPECTION_QUERY, $this->collector);
         } catch (GraphqlOrmException $e) {
             $this->warn($e->getMessage());
 

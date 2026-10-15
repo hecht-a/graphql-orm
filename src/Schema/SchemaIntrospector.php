@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace GraphqlOrm\Schema;
 
 use GraphqlOrm\Client\GraphqlClientInterface;
+use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
-use GraphqlOrm\Execution\GraphqlExecutionContext;
 
 /**
  * @internal
@@ -48,6 +48,7 @@ final readonly class SchemaIntrospector
 
     public function __construct(
         private GraphqlClientInterface $client,
+        private ?GraphqlOrmDataCollector $collector = null,
     ) {
     }
 
@@ -69,9 +70,7 @@ final readonly class SchemaIntrospector
      */
     public function introspectSchema(): array
     {
-        $context = new GraphqlExecutionContext();
-
-        $result = $this->client->query(self::INTROSPECTION_QUERY, $context);
+        $result = IntrospectionQuery::send($this->client, self::INTROSPECTION_QUERY, $this->collector);
 
         $data = $result['data'] ?? null;
 

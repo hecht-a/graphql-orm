@@ -21,6 +21,7 @@ use GraphqlOrm\Metadata\Naming\SnakeCaseNamingStrategy;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Schema\CountableFieldResolver;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
+use GraphqlOrm\Schema\SchemaIntrospector;
 use GraphqlOrm\Test\MockGraphqlServer;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntityNamedByStrategy;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeProject;
@@ -235,6 +236,18 @@ final class GraphqlOrmExtensionTest extends TestCase
         $dialect = $container->get('graphql_orm.dialect');
         self::assertInstanceOf(DataApiBuilderDialect::class, $dialect);
         self::assertInstanceOf(CountableFieldResolver::class, (new \ReflectionProperty(DataApiBuilderDialect::class, 'countableFields'))->getValue($dialect));
+    }
+
+    #[Test]
+    public function itRecordsTheIntrospectionQueriesInTheProfilerInDebugMode(): void
+    {
+        $container = $this->createContainer(debug: true, config: ['dialect' => DataApiBuilderDialect::class]);
+
+        $container->compile();
+
+        foreach ([RootArgumentTypeResolver::class, CountableFieldResolver::class, SchemaIntrospector::class] as $class) {
+            self::assertInstanceOf(GraphqlOrmDataCollector::class, (new \ReflectionProperty($class, 'collector'))->getValue($container->get($class)), $class);
+        }
     }
 
     #[Test]
