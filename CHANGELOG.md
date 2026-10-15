@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   masked values, in the colors of the profiler theme.
 - Profiler: repeated queries that are all a `find()` of the same entity come with the `findBy()` loading them at once,
   on the identifier of the entity. `GraphqlQueryTrace::$identifierProperty` names it when the profiler is enabled.
+- Profiler: an "Entities" tab describing the mapped entities as the bundle maps them (root field, identifier, repository,
+  properties with their GraphQL field, relation target and fetch mode), those read by the request first.
 - Profiler: the time spent hydrating each response, apart from the network: a "Hydration" metric, a grey part in the
   duration bar of each query, and the time in its "Hydration" tab. `GraphqlQueryTrace::$hydrationDuration` holds it.
 

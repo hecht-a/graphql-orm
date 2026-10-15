@@ -14,6 +14,9 @@ For each request, the panel shows:
   in grey: whether the time goes to the API or to the mapping), response size, entities
   hydrated and status (an error in red, a slow query in yellow). Filter them by status, or search their text. A query in
   error is shown open.
+- **The entities**: those of the mapping directory and those read by the queries of the request (first), as the bundle
+  maps them: root field, identifier, repository, and for each property its GraphQL field, the target of a relation
+  (`[]` for a collection) and its fetch mode. An entity whose mapping fails shows the error.
 - **The identity map**: the entities that `find()` served from the shared identity map, known in full from an earlier
   query, each one a query not sent (see [shared identity map](configuration.md#shared-identity-map)).
 - **The configuration** of the bundle (dialect, endpoint, options; the names of the headers only, never their values
