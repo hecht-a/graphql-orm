@@ -69,7 +69,9 @@ the relation with the entities holding it (raise `max_depth`, or select its fiel
 implementing `BatchLoadingDialect` loads the relations met in a same response with one query.
 
 **Repeated queries**, such as a `find()` in a `foreach`: the panel groups the queries whose shape is the same once their
-values are masked, and lists those sent 3 times or more, with links opening them:
+values are masked, and lists those sent 3 times or more, with links opening them. When they are all a `find()` of the
+same entity, the panel suggests the query replacing them, e.g. `$repository->findBy(['id' => [/* the 8 identifiers */]])`
+(the values stay masked):
 
 | Sent    | Queries         | Query, values masked                      |
 |---------|-----------------|-------------------------------------------|
