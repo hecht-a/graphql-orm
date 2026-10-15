@@ -8,6 +8,8 @@ use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Query\GraphqlQueryTrace;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Twig\Environment;
 use Twig\Extension\DebugExtension;
 use Twig\Loader\ArrayLoader;
@@ -52,6 +54,22 @@ final class ProfilerTemplateTest extends TestCase
 
         self::assertStringContainsString('navigator.clipboard && window.isSecureContext', $html);
         self::assertStringContainsString('document.execCommand("copy")', $html);
+    }
+
+    #[Test]
+    public function itRendersAStoredProfileWithSlowQueries(): void
+    {
+        $collector = new GraphqlOrmDataCollector(slowQueryThreshold: 500.0);
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { tasks { id } }';
+        $trace->duration = 750.0;
+        $collector->addQuery($trace);
+        $collector->collect(new Request(), new Response());
+
+        $restored = unserialize(serialize($collector));
+        self::assertInstanceOf(GraphqlOrmDataCollector::class, $restored);
+
+        self::assertStringContainsString('over 500 ms', $this->render($restored));
     }
 
     #[Test]

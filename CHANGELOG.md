@@ -36,6 +36,17 @@ Fix the deprecations reported by 4.9 first: each of them is a change of 5.0. The
 
 ---
 
+
+## [Unreleased]
+
+### Fixed
+
+- Profiler: opening a stored profile with slow queries failed with "Typed property ...::$slowQueryThreshold must not be
+  accessed before initialization": a profile read from the storage only has its data, the threshold is now kept there.
+
+---
+
+
 ## [4.10.0] — 2026-10-15
 
 ### Added
