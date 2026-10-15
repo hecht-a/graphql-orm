@@ -54,8 +54,8 @@ graphql_orm:
 | Mode        | Behaviour                                                                         |
 |-------------|-----------------------------------------------------------------------------------|
 | `exception` | Throws `SchemaValidationException` on the first request of each PHP process (the API being unreachable is also a failure) |
-| `warning`   | Logs violations as warnings without interrupting execution                        |
-| `disabled`  | No validation (default)                                                           |
+| `warning`   | Logs violations as warnings without interrupting execution (default in the dev environment) |
+| `disabled`  | No validation (default in the other environments, tests included)                 |
 
 Entity classes are discovered automatically from `mapping.entity.dir` — no manual list needed.
 

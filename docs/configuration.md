@@ -4,11 +4,11 @@
 # config/packages/graphql_orm.yaml
 graphql_orm:
     endpoint: 'http://localhost:4000/graphql'
-    max_depth: 3
+    max_depth: 1
 
     # Optional: send root arguments as typed GraphQL variables (see "Variables" below)
     variables:
-        enabled: false
+        enabled: true
         cache_pool: cache.app
         ttl: 3600
 
@@ -32,7 +32,7 @@ graphql_orm:
 
     # Optional: schema validation (see schema-validation.md)
     schema_validation:
-        mode: disabled # exception | warning | disabled
+        mode: warning # exception | warning | disabled; unset: warning in the dev environment, disabled otherwise
 
     mapping:
         entity:
@@ -48,12 +48,12 @@ graphql_orm:
 | Option                            | Default                  | Description                             |
 |-----------------------------------|--------------------------|-----------------------------------------|
 | `endpoint`                        | *(required)*             | GraphQL API endpoint                    |
-| `max_depth`                       | `2`                      | Relation levels loaded by the automatic selection; deeper relations only get their identifier (an explicit `select()` is not limited) |
+| `max_depth`                       | `1`                      | Relation levels loaded by the automatic selection; deeper relations only get their identifier (an explicit `select()` is not limited) |
 | `lazy_loading`                    | `false`                  | Load the relations reduced to their identifier on first access (see [lazy loading](#lazy-loading)) |
-| `variables.enabled`               | `false`                  | Send root arguments as typed GraphQL variables |
+| `variables.enabled`               | `true`                   | Send root arguments as typed GraphQL variables |
 | `variables.cache_pool`            | `cache.app`              | Cache pool storing the introspected argument types |
 | `variables.ttl`                   | `3600`                   | Seconds before the schema is introspected again |
-| `identity_map`                    | `false`                  | Share the entities between the queries of a request (see [shared identity map](#shared-identity-map)) |
+| `identity_map`                    | `true`                   | Share the entities between the queries of a request (see [shared identity map](#shared-identity-map)) |
 | `slow_query_threshold`            | `null`                   | Milliseconds from which a query is logged as a warning and highlighted in the profiler (see [slow queries](logging.md#slow-queries)) |
 | `redact_query_values`             | `true`                   | Mask query values in logs and profiler (see [logging.md](logging.md#masked-values)) |
 | `http_client`                     | `null`                   | HTTP client service id; defaults to the autowired `HttpClientInterface` |
@@ -64,7 +64,7 @@ graphql_orm:
 | `headers_provider`                | `null`                   | Service id computing headers per request (see [dynamic headers](#dynamic-headers)) |
 | `http_client_options.verify_host` | `true`                   | TLS host verification                   |
 | `http_client_options.verify_peer` | `true`                   | TLS peer verification                   |
-| `schema_validation.mode`          | `disabled`               | `exception`, `warning`, or `disabled`   |
+| `schema_validation.mode`          | `warning` in the dev environment, `disabled` otherwise | `exception`, `warning`, or `disabled` |
 | `mapping.entity.dir`              | `src/GraphQL/Entity`     | Directory where entities are stored     |
 | `mapping.entity.namespace`        | `App\GraphQL\Entity`     | Namespace for entities                  |
 | `mapping.repository.dir`          | `src/GraphQL/Repository` | Directory where repositories are stored |
@@ -101,44 +101,9 @@ $task->user->name;                  // users(...) { id name ... }: the user is l
 
 Lazy ghosts are a PHP 8.4 feature: they need no proxy class, and work with `final` entity classes.
 
-## Defaults changing in 5.0
-
-Four options get a new default value in 5.0. Not setting them is deprecated since 4.9 (`Not setting the
-"graphql_orm.identity_map" option is deprecated...`): set them, to the new value to adopt it now, or to the current
-one to keep it.
-
-| Option                   | Default in 4.x | Default in 5.0            |
-|--------------------------|----------------|---------------------------|
-| `identity_map`           | `false`        | `true`                    |
-| `max_depth`              | `2`            | `1`, with [lazy relations](entity-mapping.md#lazy-relations) for what is read |
-| `variables.enabled`      | `false`        | `true`                    |
-| `schema_validation.mode` | `disabled`     | `warning` in debug mode   |
-
-```yaml
-# config/packages/graphql_orm.yaml: the defaults of 5.0, adopted now
-graphql_orm:
-    identity_map: true
-    max_depth: 1
-    variables:
-        enabled: true
-    schema_validation:
-        mode: disabled
-
-when@dev:
-    graphql_orm:
-        schema_validation:
-            mode: warning
-```
-
 ## Shared identity map
 
-By default each query has its own identity map: two `find(1)` send two queries and give two instances. With
-`identity_map`, the queries of a request share their entities, as Doctrine does:
-
-```yaml
-graphql_orm:
-    identity_map: true
-```
+The queries of a request share their entities, as Doctrine does (`identity_map`, enabled by default):
 
 - An entity is one instance, updated by each query returning it.
 - `find()` returns an entity known in full without a query: one met in a previous query, nested relations included.
@@ -147,8 +112,8 @@ graphql_orm:
   A long-running script calls `GraphqlManager::clear()`.
 - `toIterable()` keeps its pages out of it, so that going through a large result set still holds a single page.
 
-It is disabled by default as it changes the behavior: the same instance everywhere, and `find()` not always sending a
-query.
+With `identity_map: false`, each query has its own identity map: two `find(1)` send two queries and give two
+instances.
 
 ## HTTP client
 
@@ -245,8 +210,8 @@ the query.
 
 ## Variables
 
-By default, argument values are written in the query (escaped). With `variables.enabled`, the arguments of the root
-field are sent as GraphQL variables instead:
+By default (`variables.enabled`), the arguments of the root field are sent as GraphQL variables, their types read from
+a cached introspection of the schema; with `enabled: false`, the values are written in the query (escaped):
 
 ```graphql
 query($filter: TaskFilterInput, $first: Int) {

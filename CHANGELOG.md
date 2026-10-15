@@ -16,6 +16,12 @@ Fix the deprecations reported by 4.9 first: each of them is a change of 5.0.
   mapped with `#[Relation]` (with its `mappedFrom`, `targetEntity`, `fetch` and `ignoreValidation`), and
   `GraphqlOrm\Attribute\Fetch` becomes `GraphqlOrm\Mapping\Fetch`. An entity still mapped with the old attributes is
   no entity anymore (`NotAGraphqlEntityException`). The PHPStan extension no longer declares the `Fetch` alias.
+- New default values: `identity_map: true`, `max_depth: 1`, `variables.enabled: true`, and `schema_validation.mode`
+  `warning` in the dev environment, `disabled` otherwise (tests included, rather than "in debug mode" as announced by
+  4.9, so that test suites do not introspect the API). An application that set them, as 4.9 asked, sees no change;
+  otherwise, mind the relations no longer selected beyond the first level (raise `max_depth`, or map them with
+  `Fetch::Lazy`), and an API refusing introspection, whose values are then sent inline with a logged warning.
+- `symfony/deprecation-contracts` is no longer a direct dependency.
 
 ### Added
 
@@ -24,7 +30,6 @@ Fix the deprecations reported by 4.9 first: each of them is a change of 5.0.
   these options.
 
 ---
-
 
 ## [4.10.0] — 2026-10-15
 
