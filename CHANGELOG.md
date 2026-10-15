@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrading from 4.x
+
+Fix the deprecations reported by 4.9 first: each of them is a change of 5.0.
+
+- The mapping attributes of `GraphqlOrm\Attribute` are removed: `#[GraphqlEntity]` and `#[GraphqlField]` become
+  `#[Entity]` and `#[Field]` of `GraphqlOrm\Mapping`, the `identifier` argument becomes `#[Identifier]`, a relation is
+  mapped with `#[Relation]` (with its `mappedFrom`, `targetEntity`, `fetch` and `ignoreValidation`), and
+  `GraphqlOrm\Attribute\Fetch` becomes `GraphqlOrm\Mapping\Fetch`. An entity still mapped with the old attributes is
+  no entity anymore (`NotAGraphqlEntityException`). The PHPStan extension no longer declares the `Fetch` alias.
+
 ### Added
 
 - `MockGraphqlServer` answers the introspection queries of the bundle (typed variables, schema validation) with an
