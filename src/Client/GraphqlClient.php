@@ -7,14 +7,19 @@ namespace GraphqlOrm\Client;
 use GraphqlOrm\Exception\GraphqlRequestException;
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
+use GraphqlOrm\Mapping\Entity;
 use Symfony\Component\Stopwatch\Stopwatch;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
+use Twig\Template;
 
 final readonly class GraphqlClient implements ConcurrentGraphqlClientInterface
 {
     private const FIRST_HTTP_ERROR_STATUS = 400;
+
+    /** Frames read to find the caller: deep enough for a relation loaded on first access from a Twig template. */
+    private const CALLER_STACK_DEPTH = 40;
 
     /**
      * @param array<string, mixed> $headers
@@ -46,7 +51,7 @@ final readonly class GraphqlClient implements ConcurrentGraphqlClientInterface
         $context->trace->caller = $this->findCaller(
             debug_backtrace(
                 DEBUG_BACKTRACE_IGNORE_ARGS,
-                15
+                self::CALLER_STACK_DEPTH
             )
         );
 
@@ -199,6 +204,17 @@ final readonly class GraphqlClient implements ConcurrentGraphqlClientInterface
             $class = $callingFrame['class'] ?? null;
             $function = $callingFrame['function'] ?? null;
 
+            // A method of an entity, e.g. __toString() reading a relation loaded on first access: its caller tells more.
+            if (\is_string($class) && self::isEntity($class)) {
+                continue;
+            }
+
+            $template = \is_string($class) && \is_int($line) ? self::templateSource($class, $line) : null;
+
+            if ($template !== null) {
+                return ['file' => $template[0], 'line' => $template[1], 'class' => null, 'function' => null];
+            }
+
             return [
                 'file' => $this->shortenPath($file),
                 'line' => \is_int($line) ? $line : null,
@@ -208,6 +224,37 @@ final readonly class GraphqlClient implements ConcurrentGraphqlClientInterface
         }
 
         return null;
+    }
+
+    private static function isEntity(string $class): bool
+    {
+        return class_exists($class) && (new \ReflectionClass($class))->getAttributes(Entity::class) !== [];
+    }
+
+    /**
+     * The template and its line, for a line of a Twig template compiled in the cache: Twig maps the lines of the code it
+     * generates to those of the template. Twig is optional: without it, no class is a template.
+     *
+     * @return array{string, int|null}|null
+     */
+    private static function templateSource(string $class, int $line): ?array
+    {
+        if (!class_exists($class) || !is_subclass_of($class, Template::class)) {
+            return null;
+        }
+
+        // The name and the line map of a compiled template are constants of its code: no environment is needed.
+        $template = (new \ReflectionClass($class))->newInstanceWithoutConstructor();
+        $lines = $template->getDebugInfo();
+        krsort($lines);
+
+        foreach ($lines as $codeLine => $templateLine) {
+            if ($codeLine <= $line) {
+                return [$template->getTemplateName(), $templateLine];
+            }
+        }
+
+        return [$template->getTemplateName(), null];
     }
 
     private function isLibraryFile(string $file): bool
