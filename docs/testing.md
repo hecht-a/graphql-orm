@@ -43,6 +43,7 @@ final class TaskServiceTest extends KernelTestCase
 `requests()` returns the requests received, each with its `query` and its `variables`. A query sent once every queued
 response is used fails with a `LogicException` showing it.
 
-The responses are written in the shape of your API: `items` for Data API Builder, `edges`/`node` for Relay... With
-`variables` or `schema_validation` enabled, the bundle also sends introspection queries: keep them disabled in the
-tests, or queue their responses first.
+The responses are written in the shape of your API: `items` for Data API Builder, `edges`/`node` for Relay... The
+introspection queries of the bundle (typed `variables`, `schema_validation`) are answered by the server itself, with an
+empty schema: the values are then sent inline, and these queries are neither recorded in `requests()` nor consume the
+queued responses.

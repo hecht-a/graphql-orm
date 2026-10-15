@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `MockGraphqlServer` answers the introspection queries of the bundle (typed variables, schema validation) with an
+  empty schema, without recording them nor consuming the queued responses: the tests of an application work whatever
+  these options.
+
+---
+
+
 ## [4.10.0] — 2026-10-15
 
 ### Added
