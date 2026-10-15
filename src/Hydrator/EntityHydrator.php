@@ -9,6 +9,7 @@ use GraphqlOrm\Attribute\BeforeHydrate;
 use GraphqlOrm\Exception\CastException;
 use GraphqlOrm\Exception\EntityNotFoundException;
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
+use GraphqlOrm\Exception\PartialEntityException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\Mapping\Fetch;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
@@ -45,9 +46,15 @@ final class EntityHydrator
      */
     private array $hookMethods = [];
 
+    /**
+     * @var \WeakMap<object, true> the entities hydrated from a selection of their fields, kept out of the lazy loads
+     */
+    private \WeakMap $partial;
+
     public function __construct(
         private readonly GraphqlEntityMetadataFactory $metadataFactory,
     ) {
+        $this->partial = new \WeakMap();
     }
 
     /**
@@ -123,6 +130,7 @@ final class EntityHydrator
 
         $this->callBeforeHydrateMethods($entity, $data);
         $this->hydrateFields($entity, $metadata, $data, $context, $depth);
+        $this->guardUnselectedProperties($entity, $metadata);
         $this->callAfterHydrateMethods($entity, $metadata);
 
         return $this->markComplete($entity, $metadata, $data, $context);
@@ -206,6 +214,53 @@ final class EntityHydrator
     }
 
     /**
+     * Makes the mapped properties the row did not fill, and that have no value of their own, throw a
+     * PartialEntityException when read: the entity becomes a lazy ghost whose initializer throws, everything already set
+     * (by the row, the constructor or a default value) being set again as is.
+     */
+    private function guardUnselectedProperties(object $entity, GraphqlEntityMetadata $metadata): void
+    {
+        $missing = [];
+
+        foreach ($metadata->fields as $field) {
+            try {
+                $property = $this->property($entity::class, $field->property);
+            } catch (\ReflectionException) {
+                continue;
+            }
+
+            if (!$property->isInitialized($entity)) {
+                $missing[] = $field->property;
+            }
+        }
+
+        if ($missing === []) {
+            return;
+        }
+
+        $reflection = $this->classReflection($entity::class);
+        $values = [];
+
+        foreach ($reflection->getProperties() as $property) {
+            if (!$property->isStatic() && $property->isInitialized($entity)) {
+                $values[] = [$property, $property->getValue($entity)];
+            }
+        }
+
+        $reflection->resetAsLazyGhost(
+            $entity,
+            static fn (object $ghost) => throw PartialEntityException::forProperties($ghost::class, $missing),
+            \ReflectionClass::SKIP_DESTRUCTOR,
+        );
+
+        foreach ($values as [$property, $value]) {
+            $property->setRawValueWithoutLazyInitialization($entity, $value);
+        }
+
+        $this->partial[$entity] = true;
+    }
+
+    /**
      * A relation beyond max_depth only gets its identifier selected: nothing else to hydrate from this row.
      *
      * @param array<string|int, mixed> $data
@@ -229,7 +284,7 @@ final class EntityHydrator
             $pending = [$identifier => $ghost];
 
             foreach ($context->identityMap[$class] ?? [] as $key => $entity) {
-                if ($entity !== $ghost && $this->isUninitializedGhost($entity)) {
+                if ($entity !== $ghost && $this->isUninitializedGhost($entity) && !isset($this->partial[$entity])) {
                     $pending[$key] = $entity;
                 }
             }
@@ -298,6 +353,7 @@ final class EntityHydrator
         }
 
         $this->classReflection($ghost::class)->markLazyObjectAsInitialized($ghost);
+        unset($this->partial[$ghost]);
         $this->callAfterHydrateMethods($ghost, $metadata);
 
         return $ghost;
