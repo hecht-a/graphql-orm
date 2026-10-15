@@ -23,11 +23,13 @@ use GraphqlOrm\Metadata\Naming\SnakeCaseNamingStrategy;
 use GraphqlOrm\Schema\SchemaIntrospector;
 use GraphqlOrm\Schema\SchemaValidationMode;
 use GraphqlOrm\Schema\SchemaValidator;
+use GraphqlOrm\Serializer\GraphqlEntityNormalizer;
 use GraphqlOrm\Twig\GraphqlOrmTwigExtension;
 use GraphqlOrm\ValueResolver\GraphqlEntityValueResolver;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Form\FormTypeInterface;
+use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 use Symfony\Component\Stopwatch\Stopwatch;
 use Twig\Extension\AbstractExtension;
 
@@ -73,6 +75,13 @@ return static function (ContainerConfigurator $config) {
     if (class_exists(AbstractExtension::class)) {
         $services->set(GraphqlOrmTwigExtension::class)
             ->tag('twig.extension');
+    }
+
+    // symfony/serializer is optional: before the ObjectNormalizer, so that a lazy relation is not loaded to be written.
+    if (interface_exists(NormalizerInterface::class)) {
+        $services->set(GraphqlEntityNormalizer::class)
+            ->autoconfigure(false)
+            ->tag('serializer.normalizer', ['priority' => 100]);
     }
 
     // symfony/form is optional.

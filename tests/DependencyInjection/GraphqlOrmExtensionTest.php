@@ -22,6 +22,7 @@ use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Schema\CountableFieldResolver;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Schema\SchemaIntrospector;
+use GraphqlOrm\Serializer\GraphqlEntityNormalizer;
 use GraphqlOrm\Test\MockGraphqlServer;
 use GraphqlOrm\Tests\Fixtures\Depth\ChainA;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntityNamedByStrategy;
@@ -307,6 +308,14 @@ final class GraphqlOrmExtensionTest extends TestCase
         $collector->collect(new Request(), new Response());
 
         self::assertContains(ChainA::class, array_column($collector->getEntities(), 'class'));
+    }
+
+    #[Test]
+    public function itRegistersTheNormalizerOfTheEntitiesBeforeTheObjectNormalizer(): void
+    {
+        $container = $this->createContainer(debug: false);
+
+        self::assertSame([['priority' => 100]], $container->getDefinition(GraphqlEntityNormalizer::class)->getTag('serializer.normalizer'));
     }
 
     #[Test]
