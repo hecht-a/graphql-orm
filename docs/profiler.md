@@ -4,21 +4,21 @@ GraphQL ORM integrates with the **Symfony Web Debug Toolbar** and Profiler.
 
 For each request, the panel shows:
 
-- Number of GraphQL queries executed
-- GraphQL errors (highlighted in red)
-- Repeated queries (highlighted in yellow): queries that differ only by their values, sent 3 times or more
-- Slow queries (highlighted in yellow): queries lasting at least `slow_query_threshold` milliseconds, when it is set
-  (see [logging.md](logging.md#slow-queries))
-- Per-query details:
-	- Endpoint
-	- Duration (measured via Symfony Stopwatch)
-	- Response size
-	- Hydration stats (entities, relations, collections, max depth)
-	- Generated GraphQL query (with Copy button), values masked by default (see [logging.md](logging.md#masked-values))
-	- "Copy as cURL" button, to replay the query from a terminal (see [below](#copy-as-curl))
-	- Interactive AST viewer
-	- Variables
-	- Caller (file + line that triggered the query)
+- **Metrics**: number of queries, time spent in GraphQL (measured via Symfony Stopwatch), slow queries when
+  `slow_query_threshold` is set (see [logging.md](logging.md#slow-queries)), errors, entities hydrated and bytes
+  received.
+- **An alert** when queries are repeated (see [below](#repeated-queries)).
+- **The queries**, one row each: root field, caller, duration bar, response size, entities hydrated and status (an
+  error in red, a slow query in yellow). Filter them by status, or search their text. A query in error is shown open.
+
+Click a query to see its detail:
+
+- **GraphQL**: the query sent, values masked by default (see [logging.md](logging.md#masked-values))
+- **Variables**
+- **AST**: an interactive viewer of the query built by the ORM
+- **Hydration**: entities, relations, collections, root result count and depth used
+- The "Copy" and "Copy as cURL" buttons (see [below](#copy-as-curl)), the caller (file and line that triggered the
+  query) and the endpoint
 
 No additional configuration is needed — the collector is registered automatically in debug mode (`kernel.debug`). It
 is not registered otherwise, so queries are not kept in memory in production.
@@ -39,7 +39,7 @@ profiler. The values are those shown by the profiler, masked by default: to repl
 
 A loop sending one query per entity is the classic N+1 problem: lazy relations loaded one by one, a `find()` in a
 `foreach`... The panel groups the queries whose shape is the same once their values are masked, and lists those sent
-3 times or more, with links to them:
+3 times or more in its "Repeated" tab, with links opening them:
 
 | Sent    | Queries         | Query, values masked                      |
 |---------|-----------------|-------------------------------------------|

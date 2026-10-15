@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- The profiler panel is reorganized: metrics first (queries, time, slow queries, errors, entities hydrated, bytes
+  received), then the queries in a table, filtered by status or searched, each opening its detail in tabs (GraphQL,
+  variables, AST, hydration). The repeated queries get an alert and a tab of their own. The panel follows the light or
+  dark theme of the profiler.
+
+---
+
 ## [5.0.0] — 2026-10-15
 
 ### Upgrading from 4.x
