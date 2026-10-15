@@ -8,7 +8,7 @@ php bin/console graphqlorm:make:entity Task
 
 Launches an interactive wizard that generates:
 
-- An entity class with `#[GraphqlEntity]` and `#[GraphqlField]` attributes
+- An entity class with `#[GraphqlEntity]`, `#[GraphqlField]`, `#[Identifier]` and `#[Relation]` attributes
 - A typed repository class
 
 Supports scalar fields, nullable fields, object relations, and collection relations. Existing entities are suggested

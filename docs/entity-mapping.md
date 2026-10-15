@@ -5,11 +5,14 @@
 ```php
 use GraphqlOrm\Attribute\GraphqlEntity;
 use GraphqlOrm\Attribute\GraphqlField;
+use GraphqlOrm\Attribute\Identifier;
+use GraphqlOrm\Attribute\Relation;
 
 #[GraphqlEntity(name: 'tasks', repositoryClass: TaskRepository::class)]
 class Task
 {
-    #[GraphqlField(mappedFrom: 'id', identifier: true)]
+    #[GraphqlField(mappedFrom: 'id')]
+    #[Identifier]
     public int $id;
 
     #[GraphqlField(mappedFrom: 'title')]
@@ -18,7 +21,7 @@ class Task
     #[GraphqlField(mappedFrom: 'dueDate')]
     public ?DateTimeImmutable $dueDate = null;
 
-    #[GraphqlField(mappedFrom: 'user')]
+    #[Relation(mappedFrom: 'user')]
     public ?User $user = null;
 }
 ```
@@ -32,13 +35,39 @@ class Task
 
 ## `#[GraphqlField]`
 
+A field holding a value: a scalar, a date, an enum.
+
 | Parameter          | Type                 | Description                                            |
 |--------------------|----------------------|--------------------------------------------------------|
 | `mappedFrom`       | `string\|null`       | Field name in the GraphQL schema; named by the [naming strategy](#naming-strategy) when omitted |
-| `identifier`       | `bool`               | Marks this field as the entity identifier              |
-| `targetEntity`     | `class-string\|null` | Explicit relation target (optional if PHP type is set) |
 | `ignoreValidation` | `bool`               | Ignore the schema validation                           |
+
+## `#[Identifier]`
+
+Marks the field identifying the entity, declared with `#[GraphqlField]`, as Doctrine `#[Id]`. `find()`, the identity
+map, the lazy relations and the form type need it. An entity has one at most, and `#[Identifier]` without
+`#[GraphqlField]` throws an `InvalidArgumentException`.
+
+```php
+#[GraphqlField(mappedFrom: 'id')]
+#[Identifier]
+public int $id;
+```
+
+## `#[Relation]`
+
+A relation to another entity, or a collection of them, as Doctrine `#[ManyToOne]` and `#[OneToMany]`: it replaces
+`#[GraphqlField]` on the property.
+
+| Parameter          | Type                 | Description                                            |
+|--------------------|----------------------|--------------------------------------------------------|
+| `mappedFrom`       | `string\|null`       | Field name in the GraphQL schema; named by the [naming strategy](#naming-strategy) when omitted |
+| `targetEntity`     | `class-string\|null` | The related entity, when the type of the property does not tell it |
 | `fetch`            | `Fetch`              | `Fetch::Eager` (default) or `Fetch::Lazy`, see [lazy relations](#lazy-relations) |
+| `ignoreValidation` | `bool`               | Ignore the schema validation                           |
+
+A property mapped with both `#[GraphqlField]` and `#[Relation]`, or a `#[Relation]` whose type is no entity, throws an
+`InvalidArgumentException`.
 
 ## Lazy relations
 
@@ -48,11 +77,11 @@ Doctrine `fetch: LAZY`:
 ```php
 use GraphqlOrm\Attribute\Fetch;
 
-#[GraphqlField(mappedFrom: 'user', fetch: Fetch::Lazy)]
+#[Relation(mappedFrom: 'user', fetch: Fetch::Lazy)]
 public ?User $user = null;
 
 /** @var Task[] */
-#[GraphqlField(mappedFrom: 'tasks', fetch: Fetch::Lazy)]
+#[Relation(mappedFrom: 'tasks', fetch: Fetch::Lazy)]
 public array $tasks = [];
 ```
 
@@ -62,8 +91,7 @@ public array $tasks = [];
   a list (Data API Builder, Hasura).
 - A collection is selected by the identifiers of its items, each item being a ghost: a PHP array cannot be lazy itself.
 - An explicit `select('user.name')` still loads the relation with the query.
-- It needs no `lazy_loading`, which only applies to the relations beyond `max_depth`. Only a relation can be fetched
-  lazily: `fetch: Fetch::Lazy` on another field throws an `InvalidArgumentException`.
+- It needs no `lazy_loading`, which only applies to the relations beyond `max_depth`.
 
 ## Naming strategy
 
@@ -85,7 +113,8 @@ graphql_orm:
 #[GraphqlEntity(name: 'tasks')]
 class Task
 {
-    #[GraphqlField(identifier: true)]
+    #[GraphqlField]
+    #[Identifier]
     public int $id;
 
     #[GraphqlField] // due_date
@@ -102,29 +131,48 @@ strategy, clear the cache (`cache:clear`), which holds the metadata outside debu
 
 ## Relations
 
-Relations are detected automatically from the PHP property type:
+The related entity is read from the PHP type of the property:
 
 ```php
-// Automatic detection via PHP type
-#[GraphqlField(mappedFrom: 'user')]
+// From the type
+#[Relation(mappedFrom: 'user')]
 public User $user;
 
 // Explicit declaration
-#[GraphqlField(mappedFrom: 'user', targetEntity: User::class)]
+#[Relation(mappedFrom: 'user', targetEntity: User::class)]
 public mixed $user;
 
 // Collection: the item type is read from the docblock (`Task[]`, `list<Task>`, `array<int, Task>`)
 /** @var Task[] */
-#[GraphqlField(mappedFrom: 'tasks')]
+#[Relation(mappedFrom: 'tasks')]
 public array $tasks = [];
 
 // Collection with an explicit target
-#[GraphqlField(mappedFrom: 'tasks', targetEntity: Task::class)]
+#[Relation(mappedFrom: 'tasks', targetEntity: Task::class)]
 public array $tasks = [];
 ```
 
-An `array` property without `targetEntity` and without a docblock pointing to a `#[GraphqlEntity]` class is a plain
-array (e.g. a list of scalars such as `/** @var string[] */`). An untyped property is hydrated with the raw value.
+An `array` mapped with `#[GraphqlField]` is a plain array (e.g. a list of scalars such as `/** @var string[] */`). An
+untyped property is hydrated with the raw value.
+
+## Upgrading from the mapping of 4.8
+
+Until 4.8, `#[GraphqlField]` also marked the identifier and mapped the relations. This still works in 4.x, with a
+deprecation reported in the logs and the tests (`Since hecht-a/graphql-orm 4.9: ...`), and is removed in 5.0:
+
+```php
+// 4.8                                              // 4.9
+#[GraphqlField(mappedFrom: 'id', identifier: true)] #[GraphqlField(mappedFrom: 'id')]
+public int $id;                                     #[Identifier]
+                                                    public int $id;
+
+#[GraphqlField(mappedFrom: 'user', fetch: Fetch::Lazy)]  #[Relation(mappedFrom: 'user', fetch: Fetch::Lazy)]
+public ?User $user = null;                               public ?User $user = null;
+```
+
+The arguments of a relation (`mappedFrom`, `targetEntity`, `fetch`, `ignoreValidation`) move as they are.
+`graphqlorm:make:entity` generates the new attributes. The metadata being cached outside debug mode, a deprecation is
+reported when the cache is built: after `cache:clear`, or in the test environment.
 
 ## Supported PHP types
 

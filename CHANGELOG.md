@@ -12,11 +12,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `GraphqlManager::getRepository()`, as Doctrine `EntityManager::getRepository()`: the repository service named in the
   `repositoryClass` of `#[GraphqlEntity]`, a generic one otherwise. The repositories extending
   `GraphqlEntityRepository` are found by autoconfiguration (`graphql_orm.repository` tag).
+- `#[Identifier]` marks the identifier field, declared with `#[GraphqlField]`, as Doctrine `#[Id]`; `#[Relation]` maps a
+  relation or a collection, replacing `#[GraphqlField]` on the property, with `mappedFrom`, `targetEntity`, `fetch` and
+  `ignoreValidation`. `graphqlorm:make:entity` generates them.
 
 ### Changed
 
 - The `query_builder` option of `GraphqlEntityType`, the controller argument resolver and `graphqlorm:find` use the
   repository of the application: its own methods and overrides apply there too.
+
+### Deprecated
+
+- The `identifier` argument of `#[GraphqlField]`: add `#[Identifier]`. Mapping a relation with `#[GraphqlField]`, and
+  its `targetEntity` and `fetch` arguments: use `#[Relation]`. Both still work in 4.x and are removed in 5.0, see
+  "Upgrading from the mapping of 4.8" in docs/entity-mapping.md.
 
 ---
 

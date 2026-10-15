@@ -18,11 +18,13 @@ capture fields that are not mapped (e.g. `__typename`, pagination metadata).
 use GraphqlOrm\Attribute\BeforeHydrate;
 use GraphqlOrm\Attribute\GraphqlEntity;
 use GraphqlOrm\Attribute\GraphqlField;
+use GraphqlOrm\Attribute\Identifier;
 
 #[GraphqlEntity(name: 'products', repositoryClass: ProductRepository::class)]
 class Product
 {
-    #[GraphqlField(mappedFrom: 'id', identifier: true)]
+    #[GraphqlField(mappedFrom: 'id')]
+    #[Identifier]
     public int $id;
 
     #[GraphqlField(mappedFrom: 'name')]
@@ -59,11 +61,13 @@ Called after all fields have been assigned. Use it to compute virtual fields or 
 use GraphqlOrm\Attribute\AfterHydrate;
 use GraphqlOrm\Attribute\GraphqlEntity;
 use GraphqlOrm\Attribute\GraphqlField;
+use GraphqlOrm\Attribute\Identifier;
 
 #[GraphqlEntity(name: 'tasks', repositoryClass: TaskRepository::class)]
 class Task
 {
-    #[GraphqlField(mappedFrom: 'id', identifier: true)]
+    #[GraphqlField(mappedFrom: 'id')]
+    #[Identifier]
     public int $id;
 
     #[GraphqlField(mappedFrom: 'title')]
@@ -123,7 +127,8 @@ AfterHydrate**.
 #[GraphqlEntity(name: 'products', repositoryClass: ProductRepository::class)]
 class Product
 {
-    #[GraphqlField(mappedFrom: 'id', identifier: true)]
+    #[GraphqlField(mappedFrom: 'id')]
+    #[Identifier]
     public int $id;
 
     #[GraphqlField(mappedFrom: 'price')]

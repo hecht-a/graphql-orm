@@ -66,7 +66,7 @@ with Doctrine (`findBy(['id' => [1, 3]])`, an empty list matching nothing); the 
 | `DefaultDialect`        | `tasks(status: "active", deletedAt: null)`                                  |
 | `DataApiBuilderDialect` | `tasks(filter: { status: { eq: "active" }, deletedAt: { isNull: true } })` |
 
-`find()` requires an identifier (`#[GraphqlField(identifier: true)]`) and throws a `LogicException` otherwise.
+`find()` requires an identifier (`#[Identifier]`) and throws a `LogicException` otherwise.
 Ordering is not supported by `DefaultDialect` (see [dialects](dialects.md)). Use the query builder for anything other
 than equalities.
 
