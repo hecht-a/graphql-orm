@@ -32,7 +32,7 @@ $builder->add('task', GraphqlEntityType::class, [
     'choice_label' => 'title',
     'query_builder' => fn (TaskRepository $repository) => $repository->createQueryBuilder()
         ->where($repository->createQueryBuilder()->expr()->eq('done', false))
-        ->orderBy('title', Direction::ASC),
+        ->orderBy('title', Direction::Asc),
 ]);
 ```
 

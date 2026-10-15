@@ -55,7 +55,7 @@ php bin/console graphqlorm:make:entity Task --from-schema
 ```
 
 ```php
-$tasks = $taskRepository->findBy(['status' => 'active'], ['createdAt' => Direction::DESC], 10);
+$tasks = $taskRepository->findBy(['status' => 'active'], ['createdAt' => Direction::Desc], 10);
 
 $qb = $taskRepository->createQueryBuilder();
 $tasks = $qb

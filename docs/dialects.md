@@ -92,7 +92,7 @@ query builder filters into a `where` boolean expression:
 
 ```php
 $qb->where($qb->expr()->orX($qb->expr()->contains('title', 'docs'), $qb->expr()->eq('id', 3)))
-    ->orderBy('id', Direction::DESC)
+    ->orderBy('id', Direction::Desc)
     ->limit(10);
 ```
 
@@ -123,7 +123,7 @@ sends the criteria of the find methods as a `condition`, and orders with the `or
 from the field names:
 
 ```php
-$tasks = $repository->findBy(['done' => false], ['dueDate' => Direction::ASC], 10);
+$tasks = $repository->findBy(['done' => false], ['dueDate' => Direction::Asc], 10);
 ```
 
 ```graphql

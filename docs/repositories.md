@@ -38,10 +38,10 @@ $task = $repository->find(42);
 
 // Filter by criteria, with an optional ordering and limit
 $tasks = $repository->findBy(['status' => 'active']);
-$tasks = $repository->findBy(['status' => 'active'], ['createdAt' => Direction::DESC], 10);
+$tasks = $repository->findBy(['status' => 'active'], ['createdAt' => Direction::Desc], 10);
 
 // First entity matching the criteria (null when none)
-$task = $repository->findOneBy(['status' => 'active'], ['createdAt' => Direction::DESC]);
+$task = $repository->findOneBy(['status' => 'active'], ['createdAt' => Direction::Desc]);
 
 // Number of entities matching the criteria
 $count = $repository->count(['status' => 'active']);

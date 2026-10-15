@@ -37,7 +37,7 @@ it does not keep the entities it read:
 
 ```php
 $tasks = $taskRepository->createQueryBuilder()
-    ->orderBy('id', Direction::ASC)
+    ->orderBy('id', Direction::Asc)
     ->limit(500) // the page size
     ->paginate()
     ->getQuery()

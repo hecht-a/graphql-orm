@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `#[GraphqlField]`, and its `targetEntity` and `fetch` arguments: use `#[Relation]`. `GraphqlOrm\Attribute\Fetch`: use
   `GraphqlOrm\Mapping\Fetch`, of which it is an alias. All still work in 4.x and are removed in 5.0, see "Upgrading from
   the mapping of 4.8" in docs/entity-mapping.md. The PHPStan extension declares the `Fetch` alias.
+- `Direction::ASC` and `Direction::DESC`: use `Direction::Asc` and `Direction::Desc`, the cases being named in
+  PascalCase as the other enums of the bundle. The old names are constants of the enum, pointing to the new cases, so
+  that `Direction::ASC === Direction::Asc`; they are removed in 5.0. The values sent (`ASC`, `DESC`) are unchanged.
 
 ---
 

@@ -82,7 +82,7 @@ PostGraphile needs a plugin for filters (see [dialects.md](dialects.md)).
 use GraphqlOrm\Query\Direction;
 
 $qb
-    ->orderBy('createdAt', Direction::DESC)
+    ->orderBy('createdAt', Direction::Desc)
     ->limit(20);
 ```
 
