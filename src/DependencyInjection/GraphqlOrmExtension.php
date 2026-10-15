@@ -29,24 +29,8 @@ use Symfony\Component\Finder\Finder;
  */
 final class GraphqlOrmExtension extends Extension
 {
-    /**
-     * The options whose default value changes in 5.0: their path, current default and next default.
-     */
-    private const CHANGING_DEFAULTS = [
-        ['identity_map', 'false', 'true'],
-        ['max_depth', '2', '1'],
-        ['variables.enabled', 'false', 'true'],
-        ['schema_validation.mode', '"disabled"', '"warning" in debug mode'],
-    ];
-
     public function load(array $configs, ContainerBuilder $container): void
     {
-        foreach (self::CHANGING_DEFAULTS as [$path, $current, $next]) {
-            if (!self::isSet($configs, $path)) {
-                trigger_deprecation('hecht-a/graphql-orm', '4.9', 'Not setting the "graphql_orm.%s" option is deprecated: its default value changes to %s in 5.0, set it to keep %s.', $path, $next, $current);
-            }
-        }
-
         $configuration = new Configuration();
 
         /**
@@ -65,7 +49,7 @@ final class GraphqlOrmExtension extends Extension
          *   headers_provider: string|null,
          *   lazy_loading: bool,
          *   max_depth: int,
-         *   schema_validation: array{mode: string},
+         *   schema_validation: array{mode: string|null},
          *   mapping: array{
          *     entity: array{dir: string, namespace: string},
          *     repository: array{dir: string, namespace: string}
@@ -167,7 +151,9 @@ final class GraphqlOrmExtension extends Extension
         $container->setParameter('graphql_orm.headers', $config['headers']);
         $container->setParameter('graphql_orm.max_depth', $config['max_depth']);
 
-        $container->setParameter('graphql_orm.schema_validation.mode', $config['schema_validation']['mode']);
+        // Unset, the schema is validated with warnings while developing, not in the tests nor in production.
+        $environment = $container->hasParameter('kernel.environment') ? $container->getParameter('kernel.environment') : null;
+        $container->setParameter('graphql_orm.schema_validation.mode', $config['schema_validation']['mode'] ?? ($environment === 'dev' ? 'warning' : 'disabled'));
 
         $entityDir = $config['mapping']['entity']['dir'];
         $entityNamespace = $config['mapping']['entity']['namespace'];
@@ -203,27 +189,5 @@ final class GraphqlOrmExtension extends Extension
         }
 
         return $classes;
-    }
-
-    /**
-     * Whether an option is set in one of the configurations, before the defaults are applied.
-     *
-     * @param array<mixed> $configs
-     */
-    private static function isSet(array $configs, string $path): bool
-    {
-        foreach ($configs as $config) {
-            $value = $config;
-
-            foreach (explode('.', $path) as $key) {
-                $value = \is_array($value) && \array_key_exists($key, $value) ? $value[$key] : null;
-            }
-
-            if ($value !== null) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }
