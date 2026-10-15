@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- The schema validation checked no entity with the default `mapping.entity.dir`,
+  `%kernel.project_dir%/src/GraphQL/Entity`: the directory was read before `%kernel.project_dir%` was resolved, so that
+  no entity was found. The metadata cache warmer, given the same list, warmed nothing either.
+
+---
+
 ## [4.10.2] — 2026-10-15
 
 4.10.1 is withdrawn: its tag pointed by mistake at the code of 5.0. 4.10.2 holds the fix meant for it, on top of 4.10.0.

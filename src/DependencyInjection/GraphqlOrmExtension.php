@@ -171,7 +171,9 @@ final class GraphqlOrmExtension extends Extension
 
         $entityDir = $config['mapping']['entity']['dir'];
         $entityNamespace = $config['mapping']['entity']['namespace'];
-        $container->setParameter('graphql_orm.schema_validation.entity_classes', $this->scanEntityClasses($entityDir, $entityNamespace));
+        // The default directory holds %kernel.project_dir%: it is resolved before being read.
+        $scannedDir = $container->getParameterBag()->resolveValue($entityDir);
+        $container->setParameter('graphql_orm.schema_validation.entity_classes', \is_string($scannedDir) ? $this->scanEntityClasses($scannedDir, $entityNamespace) : []);
 
         $container->setParameter('graphql_orm.mapping.entity.dir', $entityDir);
         $container->setParameter('graphql_orm.mapping.entity.namespace', $entityNamespace);

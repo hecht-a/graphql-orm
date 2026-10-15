@@ -22,6 +22,7 @@ use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Schema\CountableFieldResolver;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Test\MockGraphqlServer;
+use GraphqlOrm\Tests\Fixtures\Depth\ChainA;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntityNamedByStrategy;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeProject;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
@@ -47,6 +48,20 @@ final class GraphqlOrmExtensionTest extends TestCase
         'variables' => ['enabled' => false],
         'schema_validation' => ['mode' => 'disabled'],
     ];
+
+    #[Test]
+    public function itFindsTheEntitiesOfADirectoryGivenWithTheProjectDir(): void
+    {
+        $container = $this->createContainer(debug: false, config: ['mapping' => ['entity' => [
+            'dir' => '%kernel.project_dir%/tests/Fixtures/Depth',
+            'namespace' => 'GraphqlOrm\\Tests\\Fixtures\\Depth',
+        ]]]);
+
+        $entityClasses = $container->getParameter('graphql_orm.schema_validation.entity_classes');
+
+        self::assertIsArray($entityClasses);
+        self::assertContains(ChainA::class, $entityClasses);
+    }
 
     #[Test]
     public function itRegistersTheProfilerCollectorInDebugMode(): void
