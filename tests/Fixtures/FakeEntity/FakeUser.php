@@ -6,11 +6,13 @@ namespace GraphqlOrm\Tests\Fixtures\FakeEntity;
 
 use GraphqlOrm\Attribute\GraphqlEntity;
 use GraphqlOrm\Attribute\GraphqlField;
+use GraphqlOrm\Attribute\Identifier;
 use GraphqlOrm\Tests\Fixtures\FakeRepository\FakeRepository;
 
 #[GraphqlEntity(name: 'users', repositoryClass: FakeRepository::class)]
 class FakeUser
 {
-    #[GraphqlField(mappedFrom: 'id', identifier: true)]
+    #[GraphqlField(mappedFrom: 'id')]
+    #[Identifier]
     public int $id;
 }

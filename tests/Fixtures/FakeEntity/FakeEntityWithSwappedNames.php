@@ -6,6 +6,7 @@ namespace GraphqlOrm\Tests\Fixtures\FakeEntity;
 
 use GraphqlOrm\Attribute\GraphqlEntity;
 use GraphqlOrm\Attribute\GraphqlField;
+use GraphqlOrm\Attribute\Identifier;
 
 /**
  * Each property has the GraphQL name of the other field.
@@ -13,7 +14,8 @@ use GraphqlOrm\Attribute\GraphqlField;
 #[GraphqlEntity(name: 'items')]
 class FakeEntityWithSwappedNames
 {
-    #[GraphqlField(mappedFrom: 'id', identifier: true)]
+    #[GraphqlField(mappedFrom: 'id')]
+    #[Identifier]
     public int $id;
 
     #[GraphqlField(mappedFrom: 'label')]

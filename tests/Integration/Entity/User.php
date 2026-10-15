@@ -6,17 +6,20 @@ namespace GraphqlOrm\Tests\Integration\Entity;
 
 use GraphqlOrm\Attribute\GraphqlEntity;
 use GraphqlOrm\Attribute\GraphqlField;
+use GraphqlOrm\Attribute\Identifier;
+use GraphqlOrm\Attribute\Relation;
 
 #[GraphqlEntity(name: 'users')]
 class User
 {
-    #[GraphqlField(mappedFrom: 'id', identifier: true)]
+    #[GraphqlField(mappedFrom: 'id')]
+    #[Identifier]
     public int $id;
 
     #[GraphqlField(mappedFrom: 'name')]
     public string $name;
 
     /** @var Task[] */
-    #[GraphqlField(mappedFrom: 'tasks')]
+    #[Relation(mappedFrom: 'tasks')]
     public array $tasks = [];
 }

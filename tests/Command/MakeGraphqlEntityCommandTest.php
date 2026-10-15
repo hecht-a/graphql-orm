@@ -90,9 +90,10 @@ final class MakeGraphqlEntityCommandTest extends TestCase
 
         self::assertSame(Command::SUCCESS, $exitCode);
         $code = $this->entityCode();
-        self::assertStringContainsString("#[GraphqlField(mappedFrom: 'id', identifier: true)]\n    private int \$id;", $code);
+        self::assertStringContainsString("#[GraphqlField(mappedFrom: 'id')]\n    #[Identifier]\n    private int \$id;", $code);
         self::assertStringContainsString("#[GraphqlField(mappedFrom: 'title')]\n    private ?string \$title = null;", $code);
-        self::assertStringContainsString('private ?User $owner = null;', $code);
+        self::assertStringContainsString("#[Relation(mappedFrom: 'owner')]\n    private ?User \$owner = null;", $code);
+        self::assertStringContainsString("use GraphqlOrm\\Attribute\\Identifier;\nuse GraphqlOrm\\Attribute\\Relation;", $code);
         self::assertStringContainsString('use App\GraphQL\Entity\User;', $code);
         self::assertStringContainsString('User', $tester->getDisplay());
     }

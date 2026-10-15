@@ -6,6 +6,8 @@ namespace GraphqlOrm\Tests\Integration\PostGraphile\Entity;
 
 use GraphqlOrm\Attribute\GraphqlEntity;
 use GraphqlOrm\Attribute\GraphqlField;
+use GraphqlOrm\Attribute\Identifier;
+use GraphqlOrm\Attribute\Relation;
 
 /**
  * PostGraphile simple collections (DefaultDialect).
@@ -13,7 +15,8 @@ use GraphqlOrm\Attribute\GraphqlField;
 #[GraphqlEntity(name: 'allTasksList')]
 class ListTask
 {
-    #[GraphqlField(mappedFrom: 'id', identifier: true)]
+    #[GraphqlField(mappedFrom: 'id')]
+    #[Identifier]
     public int $id;
 
     #[GraphqlField(mappedFrom: 'title')]
@@ -25,6 +28,6 @@ class ListTask
     #[GraphqlField(mappedFrom: 'dueDate')]
     public ?\DateTimeImmutable $dueDate = null;
 
-    #[GraphqlField(mappedFrom: 'userByUserId')]
+    #[Relation(mappedFrom: 'userByUserId')]
     public ?ListUser $user = null;
 }

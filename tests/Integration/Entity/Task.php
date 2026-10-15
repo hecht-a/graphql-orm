@@ -6,11 +6,14 @@ namespace GraphqlOrm\Tests\Integration\Entity;
 
 use GraphqlOrm\Attribute\GraphqlEntity;
 use GraphqlOrm\Attribute\GraphqlField;
+use GraphqlOrm\Attribute\Identifier;
+use GraphqlOrm\Attribute\Relation;
 
 #[GraphqlEntity(name: 'tasks')]
 class Task
 {
-    #[GraphqlField(mappedFrom: 'id', identifier: true)]
+    #[GraphqlField(mappedFrom: 'id')]
+    #[Identifier]
     public int $id;
 
     #[GraphqlField(mappedFrom: 'title')]
@@ -22,6 +25,6 @@ class Task
     #[GraphqlField(mappedFrom: 'due_date')]
     public ?\DateTimeImmutable $dueDate = null;
 
-    #[GraphqlField(mappedFrom: 'user')]
+    #[Relation(mappedFrom: 'user')]
     public ?User $user = null;
 }

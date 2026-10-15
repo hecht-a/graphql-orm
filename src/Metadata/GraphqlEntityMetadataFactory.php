@@ -7,6 +7,8 @@ namespace GraphqlOrm\Metadata;
 use GraphqlOrm\Attribute\Fetch;
 use GraphqlOrm\Attribute\GraphqlEntity;
 use GraphqlOrm\Attribute\GraphqlField;
+use GraphqlOrm\Attribute\Identifier;
+use GraphqlOrm\Attribute\Relation;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Exception\NotAGraphqlEntityException;
 use GraphqlOrm\Exception\TooManyIdentifiersException;
@@ -88,28 +90,10 @@ class GraphqlEntityMetadataFactory
         $identifier = null;
 
         foreach ($reflection->getProperties() as $property) {
-            $attr = $property->getAttributes(GraphqlField::class)[0] ?? null;
+            $field = $this->field($class, $property);
 
-            if (!$attr) {
+            if ($field === null) {
                 continue;
-            }
-
-            /** @var GraphqlField $instance */
-            $instance = $attr->newInstance();
-            [$relation, $isCollection] = $this->resolveRelation($property, $instance);
-
-            $field = new GraphqlFieldMetadata(
-                property: $property->getName(),
-                mappedFrom: $instance->mappedFrom ?? $this->namingStrategy->fieldName($property->getName()),
-                relation: $relation,
-                isCollection: $isCollection,
-                isIdentifier: $instance->identifier,
-                ignoreValidation: $instance->ignoreValidation,
-                fetch: $instance->fetch,
-            );
-
-            if ($field->fetch === Fetch::Lazy && $field->relation === null) {
-                throw new InvalidArgumentException(\sprintf('"%s::$%s" is not a relation: only a relation can be fetched lazily.', $class, $field->property));
             }
 
             if ($field->isIdentifier) {
@@ -133,15 +117,97 @@ class GraphqlEntityMetadataFactory
     }
 
     /**
+     * The field mapped on a property with #[GraphqlField] or #[Relation], if any.
+     *
+     * @param class-string $class
+     *
+     * @throws InvalidArgumentException when the attributes of the property contradict each other
+     */
+    private function field(string $class, \ReflectionProperty $property): ?GraphqlFieldMetadata
+    {
+        $value = $property->getAttributes(GraphqlField::class)[0] ?? null;
+        $relation = $property->getAttributes(Relation::class)[0] ?? null;
+        $isIdentifier = $property->getAttributes(Identifier::class) !== [];
+        $name = $class . '::$' . $property->getName();
+
+        if ($isIdentifier && $value === null) {
+            throw new InvalidArgumentException(\sprintf('"%s" has #[Identifier] without #[GraphqlField]: the identifier is a field holding a value, declare it with #[GraphqlField].', $name));
+        }
+
+        if ($value !== null && $relation !== null) {
+            throw new InvalidArgumentException(\sprintf('"%s" is mapped with both #[GraphqlField] and #[Relation]: map a relation with #[Relation] only.', $name));
+        }
+
+        return match (true) {
+            $relation !== null => $this->relationField($name, $property, $relation->newInstance()),
+            $value !== null => $this->valueField($name, $property, $value->newInstance(), $isIdentifier),
+            default => null,
+        };
+    }
+
+    /**
+     * @throws InvalidArgumentException when the type of the property is no entity
+     */
+    private function relationField(string $name, \ReflectionProperty $property, Relation $attribute): GraphqlFieldMetadata
+    {
+        [$relation, $isCollection] = $this->resolveRelation($property, $attribute->targetEntity);
+
+        if ($relation === null) {
+            throw new InvalidArgumentException(\sprintf('"%s" is mapped with #[Relation] but its type is no entity: map a value with #[GraphqlField], or give the targetEntity of the relation.', $name));
+        }
+
+        return new GraphqlFieldMetadata(
+            property: $property->getName(),
+            mappedFrom: $attribute->mappedFrom ?? $this->namingStrategy->fieldName($property->getName()),
+            relation: $relation,
+            isCollection: $isCollection,
+            ignoreValidation: $attribute->ignoreValidation,
+            fetch: $attribute->fetch,
+        );
+    }
+
+    /**
+     * A field of #[GraphqlField], which mapped the identifier and the relations too until 4.9.
+     *
+     * @throws InvalidArgumentException when a value is fetched lazily
+     */
+    private function valueField(string $name, \ReflectionProperty $property, GraphqlField $attribute, bool $isIdentifier): GraphqlFieldMetadata
+    {
+        if ($attribute->identifier) {
+            trigger_deprecation('hecht-a/graphql-orm', '4.9', 'The "identifier" argument of #[GraphqlField] on "%s" is deprecated, add #[Identifier] instead.', $name);
+        }
+
+        [$relation, $isCollection] = $this->resolveRelation($property, $attribute->targetEntity);
+
+        if ($relation !== null) {
+            trigger_deprecation('hecht-a/graphql-orm', '4.9', 'Mapping the relation "%s" with #[GraphqlField] is deprecated, use #[Relation] instead.', $name);
+        } elseif ($attribute->fetch === Fetch::Lazy) {
+            throw new InvalidArgumentException(\sprintf('"%s" is not a relation: only a relation can be fetched lazily.', $name));
+        }
+
+        return new GraphqlFieldMetadata(
+            property: $property->getName(),
+            mappedFrom: $attribute->mappedFrom ?? $this->namingStrategy->fieldName($property->getName()),
+            relation: $relation,
+            isCollection: $isCollection,
+            isIdentifier: $isIdentifier || $attribute->identifier,
+            ignoreValidation: $attribute->ignoreValidation,
+            fetch: $attribute->fetch,
+        );
+    }
+
+    /**
+     * @param class-string|null $targetEntity
+     *
      * @return array{class-string|null, bool} the relation target and whether it is a collection
      */
-    private function resolveRelation(\ReflectionProperty $property, GraphqlField $attribute): array
+    private function resolveRelation(\ReflectionProperty $property, ?string $targetEntity): array
     {
         $types = $this->namedTypes($property->getType());
         $isArray = \in_array('array', array_map(fn (\ReflectionNamedType $type) => $type->getName(), $types), true);
 
-        if ($attribute->targetEntity !== null) {
-            return [$attribute->targetEntity, $isArray];
+        if ($targetEntity !== null) {
+            return [$targetEntity, $isArray];
         }
 
         foreach ($types as $type) {

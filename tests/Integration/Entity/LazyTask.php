@@ -7,6 +7,8 @@ namespace GraphqlOrm\Tests\Integration\Entity;
 use GraphqlOrm\Attribute\Fetch;
 use GraphqlOrm\Attribute\GraphqlEntity;
 use GraphqlOrm\Attribute\GraphqlField;
+use GraphqlOrm\Attribute\Identifier;
+use GraphqlOrm\Attribute\Relation;
 
 /**
  * The tasks with their user loaded on first access.
@@ -14,12 +16,13 @@ use GraphqlOrm\Attribute\GraphqlField;
 #[GraphqlEntity(name: 'tasks')]
 class LazyTask
 {
-    #[GraphqlField(mappedFrom: 'id', identifier: true)]
+    #[GraphqlField(mappedFrom: 'id')]
+    #[Identifier]
     public int $id;
 
     #[GraphqlField(mappedFrom: 'title')]
     public string $title;
 
-    #[GraphqlField(mappedFrom: 'user', fetch: Fetch::Lazy)]
+    #[Relation(mappedFrom: 'user', fetch: Fetch::Lazy)]
     public ?User $user = null;
 }

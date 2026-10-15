@@ -86,6 +86,7 @@ final readonly class MakeGraphqlEntityCommand
             'repo_short' => $repoClassName,
             'properties' => $propertiesCode,
             'relation_imports' => $relationImports,
+            'attribute_imports' => $this->attributeImports($properties),
         ]);
 
         $repoCode = $this->stubRenderer->render('repository.stub.php', [
@@ -303,9 +304,11 @@ final readonly class MakeGraphqlEntityCommand
         $out = [];
 
         foreach ($properties as $property) {
-            $attribute = $property->identifier
-                ? "#[GraphqlField(mappedFrom: '{$property->mappedFrom}', identifier: true)]"
-                : "#[GraphqlField(mappedFrom: '{$property->mappedFrom}')]";
+            $attribute = match (true) {
+                $property->relation => "#[Relation(mappedFrom: '{$property->mappedFrom}')]",
+                $property->identifier => "#[GraphqlField(mappedFrom: '{$property->mappedFrom}')]\n    #[Identifier]",
+                default => "#[GraphqlField(mappedFrom: '{$property->mappedFrom}')]",
+            };
 
             if ($property->relation) {
                 if ($property->collection) {
@@ -344,6 +347,29 @@ PHP;
         }
 
         return implode("\n", $out);
+    }
+
+    /**
+     * The mapping attributes the entity uses, and only those.
+     *
+     * @param PropertyDefinition[] $properties
+     */
+    private function attributeImports(array $properties): string
+    {
+        $attributes = ['GraphqlEntity'];
+
+        foreach ($properties as $property) {
+            $attributes[] = $property->relation ? 'Relation' : 'GraphqlField';
+
+            if ($property->identifier && !$property->relation) {
+                $attributes[] = 'Identifier';
+            }
+        }
+
+        $attributes = array_unique($attributes);
+        sort($attributes);
+
+        return implode("\n", array_map(fn (string $attribute) => 'use GraphqlOrm\\Attribute\\' . $attribute . ';', $attributes));
     }
 
     /**

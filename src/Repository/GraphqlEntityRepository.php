@@ -57,7 +57,7 @@ class GraphqlEntityRepository
         $identifier = $this->manager->getMetadataFactory()->getMetadata($this->entityClass)->identifier;
 
         if ($identifier === null) {
-            throw new LogicException(\sprintf('"%s" has no identifier: mark one of its fields with #[GraphqlField(identifier: true)].', $this->entityClass));
+            throw new LogicException(\sprintf('"%s" has no identifier: mark its identifier field with #[Identifier].', $this->entityClass));
         }
 
         $known = \is_int($id) || \is_string($id) ? $this->manager->findKnown($this->entityClass, $id) : null;

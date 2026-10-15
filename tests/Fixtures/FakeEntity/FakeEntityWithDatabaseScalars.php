@@ -6,11 +6,13 @@ namespace GraphqlOrm\Tests\Fixtures\FakeEntity;
 
 use GraphqlOrm\Attribute\GraphqlEntity;
 use GraphqlOrm\Attribute\GraphqlField;
+use GraphqlOrm\Attribute\Identifier;
 
 #[GraphqlEntity(name: 'invoices')]
 class FakeEntityWithDatabaseScalars
 {
-    #[GraphqlField(mappedFrom: 'id', identifier: true)]
+    #[GraphqlField(mappedFrom: 'id')]
+    #[Identifier]
     public int $id;
 
     #[GraphqlField(mappedFrom: 'issuedAt')]

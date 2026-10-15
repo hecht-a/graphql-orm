@@ -100,7 +100,7 @@ final class GraphqlEntityType extends AbstractType
         }
 
         $identifier = $this->manager->getMetadataFactory()->getMetadata($class)->identifier
-            ?? throw new LogicException(\sprintf('"%s" has no identifier to tell its choices apart: mark one of its fields with #[GraphqlField(identifier: true)].', $class));
+            ?? throw new LogicException(\sprintf('"%s" has no identifier to tell its choices apart: mark its identifier field with #[Identifier].', $class));
         $property = new \ReflectionProperty($entity, $identifier->property);
         $value = $property->isInitialized($entity) ? $property->getValue($entity) : null;
 

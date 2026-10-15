@@ -6,6 +6,8 @@ namespace GraphqlOrm\Tests\Fixtures\Docblock;
 
 use GraphqlOrm\Attribute\GraphqlEntity;
 use GraphqlOrm\Attribute\GraphqlField;
+use GraphqlOrm\Attribute\Identifier;
+use GraphqlOrm\Attribute\Relation;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeUser;
 use GraphqlOrm\Tests\Fixtures\FakeRepository\FakeRepository;
@@ -13,15 +15,16 @@ use GraphqlOrm\Tests\Fixtures\FakeRepository\FakeRepository;
 #[GraphqlEntity(name: 'authors', repositoryClass: FakeRepository::class)]
 class Author
 {
-    #[GraphqlField(mappedFrom: 'id', identifier: true)]
+    #[GraphqlField(mappedFrom: 'id')]
+    #[Identifier]
     public ?int $id = null;
 
     /** @var Book[] */
-    #[GraphqlField(mappedFrom: 'books')]
+    #[Relation(mappedFrom: 'books')]
     public array $books = [];
 
     /** @var list<FakeTask> */
-    #[GraphqlField(mappedFrom: 'tasks')]
+    #[Relation(mappedFrom: 'tasks')]
     public array $tasks = [];
 
     /** @var string[] */
@@ -36,6 +39,6 @@ class Author
     #[GraphqlField(mappedFrom: 'legacy')]
     public $legacy; // @phpstan-ignore missingType.property
 
-    #[GraphqlField(mappedFrom: 'editor', targetEntity: FakeUser::class)]
+    #[Relation(mappedFrom: 'editor', targetEntity: FakeUser::class)]
     public FakeUser|\stdClass|null $editor = null;
 }
