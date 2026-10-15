@@ -81,6 +81,8 @@ final class GraphqlOrmDataCollector extends DataCollector
         ?\Throwable $exception = null,
     ): void {
         $this->data['queries'] ??= [];
+        // A profile read from the storage only has its data: the constructor is not called again.
+        $this->data['slow_query_threshold'] = $this->slowQueryThreshold;
     }
 
     public function reset(): void
@@ -106,7 +108,9 @@ final class GraphqlOrmDataCollector extends DataCollector
 
     public function getSlowQueryThreshold(): ?float
     {
-        return $this->slowQueryThreshold;
+        $threshold = $this->data['slow_query_threshold'] ?? $this->slowQueryThreshold ?? null;
+
+        return \is_float($threshold) ? $threshold : null;
     }
 
     public function getQueryCount(): int
