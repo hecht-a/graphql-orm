@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Profiler: the GraphQL queries are highlighted: keywords, fields, arguments, types, variables, strings, numbers and
+  masked values, in the colors of the profiler theme.
 - Profiler: the time spent hydrating each response, apart from the network: a "Hydration" metric, a grey part in the
   duration bar of each query, and the time in its "Hydration" tab. `GraphqlQueryTrace::$hydrationDuration` holds it.
 

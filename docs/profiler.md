@@ -35,7 +35,8 @@ access (see [lazy loading](configuration.md#lazy-loading)).
 
 Click a query to see its detail:
 
-- **GraphQL**: the query sent, values masked by default (see [logging.md](logging.md#masked-values))
+- **GraphQL**: the query sent, highlighted (keywords, fields, arguments, types, variables, values), values masked by
+  default (see [logging.md](logging.md#masked-values))
 - **Variables**
 - **Response**: the first 2 KB of the response, indented, values masked unless `redact_query_values` is false
 - **AST**: an interactive viewer of the query built by the ORM
