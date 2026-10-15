@@ -18,6 +18,8 @@ use Symfony\Contracts\HttpClient\ResponseStreamInterface;
  */
 final class MockGraphqlServer implements HttpClientInterface
 {
+    private const EMPTY_SCHEMA = ['data' => ['__schema' => ['queryType' => ['name' => 'Query', 'fields' => []], 'types' => []]]];
+
     private HttpClientInterface $client;
 
     /** @var list<MockResponse> */
@@ -114,6 +116,13 @@ final class MockGraphqlServer implements HttpClientInterface
         $body = json_decode(\is_string($options['body'] ?? null) ? $options['body'] : '', true);
         $query = \is_array($body) && \is_string($body['query'] ?? null) ? $body['query'] : '';
         $variables = \is_array($body) && \is_array($body['variables'] ?? null) ? $body['variables'] : [];
+
+        // The introspection of the bundle (typed variables, schema validation) gets an empty schema, so that the values
+        // are sent inline; it is not recorded, nor does it consume the responses queued for the queries under test.
+        if (preg_match('/\b__schema\b/', $query) === 1) {
+            return new MockResponse(json_encode(self::EMPTY_SCHEMA, JSON_THROW_ON_ERROR));
+        }
+
         $this->requests[] = new RecordedRequest($query, $variables);
 
         return array_shift($this->responses)

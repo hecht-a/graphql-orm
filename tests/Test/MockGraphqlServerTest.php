@@ -5,12 +5,20 @@ declare(strict_types=1);
 namespace GraphqlOrm\Tests\Test;
 
 use GraphqlOrm\Client\GraphqlClient;
+use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\Exception\GraphqlRequestException;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
+use GraphqlOrm\GraphqlManager;
+use GraphqlOrm\Hydrator\EntityHydrator;
+use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Repository\GraphqlEntityRepository;
+use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Test\MockGraphqlServer;
+use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
 final class MockGraphqlServerTest extends TestCase
 {
@@ -92,6 +100,44 @@ final class MockGraphqlServerTest extends TestCase
             self::assertStringContainsString(self::QUERY, $exception->getMessage());
             self::assertCount(1, $server->requests());
         }
+    }
+
+    #[Test]
+    public function itAnswersTheIntrospectionWithAnEmptySchemaWithoutConsumingTheResponses(): void
+    {
+        $server = (new MockGraphqlServer())->respond(['tasks' => [['id' => 1]]]);
+        $client = self::client($server);
+
+        $schema = $client->query('query IntrospectionQuery { __schema { queryType { name } types { name } } }', new GraphqlExecutionContext());
+        $tasks = $client->query(self::QUERY, new GraphqlExecutionContext());
+
+        self::assertSame(['data' => ['__schema' => ['queryType' => ['name' => 'Query', 'fields' => []], 'types' => []]]], $schema);
+        self::assertSame(['data' => ['tasks' => [['id' => 1]]]], $tasks);
+        self::assertCount(1, $server->requests());
+        self::assertSame(self::QUERY, $server->requests()[0]->query);
+    }
+
+    #[Test]
+    public function itLetsTheVariablesFallBackToInlineValues(): void
+    {
+        $server = (new MockGraphqlServer())->respond(['tasks' => ['items' => [['id' => 1, 'title' => 'A']]]]);
+        $client = self::client($server);
+        $metadataFactory = new GraphqlEntityMetadataFactory();
+        $manager = new GraphqlManager(
+            $metadataFactory,
+            $client,
+            new EntityHydrator($metadataFactory),
+            null,
+            1,
+            new DataApiBuilderDialect(),
+            argumentTypeResolver: new RootArgumentTypeResolver($client, new ArrayAdapter(), 60),
+        );
+
+        $tasks = (new GraphqlEntityRepository($manager, FakeTask::class))->findBy(['title' => 'A']);
+
+        self::assertSame(1, $tasks[0]->id);
+        self::assertCount(1, $server->requests());
+        self::assertStringContainsString('filter: { title: { eq: "A" } }', $server->requests()[0]->query);
     }
 
     private static function client(MockGraphqlServer $server): GraphqlClient
