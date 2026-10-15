@@ -156,6 +156,30 @@ final class GraphqlOrmDataCollectorTest extends TestCase
         self::assertSame('graphql_orm', $this->collector->getName());
     }
 
+    #[Test]
+    public function itNamesTheRootFieldOfEachQuery(): void
+    {
+        $this->collector->addQuery(self::traceOf('query { tasks(first: 10) { id } }'));
+        $this->collector->addQuery(self::traceOf("query(\$filter: TaskFilterInput) {\n  users(filter: \$filter) { id }\n}"));
+        $this->collector->addQuery(self::traceOf('{ __schema { types { name } } }'));
+
+        self::assertSame(['tasks', 'users', '__schema'], array_column($this->collector->getQueries(), 'root_field'));
+    }
+
+    #[Test]
+    public function itSumsTheEntitiesHydratedAndTheBytesReceived(): void
+    {
+        foreach ([[4, 2048], [3, 1024]] as [$entities, $bytes]) {
+            $trace = self::traceOf('query { tasks { id } }');
+            $trace->hydratedEntities = $entities;
+            $trace->responseSize = $bytes;
+            $this->collector->addQuery($trace);
+        }
+
+        self::assertSame(7, $this->collector->getHydratedEntityCount());
+        self::assertSame(3072, $this->collector->getResponseSize());
+    }
+
     /**
      * @param array<string|int, mixed>|null $errors
      */

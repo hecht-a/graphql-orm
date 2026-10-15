@@ -26,8 +26,67 @@ final class ProfilerTemplateTest extends TestCase
 
         $html = $this->render($collector);
 
-        self::assertStringContainsString('Query #2', $html);
+        self::assertStringContainsString('id="graphql-orm-query-2"', $html);
+        self::assertStringContainsString('users', strip_tags($html));
         self::assertStringNotContainsString('Repeated queries', $html);
+    }
+
+    #[Test]
+    public function itSummarizesTheRequestInMetrics(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+
+        foreach ([[120.5, 4, 2048], [750, 3, 1024]] as [$duration, $entities, $bytes]) {
+            $trace = new GraphqlQueryTrace();
+            $trace->graphql = 'query { tasks { id } }';
+            $trace->duration = $duration;
+            $trace->hydratedEntities = $entities;
+            $trace->responseSize = $bytes;
+            $collector->addQuery($trace);
+        }
+
+        $text = self::text($this->render($collector));
+
+        self::assertStringContainsString('870.5 ms Time in GraphQL', $text);
+        self::assertStringContainsString('7 Entities hydrated', $text);
+        self::assertStringContainsString('3.0 KB Received', $text);
+    }
+
+    #[Test]
+    public function itShowsTheDetailOfEachQueryInTabs(): void
+    {
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { tasks { id } }';
+        $trace->variables = ['first' => 10];
+        $collector = new GraphqlOrmDataCollector();
+        $collector->addQuery($trace);
+
+        $html = $this->render($collector);
+
+        foreach (['graphql', 'variables', 'hydration'] as $pane) {
+            self::assertStringContainsString(\sprintf('data-graphql-orm-pane="%s"', $pane), $html);
+        }
+    }
+
+    #[Test]
+    public function itFiltersTheSlowQueriesAndTheQueriesInError(): void
+    {
+        $collector = new GraphqlOrmDataCollector(slowQueryThreshold: 500.0);
+
+        foreach ([[750.0, null], [10.0, [['message' => 'Forbidden']]]] as [$duration, $errors]) {
+            $trace = new GraphqlQueryTrace();
+            $trace->graphql = 'query { tasks { id } }';
+            $trace->duration = $duration;
+            $trace->errors = $errors;
+            $collector->addQuery($trace);
+        }
+
+        $html = $this->render($collector);
+
+        self::assertStringContainsString('data-graphql-orm-filter="slow"', $html);
+        self::assertStringContainsString('data-graphql-orm-filter="error"', $html);
+        self::assertStringContainsString('data-graphql-orm-status="slow"', $html);
+        self::assertStringContainsString('data-graphql-orm-status="error"', $html);
     }
 
     #[Test]
@@ -140,6 +199,14 @@ final class ProfilerTemplateTest extends TestCase
         self::assertStringContainsString('query { users(id: ***) { id } }', $html);
         self::assertStringContainsString('#1, #2, #4', strip_tags($html));
         self::assertStringContainsString('href="#graphql-orm-query-4"', $html);
+    }
+
+    /**
+     * The visible text of the page, with its spaces collapsed.
+     */
+    private static function text(string $html): string
+    {
+        return trim((string) preg_replace('/\s+/', ' ', html_entity_decode(strip_tags($html))));
     }
 
     /**

@@ -66,274 +66,198 @@
 {# ================= PANEL ================= #}
 
 {% block panel %}
-    <h2>GraphQL ORM Queries</h2>
+    <h2>GraphQL ORM</h2>
     {% if collector.queryCount == 0 %}
         <div class="empty">
             <p>No GraphQL queries were executed.</p>
         </div>
     {% else %}
-        {% if collector.repeatedQueries is not empty %}
-            <div class="sf-profiler-block graphql-orm-repeated">
-                <h3>Repeated queries</h3>
-                <p>
-                    These queries differ only by their values, which is the sign of a loop sending one query per entity
-                    (an N+1 problem), e.g. lazy relations loaded one by one. Select the fields you need, raise
-                    <code>max_depth</code>, or use a dialect loading the lazy relations in batches.
-                </p>
-                <table>
+        {% set durations = collector.queries|map(query => query.duration) %}
+        {% set maxDuration = max(durations|merge([0.001])) %}
+        <div id="graphql-orm-panel">
+            <div class="metrics">
+                <div class="metric">
+                    <span class="value">{{ collector.queryCount }}</span>
+                    <span class="label">Queries</span>
+                </div>
+                <div class="metric">
+                    <span class="value">{{ collector.totalDuration|number_format(1) }} <span class="unit">ms</span></span>
+                    <span class="label">Time in GraphQL</span>
+                </div>
+                {% if collector.slowQueryThreshold is not null %}
+                    <div class="metric">
+                        <span class="value">{{ collector.slowQueryCount }}</span>
+                        <span class="label">Slow (&ge; {{ collector.slowQueryThreshold }} ms)</span>
+                    </div>
+                {% endif %}
+                <div class="metric">
+                    <span class="value">{{ collector.errorCount }}</span>
+                    <span class="label">Errors</span>
+                </div>
+                <div class="metric">
+                    <span class="value">{{ collector.hydratedEntityCount }}</span>
+                    <span class="label">Entities hydrated</span>
+                </div>
+                <div class="metric">
+                    <span class="value">{{ (collector.responseSize / 1024)|number_format(1) }} <span class="unit">KB</span></span>
+                    <span class="label">Received</span>
+                </div>
+            </div>
+
+            {% if collector.repeatedQueries is not empty %}
+                <div class="graphql-orm-alert">
+                    <strong>{{ collector.repeatedQueries|length }} {{ collector.repeatedQueries|length > 1 ? 'queries are' : 'query is' }} repeated with other values</strong>
+                    <a href="#graphql-orm-repeated" data-graphql-orm-goto="repeated">See which ones</a>
+                </div>
+            {% endif %}
+
+            <div class="tab-navigation graphql-orm-tabs" role="tablist">
+                <button type="button" class="tab-control active" role="tab" aria-selected="true" data-graphql-orm-tab="queries">
+                    Queries <span class="badge">{{ collector.queryCount }}</span>
+                </button>
+                {% if collector.repeatedQueries is not empty %}
+                    <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="repeated">
+                        Repeated <span class="badge status-warning">{{ collector.repeatedQueries|length }}</span>
+                    </button>
+                {% endif %}
+            </div>
+
+            <div data-graphql-orm-view="queries">
+                <div class="graphql-orm-toolbar" role="group" aria-label="Filter the queries">
+                    <button type="button" class="graphql-orm-chip" aria-pressed="true" data-graphql-orm-filter="all">All {{ collector.queryCount }}</button>
+                    {% if collector.slowQueryCount|default(0) > 0 %}
+                        <button type="button" class="graphql-orm-chip" aria-pressed="false" data-graphql-orm-filter="slow">Slow {{ collector.slowQueryCount }}</button>
+                    {% endif %}
+                    {% if collector.errorCount > 0 %}
+                        <button type="button" class="graphql-orm-chip" aria-pressed="false" data-graphql-orm-filter="error">Errors {{ collector.errorCount }}</button>
+                    {% endif %}
+                    <input type="search" class="graphql-orm-search" placeholder="Search the queries" aria-label="Search the queries">
+                </div>
+
+                <table class="graphql-orm-queries">
                     <thead>
-                        <tr><th>Sent</th><th>Queries</th><th>Query, values masked</th></tr>
+                        <tr>
+                            <th>#</th>
+                            <th>Root field</th>
+                            <th>Duration</th>
+                            <th class="graphql-orm-number">Size</th>
+                            <th class="graphql-orm-number">Entities</th>
+                            <th>Status</th>
+                        </tr>
                     </thead>
                     <tbody>
-                        {% for repeated in collector.repeatedQueries %}
-                            <tr>
-                                <td>{{ repeated.count }} times</td>
-                                <td>{% for number in repeated.queries %}<a href="#graphql-orm-query-{{ number }}">#{{ number }}</a>{{ loop.last ? '' : ', ' }}{% endfor %}</td>
-                                <td><pre>{{ repeated.shape }}</pre></td>
+                        {% for query in collector.queries %}
+                            {% set status = query.errors ? 'error' : ((query.slow ?? false) ? 'slow' : 'ok') %}
+                            <tr id="graphql-orm-query-{{ loop.index }}"
+                                class="graphql-orm-row {{ status == 'error' ? 'status-error' : (status == 'slow' ? 'status-warning') }}"
+                                tabindex="0" aria-expanded="false"
+                                data-graphql-orm-row="{{ loop.index }}"
+                                data-graphql-orm-status="{{ status }}"
+                                data-graphql-orm-text="{{ query.graphql|lower }}">
+                                <td class="graphql-orm-number">{{ loop.index }}</td>
+                                <td>
+                                    <code>{{ query.root_field ?? '-' }}</code>
+                                    {% if query.caller %}
+                                        <div class="graphql-orm-muted">{{ query.caller.file|split('/')|last }}:{{ query.caller.line }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="graphql-orm-bar">
+                                        <span class="graphql-orm-track"><span class="graphql-orm-fill graphql-orm-fill-{{ status }}" style="width: {{ max(2, query.duration / maxDuration * 100)|round(1) }}%"></span></span>
+                                        <span class="graphql-orm-number">{{ query.duration|number_format(1) }} ms</span>
+                                    </div>
+                                </td>
+                                <td class="graphql-orm-number">{{ (query.response_size / 1024)|number_format(1) }} KB</td>
+                                <td class="graphql-orm-number">{{ query.hydrated_entities }}</td>
+                                <td>
+                                    {% if status == 'error' %}
+                                        <span class="badge badge-danger">Error</span>
+                                    {% elseif status == 'slow' %}
+                                        <span class="badge badge-warning graphql-orm-slow-badge" title="over {{ collector.slowQueryThreshold }} ms">Slow</span>
+                                    {% else %}
+                                        <span class="badge badge-success">OK</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr class="graphql-orm-detail" data-graphql-orm-detail="{{ loop.index }}" hidden>
+                                <td colspan="6">
+                                    {{ _self.renderDetail(query, loop.index) }}
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
+                <p class="graphql-orm-muted">Click a query to see its GraphQL, its variables, its AST and its hydration.</p>
             </div>
-        {% endif %}
 
-        {% for query in collector.queries %}
-            <div class="sf-profiler-block" id="graphql-orm-query-{{ loop.index }}">
-                <h3>
-                    Query #{{ loop.index }}
-                    {% if query.slow is defined and query.slow %}
-                        <span class="graphql-orm-slow-badge" title="over {{ collector.slowQueryThreshold }} ms" style="
-                            background:#ffcc00;
-                            color:#222;
-                            padding:2px 6px;
-                            border-radius:4px;
-                            font-size:12px;
-                            margin-left:6px;
-                            ">slow: {{ query.duration|number_format(0) }} ms</span>
-                    {% endif %}
-                    {% if query.errors %}
-                        <span style="
-                            background:#ff6b6b;
-                            color:white;
-                            padding:2px 6px;
-                            border-radius:4px;
-                            font-size:12px;
-                            margin-left:6px;
-                            ">
-                            ERROR
-                        </span>
-                    {% endif %}
-                </h3>
-                <table>
-                    <tbody>
-                    <tr>
-                        <th style="width:150px">Endpoint</th>
-                        <td>{{ query.endpoint }}</td>
-                    </tr>
-                    <tr>
-                        <th>Duration</th>
-                        <td>{{ query.duration|number_format(2) }} ms</td>
-                    </tr>
-                    <tr>
-                        <th>Response size</th>
-                        <td>{{ query.response_size }} bytes</td>
-                    </tr>
-                    <tr>
-                        <th>GraphQL Depth</th>
-                        <td>{{ query.depth_used }}</td>
-                    </tr>
-                    </tbody>
-                </table>
-
-                {% if query.errors %}
-                    <h4 style="color: #ff6b6b">GraphQL Errors</h4>
-
-                    {% for error in query.errors %}
-                        <div style="
-                            background: #2a1416;
-                            border-left: 4px solid #ff6b6b;
-                            padding: 10px;
-                            margin-bottom: 10px;
-                            border-radius: 6px;
-                            ">
-                            <strong>{{ error.message }}</strong>
-
-                            {% if error.extensions.code ?? null %}
-                                <br>
-                                <small>Code : {{ error.extensions.code }}</small>
-                            {% endif %}
-
-                            {% if error.extensions.exception.stacktrace ?? null %}
-                                <details style="margin-top: 8px">
-                                    <summary style="cursor: pointer">
-                                        Stacktrace
-                                    </summary>
-                                    <pre style="
-                                        max-height: 250px;
-                                        overflow: auto;
-                                        background: #18171b;
-                                        padding: 10px;
-                                        border-radius: 6px;
-                                        ">
-{{ error.extensions.exception.stacktrace|join("\n") }}
-                                    </pre>
-                                </details>
-                            {% endif %}
-                        </div>
-                    {% endfor %}
-                {% endif %}
-
-                <h4>Hydration</h4>
-                <table {% if query.errors %}style="opacity: .5"{% endif %}>
-                    <tbody>
-                    <tr>
-                        <th style="width:200px">Entities</th>
-                        <td>{{ query.hydrated_entities }}</td>
-                    </tr>
-                    <tr>
-                        <th>Relations</th>
-                        <td>{{ query.hydrated_relations }}</td>
-                    </tr>
-                    <tr>
-                        <th>Collections</th>
-                        <td>{{ query.hydrated_collections }}</td>
-                    </tr>
-                    <tr>
-                        <th>Root result count</th>
-                        <td>{{ query.hydrated_count }}</td>
-                    </tr>
-                    </tbody>
-                </table>
-
-                <h4>GraphQL Query</h4>
-                <div style="position:relative">
-                    <button
-                            class="sf-toolbar-reset"
-                            style="
-position:absolute;
-right:8px;
-top:8px;
-cursor:pointer;
-font-size:12px;
-padding:4px 8px;
-border-radius:4px;
-border:1px solid #444;
-background:#2d2d2d;
-color:white;
-" onclick="copyToClipboard(this)" data-copy="{{ query.graphql|e('html_attr') }}">
-                        Copy
-                    </button>
-                    <pre style="
-white-space:pre-wrap;
-overflow:auto;
-max-height:300px;
-background:#18171b;
-color:#d7dae0;
-padding:10px;
-border-radius:6px;
-">
-{{ query.graphql }}
-</pre>
+            {% if collector.repeatedQueries is not empty %}
+                <div data-graphql-orm-view="repeated" id="graphql-orm-repeated" hidden>
+                    <h3>Repeated queries</h3>
+                    <p>
+                        These queries differ only by their values, which is the sign of a loop sending one query per entity
+                        (an N+1 problem), e.g. lazy relations loaded one by one. Select the fields you need, raise
+                        <code>max_depth</code>, or use a dialect loading the lazy relations in batches.
+                    </p>
+                    <table>
+                        <thead>
+                            <tr><th>Sent</th><th>Queries</th><th>Query, values masked</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for repeated in collector.repeatedQueries %}
+                                <tr>
+                                    <td>{{ repeated.count }} times</td>
+                                    <td>{% for number in repeated.queries %}<a href="#graphql-orm-query-{{ number }}" data-graphql-orm-open="{{ number }}">#{{ number }}</a>{{ loop.last ? '' : ', ' }}{% endfor %}</td>
+                                    <td><pre>{{ repeated.shape }}</pre></td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
-
-                {% if query.curl is defined and query.curl %}
-                    <p>
-                        <button class="btn btn-sm" onclick="copyToClipboard(this)" data-copy="{{ query.curl|e('html_attr') }}"
-                                title="Values are masked unless redact_query_values is false; headers such as Authorization are not included.">
-                            Copy as cURL
-                        </button>
-                    </p>
-                {% endif %}
-
-                {% if query.ast %}
-                    <h4>GraphQL AST</h4>
-                    <div class="graphql-ast-tree">
-                        {{ _self.renderAst(query.ast, 0) }}
-                    </div>
-                {% endif %}
-
-                <h4>Variables</h4>
-                {% if query.variables %}
-                    <pre>{{ dump(query.variables) }}</pre>
-                {% else %}
-                    <p>—</p>
-                {% endif %}
-                <h4>Caller</h4>
-                {% if query.caller %}
-                    <p>
-                        <strong>
-                            {{ query.caller.file|split('/')|last }}:{{ query.caller.line }}
-                        </strong>
-                        <br>
-                        {{ query.caller.class }}::{{ query.caller.function }}()
-                        <br>
-                        <small style="color:#666">
-                            {{ query.caller.file }}
-                        </small>
-                    </p>
-                {% endif %}
-                <hr>
-            </div>
-        {% endfor %}
+            {% endif %}
+        </div>
     {% endif %}
 
-
     <style>
-        .graphql-ast-tree{
-            font-family:monospace;
-            background:#18171b;
-            padding:12px;
-            border-radius:6px;
-        }
+        #graphql-orm-panel { display: flex; flex-direction: column; gap: 12px; }
+        #graphql-orm-panel .metrics { margin: 0; }
+        .graphql-orm-muted { color: var(--color-muted, #737373); font-size: 12px; }
+        .graphql-orm-number { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .graphql-orm-alert { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; padding: 10px 14px; border-radius: 6px; border-left: 4px solid var(--color-warning, #785b02); background: var(--badge-warning-background, #fde496); color: var(--badge-warning-color, #785b02); }
+        .graphql-orm-alert a { color: inherit; text-decoration: underline; }
+        .graphql-orm-tabs { margin: 0; }
+        .graphql-orm-tabs .tab-control { border: 0; background: transparent; font: inherit; cursor: pointer; }
+        .graphql-orm-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+        .graphql-orm-chip { border: 1px solid var(--table-border-color, #d4d4d4); background: var(--page-background, #fff); color: var(--color-text, #262626); border-radius: 14px; padding: 2px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+        .graphql-orm-chip[aria-pressed="true"] { background: var(--color-link, #1d4ed8); border-color: var(--color-link, #1d4ed8); color: var(--page-background, #fff); }
+        .graphql-orm-search { margin-left: auto; min-width: 0; flex: 0 1 260px; border: 1px solid var(--form-input-border-color, #d4d4d4); background: var(--page-background, #fff); color: var(--color-text, #262626); border-radius: 6px; padding: 4px 10px; font: inherit; font-size: 13px; }
+        .graphql-orm-queries .graphql-orm-row { cursor: pointer; }
+        .graphql-orm-queries .graphql-orm-row:hover td, .graphql-orm-queries .graphql-orm-row[aria-expanded="true"] td { background: var(--table-header, #f5f5f5); }
+        .graphql-orm-queries .graphql-orm-row:focus-visible { outline: 2px solid var(--color-link, #1d4ed8); outline-offset: -2px; }
+        .graphql-orm-bar { display: flex; align-items: center; gap: 8px; min-width: 160px; }
+        .graphql-orm-track { flex: 1; height: 6px; border-radius: 3px; background: var(--table-header, #f5f5f5); box-shadow: inset 0 0 0 1px var(--table-border-color, #d4d4d4); overflow: hidden; }
+        .graphql-orm-fill { display: block; height: 100%; border-radius: 3px; background: var(--color-link, #1d4ed8); }
+        .graphql-orm-fill-slow { background: var(--color-warning, #785b02); }
+        .graphql-orm-fill-error { background: var(--color-error, #b41939); }
+        .graphql-orm-detail > td { padding: 0; }
+        .graphql-orm-detail-box { display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; border-left: 3px solid var(--color-link, #1d4ed8); }
+        .graphql-orm-subtabs { display: flex; flex-wrap: wrap; gap: 4px; }
+        .graphql-orm-subtab { border: 1px solid var(--table-border-color, #d4d4d4); background: var(--page-background, #fff); color: var(--color-muted, #737373); border-radius: 4px; padding: 3px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+        .graphql-orm-subtab[aria-selected="true"] { background: var(--color-text, #262626); border-color: var(--color-text, #262626); color: var(--page-background, #fff); }
+        .graphql-orm-code { margin: 0; max-height: 320px; overflow: auto; white-space: pre-wrap; background: var(--code-block-background, #fafafa); padding: 10px 12px; border-radius: 6px; }
+        .graphql-orm-actions { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+        .graphql-orm-error { border-left: 4px solid var(--color-error, #b41939); background: var(--badge-danger-background, #fce9ed); color: var(--badge-danger-color, #83122a); padding: 8px 12px; border-radius: 0 6px 6px 0; }
+        .graphql-orm-error pre { max-height: 250px; overflow: auto; }
 
-        .ast-node{
-            margin-left:12px;
-        }
-
-        .ast-header{
-            cursor:pointer;
-            padding:2px 6px;
-            border-radius:4px;
-            display:flex;
-            gap:8px;
-            align-items:center;
-        }
-
-        .ast-header:hover{
-            background:#2d2d2d;
-            outline:1px solid #4b4b4b;
-        }
-
-        .ast-toggle{
-            width:14px;
-            display:inline-block;
-            user-select:none;
-        }
-
-        .ast-leaf{
-            width:14px;
-            opacity:.4;
-        }
-
-        .ast-meta{
-            color:#888;
-            font-size:11px;
-            margin-left:auto;
-        }
-
-        .ast-name{
-            color:#9cdcfe;
-        }
-
-        .ast-children{
-            margin-left:18px;
-            border-left:1px solid #333;
-            padding-left:10px;
-        }
-
-        .ast-node.collapsed > .ast-children{
-            display:none;
-        }
+        .graphql-ast-tree { font-family: var(--font-family-monospace, monospace); background: var(--code-block-background, #fafafa); padding: 12px; border-radius: 6px; }
+        .ast-node { margin-left: 12px; }
+        .ast-header { cursor: pointer; padding: 2px 6px; border-radius: 4px; display: flex; gap: 8px; align-items: center; }
+        .ast-header:hover { background: var(--table-header, #f5f5f5); outline: 1px solid var(--table-border-color, #d4d4d4); }
+        .ast-toggle { width: 14px; display: inline-block; user-select: none; }
+        .ast-leaf { width: 14px; opacity: .4; }
+        .ast-meta { color: var(--color-muted, #737373); font-size: 11px; margin-left: auto; }
+        .ast-name { color: var(--color-link, #1d4ed8); }
+        .ast-children { margin-left: 18px; border-left: 1px solid var(--table-border-color, #d4d4d4); padding-left: 10px; }
+        .ast-node.collapsed > .ast-children { display: none; }
     </style>
 
     <script>
@@ -365,6 +289,103 @@ border-radius:6px;
                 });
         }
 
+        (() => {
+            const panel = document.getElementById("graphql-orm-panel");
+
+            if (!panel) {
+                return;
+            }
+
+            const selectTab = (name) => {
+                panel.querySelectorAll("[data-graphql-orm-tab]").forEach((tab) => {
+                    const selected = tab.dataset.graphqlOrmTab === name;
+                    tab.classList.toggle("active", selected);
+                    tab.setAttribute("aria-selected", String(selected));
+                });
+                panel.querySelectorAll("[data-graphql-orm-view]").forEach((view) => {
+                    view.hidden = view.dataset.graphqlOrmView !== name;
+                });
+            };
+
+            const toggleRow = (row, open) => {
+                const detail = panel.querySelector(`[data-graphql-orm-detail="${row.dataset.graphqlOrmRow}"]`);
+                const willOpen = open ?? detail.hidden;
+                detail.hidden = !willOpen;
+                row.setAttribute("aria-expanded", String(willOpen));
+            };
+
+            const applyFilter = () => {
+                const filter = panel.querySelector(".graphql-orm-chip[aria-pressed=\"true\"]").dataset.graphqlOrmFilter;
+                const term = panel.querySelector(".graphql-orm-search").value.trim().toLowerCase();
+                panel.querySelectorAll("[data-graphql-orm-row]").forEach((row) => {
+                    const visible = (filter === "all" || row.dataset.graphqlOrmStatus === filter)
+                        && (term === "" || row.dataset.graphqlOrmText.includes(term));
+                    row.hidden = !visible;
+                    if (!visible) {
+                        toggleRow(row, false);
+                    }
+                });
+            };
+
+            const openQuery = (number) => {
+                selectTab("queries");
+                const row = panel.querySelector(`[data-graphql-orm-row="${number}"]`);
+                if (row) {
+                    toggleRow(row, true);
+                    row.scrollIntoView({ block: "center" });
+                }
+            };
+
+            panel.addEventListener("click", (event) => {
+                const tab = event.target.closest("[data-graphql-orm-tab]");
+                const goto = event.target.closest("[data-graphql-orm-goto]");
+                const open = event.target.closest("[data-graphql-orm-open]");
+                const chip = event.target.closest("[data-graphql-orm-filter]");
+                const subtab = event.target.closest("[data-graphql-orm-subtab]");
+                const row = event.target.closest("[data-graphql-orm-row]");
+
+                if (tab || goto) {
+                    event.preventDefault();
+                    selectTab((tab ?? goto).dataset[tab ? "graphqlOrmTab" : "graphqlOrmGoto"]);
+                } else if (open) {
+                    event.preventDefault();
+                    openQuery(open.dataset.graphqlOrmOpen);
+                } else if (chip) {
+                    panel.querySelectorAll("[data-graphql-orm-filter]").forEach((other) => other.setAttribute("aria-pressed", String(other === chip)));
+                    applyFilter();
+                } else if (subtab) {
+                    const box = subtab.closest(".graphql-orm-detail-box");
+                    box.querySelectorAll("[data-graphql-orm-subtab]").forEach((other) => other.setAttribute("aria-selected", String(other === subtab)));
+                    box.querySelectorAll("[data-graphql-orm-pane]").forEach((pane) => {
+                        pane.hidden = pane.dataset.graphqlOrmPane !== subtab.dataset.graphqlOrmSubtab;
+                    });
+                } else if (row && !event.target.closest("a, button, input")) {
+                    toggleRow(row);
+                }
+            });
+
+            panel.addEventListener("keydown", (event) => {
+                const row = event.target.closest("[data-graphql-orm-row]");
+                if (row && event.target === row && (event.key === "Enter" || event.key === " ")) {
+                    event.preventDefault();
+                    toggleRow(row);
+                }
+            });
+
+            panel.querySelector(".graphql-orm-search").addEventListener("input", applyFilter);
+
+            // A query in error is shown open: it is what the page was opened for.
+            const failed = panel.querySelector("[data-graphql-orm-status=\"error\"]");
+            if (failed) {
+                toggleRow(failed, true);
+            }
+
+            const hash = window.location.hash.match(/^#graphql-orm-query-(\d+)$/);
+            if (hash) {
+                openQuery(hash[1]);
+            }
+        })();
+
         document.addEventListener("click", (e) => {
             const header = e.target.closest(".ast-header")
 
@@ -391,6 +412,82 @@ border-radius:6px;
 {% endblock %}
 
 {# ================= MACROS ================= #}
+
+{% macro renderDetail(query, number) %}
+    <div class="graphql-orm-detail-box">
+        {% for error in query.errors ?? [] %}
+            <div class="graphql-orm-error">
+                <strong>{{ error.message }}</strong>
+                {% if error.extensions.code ?? null %}
+                    <br><small>Code: {{ error.extensions.code }}</small>
+                {% endif %}
+                {% if error.extensions.exception.stacktrace ?? null %}
+                    <details>
+                        <summary>Stacktrace</summary>
+                        <pre>{{ error.extensions.exception.stacktrace|join("\n") }}</pre>
+                    </details>
+                {% endif %}
+            </div>
+        {% endfor %}
+
+        <div class="graphql-orm-subtabs" role="tablist" aria-label="Query #{{ number }}">
+            <button type="button" class="graphql-orm-subtab" role="tab" aria-selected="true" data-graphql-orm-subtab="graphql">GraphQL</button>
+            <button type="button" class="graphql-orm-subtab" role="tab" aria-selected="false" data-graphql-orm-subtab="variables">Variables</button>
+            {% if query.ast %}
+                <button type="button" class="graphql-orm-subtab" role="tab" aria-selected="false" data-graphql-orm-subtab="ast">AST</button>
+            {% endif %}
+            <button type="button" class="graphql-orm-subtab" role="tab" aria-selected="false" data-graphql-orm-subtab="hydration">Hydration</button>
+        </div>
+
+        <div data-graphql-orm-pane="graphql">
+            <pre class="graphql-orm-code">{{ query.graphql }}</pre>
+        </div>
+        <div data-graphql-orm-pane="variables" hidden>
+            {% if query.variables %}
+                {{ dump(query.variables) }}
+            {% else %}
+                <p class="graphql-orm-muted">No variables: the values are written in the query.</p>
+            {% endif %}
+        </div>
+        {% if query.ast %}
+            <div data-graphql-orm-pane="ast" hidden>
+                <div class="graphql-ast-tree">
+                    {{ _self.renderAst(query.ast, 0) }}
+                </div>
+            </div>
+        {% endif %}
+        <div data-graphql-orm-pane="hydration" hidden>
+            <table>
+                <tbody>
+                    <tr><th>Entities</th><td>{{ query.hydrated_entities }}</td></tr>
+                    <tr><th>Relations</th><td>{{ query.hydrated_relations }}</td></tr>
+                    <tr><th>Collections</th><td>{{ query.hydrated_collections }}</td></tr>
+                    <tr><th>Root result count</th><td>{{ query.hydrated_count }}</td></tr>
+                    <tr><th>Depth used</th><td>{{ query.depth_used }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="graphql-orm-actions">
+            <button type="button" class="btn btn-sm" onclick="copyToClipboard(this)" data-copy="{{ query.graphql|e('html_attr') }}">Copy</button>
+            {% if query.curl is defined and query.curl %}
+                <button type="button" class="btn btn-sm" onclick="copyToClipboard(this)" data-copy="{{ query.curl|e('html_attr') }}"
+                        title="Values are masked unless redact_query_values is false; headers such as Authorization are not included.">
+                    Copy as cURL
+                </button>
+            {% endif %}
+            {% if query.caller %}
+                <span class="graphql-orm-muted" title="{{ query.caller.file }}">
+                    Called from <code>{{ query.caller.file|split('/')|last }}:{{ query.caller.line }}</code>
+                    {% if query.caller.class %}{{ query.caller.class }}::{{ query.caller.function }}(){% endif %}
+                </span>
+            {% endif %}
+            {% if query.endpoint %}
+                <span class="graphql-orm-muted">POST {{ query.endpoint }}</span>
+            {% endif %}
+        </div>
+    </div>
+{% endmacro %}
 
 {% macro renderAst(node, depth) %}
     {% import _self as self %}

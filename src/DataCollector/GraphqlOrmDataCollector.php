@@ -35,6 +35,7 @@ final class GraphqlOrmDataCollector extends DataCollector
         $queries = $this->getQueries();
         $queries[] = [
             'graphql' => $trace->graphql,
+            'root_field' => self::rootField($trace->graphql),
             // The query with its values masked: queries differing only by their values share it.
             'shape' => $this->redactor->redactQuery($trace->graphql),
             'ast' => $trace->ast,
@@ -53,6 +54,14 @@ final class GraphqlOrmDataCollector extends DataCollector
             'slow' => $this->slowQueryThreshold !== null && $trace->duration >= $this->slowQueryThreshold,
         ];
         $this->data['queries'] = $queries;
+    }
+
+    /**
+     * The first field selected by the query, e.g. "tasks" for `query($first: Int) { tasks(first: $first) { id } }`.
+     */
+    private static function rootField(string $graphql): ?string
+    {
+        return preg_match('/\{\s*(\w+)/', $graphql, $matches) === 1 ? $matches[1] : null;
     }
 
     /**
@@ -152,6 +161,19 @@ final class GraphqlOrmDataCollector extends DataCollector
         }
 
         return $repeated;
+    }
+
+    public function getHydratedEntityCount(): int
+    {
+        return array_sum(array_map(fn (array $query): int => \is_int($query['hydrated_entities'] ?? null) ? $query['hydrated_entities'] : 0, $this->getQueries()));
+    }
+
+    /**
+     * @return int the bytes of all the responses
+     */
+    public function getResponseSize(): int
+    {
+        return array_sum(array_map(fn (array $query): int => \is_int($query['response_size'] ?? null) ? $query['response_size'] : 0, $this->getQueries()));
     }
 
     public function getErrorCount(): int
