@@ -23,11 +23,13 @@ use GraphqlOrm\Metadata\Naming\SnakeCaseNamingStrategy;
 use GraphqlOrm\Schema\SchemaIntrospector;
 use GraphqlOrm\Schema\SchemaValidationMode;
 use GraphqlOrm\Schema\SchemaValidator;
+use GraphqlOrm\Twig\GraphqlOrmTwigExtension;
 use GraphqlOrm\ValueResolver\GraphqlEntityValueResolver;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Form\FormTypeInterface;
 use Symfony\Component\Stopwatch\Stopwatch;
+use Twig\Extension\AbstractExtension;
 
 use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
@@ -66,6 +68,12 @@ return static function (ContainerConfigurator $config) {
     $services->set(GraphqlEntityValueResolver::class)
         ->autoconfigure(false)
         ->tag('controller.argument_value_resolver', ['priority' => 110, 'name' => GraphqlEntityValueResolver::class]);
+
+    // twig/twig is optional: the profiler panel needs it, and highlights the queries with this extension.
+    if (class_exists(AbstractExtension::class)) {
+        $services->set(GraphqlOrmTwigExtension::class)
+            ->tag('twig.extension');
+    }
 
     // symfony/form is optional.
     if (interface_exists(FormTypeInterface::class)) {

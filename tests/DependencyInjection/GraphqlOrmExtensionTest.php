@@ -30,6 +30,7 @@ use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use GraphqlOrm\Tests\Fixtures\FakeEventDispatcher;
 use GraphqlOrm\Tests\Fixtures\FakeHeadersProvider;
 use GraphqlOrm\Tests\Fixtures\FakeRepository\FakeProjectRepository;
+use GraphqlOrm\Twig\GraphqlOrmTwigExtension;
 use GraphqlOrm\ValueResolver\GraphqlEntityValueResolver;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -280,6 +281,14 @@ final class GraphqlOrmExtensionTest extends TestCase
 
         self::assertIsArray($entityClasses);
         self::assertContains(ChainA::class, $entityClasses);
+    }
+
+    #[Test]
+    public function itRegistersTheTwigExtensionOfTheProfiler(): void
+    {
+        $container = $this->createContainer(debug: true);
+
+        self::assertTrue($container->getDefinition(GraphqlOrmTwigExtension::class)->hasTag('twig.extension'));
     }
 
     #[Test]

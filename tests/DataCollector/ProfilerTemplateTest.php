@@ -7,6 +7,7 @@ namespace GraphqlOrm\Tests\DataCollector;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Query\GraphqlQueryTrace;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
+use GraphqlOrm\Twig\GraphqlOrmTwigExtension;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
@@ -312,6 +313,15 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itHighlightsTheGraphqlQueries(): void
+    {
+        $html = $this->render($this->collector(['query { tasks(first: 10) { id } }']));
+
+        self::assertStringContainsString('<span class="graphql-orm-hl-keyword">query</span>', $html);
+        self::assertStringContainsString('<span class="graphql-orm-hl-argument">first</span>', $html);
+    }
+
+    #[Test]
     public function itWarnsAboutRepeatedQueries(): void
     {
         $collector = $this->collector([
@@ -325,7 +335,7 @@ final class ProfilerTemplateTest extends TestCase
 
         self::assertStringContainsString('Repeated queries', $html);
         self::assertStringContainsString('3 times', $html);
-        self::assertStringContainsString('query { users(id: ***) { id } }', $html);
+        self::assertStringContainsString('query { users(id: ***) { id } }', self::text($html));
         self::assertStringContainsString('#1, #2, #4', strip_tags($html));
         self::assertStringContainsString('href="#graphql-orm-query-4"', $html);
     }
@@ -365,6 +375,7 @@ final class ProfilerTemplateTest extends TestCase
 
         $twig = new Environment(new ChainLoader([$profiler, $filesystem]), ['debug' => true, 'strict_variables' => true]);
         $twig->addExtension(new DebugExtension());
+        $twig->addExtension(new GraphqlOrmTwigExtension());
 
         return $twig->render('@GraphqlOrm/collector/graphql_orm.html.twig', ['collector' => $collector, 'profiler_url' => '/_profiler/abc']);
     }
