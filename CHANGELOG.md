@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Profiler: the time spent hydrating each response, apart from the network: a "Hydration" metric, a grey part in the
+  duration bar of each query, and the time in its "Hydration" tab. `GraphqlQueryTrace::$hydrationDuration` holds it.
+
+---
+
 ## [5.1.1] — 2026-10-15
 
 ### Fixed

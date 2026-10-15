@@ -4,12 +4,14 @@ GraphQL ORM integrates with the **Symfony Web Debug Toolbar** and Profiler.
 
 For each request, the panel shows:
 
-- **Metrics**: number of queries, time spent in GraphQL (measured via Symfony Stopwatch), slow queries when
+- **Metrics**: number of queries, time spent in GraphQL (measured via Symfony Stopwatch), time spent hydrating the
+  responses, slow queries when
   `slow_query_threshold` is set (see [logging.md](logging.md#slow-queries)), errors, entities hydrated and bytes
   received.
 - **An alert** for each relation loaded one entity at a time, and when queries are repeated (see
   [below](#n-1-and-repeated-queries)).
-- **The queries**, one row each: origin, root field and entity, caller, duration bar, response size, entities
+- **The queries**, one row each: origin, root field and entity, caller, duration bar (the network, then the hydration
+  in grey: whether the time goes to the API or to the mapping), response size, entities
   hydrated and status (an error in red, a slow query in yellow). Filter them by status, or search their text. A query in
   error is shown open.
 - **The identity map**: the entities that `find()` served from the shared identity map, known in full from an earlier
