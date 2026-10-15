@@ -46,6 +46,15 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itCopiesWithoutTheClipboardApiOutsideASecureContext(): void
+    {
+        $html = $this->render($this->collector(['query { tasks { id } }']));
+
+        self::assertStringContainsString('navigator.clipboard && window.isSecureContext', $html);
+        self::assertStringContainsString('document.execCommand("copy")', $html);
+    }
+
+    #[Test]
     public function itHighlightsTheSlowQueries(): void
     {
         $collector = new GraphqlOrmDataCollector(slowQueryThreshold: 500.0);
