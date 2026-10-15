@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Profiler: the relations loaded on first access 3 times or more, one query each (an N+1 problem), with their queries,
   their duration and the lines reading them, in an alert, the toolbar and the "N+1 & repeated" tab. The lazy loads are
   no longer counted as repeated queries. `GraphqlQueryTrace::$lazyRelation` names the relation of a lazy load.
+- Profiler: the entities that `find()` served from the shared identity map without a query, with the lines calling it,
+  in a metric and an "Identity map" tab.
 - `GraphqlEntityRepository::getClassName()`, as Doctrine, and `GraphqlQuery::getEntityClass()`.
 - `GraphqlQueryTrace::$startedAt`, `$origin` and `$entityClass`, the two last ones filled when the profiler is enabled.
 

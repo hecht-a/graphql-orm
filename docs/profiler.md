@@ -12,6 +12,8 @@ For each request, the panel shows:
 - **The queries**, one row each: origin, root field and entity, caller, duration bar, response size, entities
   hydrated and status (an error in red, a slow query in yellow). Filter them by status, or search their text. A query in
   error is shown open.
+- **The identity map**: the entities that `find()` served from the shared identity map, known in full from an earlier
+  query, each one a query not sent (see [shared identity map](configuration.md#shared-identity-map)).
 - **A timeline** of the queries during the request: overlapping bars are queries sent together, e.g. by
   `GraphqlQuery::concurrently()`.
 
