@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `#[Identifier]` marks the identifier field, as Doctrine `#[Id]`; `#[Relation]` maps a relation or a collection, with
   `mappedFrom`, `targetEntity`, `fetch` and `ignoreValidation`. `graphqlorm:make:entity` generates them. A property
   holding an entity mapped with `#[Field]`, or mapped with two field attributes, throws an `InvalidArgumentException`.
+- `GraphqlManagerInterface`, as Doctrine `EntityManagerInterface`, with `getRepository()` and `clear()`: the type to
+  inject, and to simulate or decorate in the tests of an application. Autowired to `GraphqlManager`.
 
 ### Changed
 
@@ -35,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Not setting `identity_map`, `max_depth`, `variables.enabled` and `schema_validation.mode`: their default value changes
   in 5.0 (`true`, `1`, `true`, `warning` in debug mode). Set them, see "Defaults changing in 5.0" in
   docs/configuration.md.
+- Extending `GraphqlManager`: it is `@final` since 4.9 and final in 5.0, reported by the Symfony debug class loader.
+  Depend on `GraphqlManagerInterface` to simulate or decorate it.
 
 ---
 

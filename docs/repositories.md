@@ -23,6 +23,17 @@ Declared as a service (autowired, as with the default Symfony configuration) and
 $tasks = $manager->getRepository(Task::class); // TaskRepository
 ```
 
+Inject `GraphqlManagerInterface`, as Doctrine `EntityManagerInterface`: it is the type to simulate or decorate in the
+tests of an application. `GraphqlManager` is final in 5.0 (`@final` since 4.9).
+
+```php
+public function __construct(private GraphqlManagerInterface $manager) {}
+
+// in a test
+$manager = $this->createStub(GraphqlManagerInterface::class);
+$manager->method('getRepository')->willReturn($taskRepository);
+```
+
 The form type, the controller argument resolver and the `graphqlorm:find` command go through it, so your own methods
 and overrides apply there too. The lazy loading keeps a generic repository, so that an override of `find()` does not
 change how lazy relations are loaded.
