@@ -158,7 +158,8 @@ final class MyDialect implements GraphqlQueryDialect
 ```
 
 To support `count()`, implement `CountingDialect`: `countField()` builds the root field selecting the count, printed
-without collection envelope, and `readCount()` reads it from the response.
+without collection envelope, and `readCount()` reads it from the response. `countField()` receives the GraphQL name of the identifier,
+or `null` when the entity has none or its property is typed with neither `int` nor `float`.
 
 If the filter of your API supports `in()` on the identifier, implement the `BatchLoadingDialect` marker interface: the
 lazy relations of a response are then loaded with one query per class instead of one per entity.
