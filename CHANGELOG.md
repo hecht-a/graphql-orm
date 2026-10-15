@@ -21,6 +21,8 @@ Fix the deprecations reported by 4.9 first: each of them is a change of 5.0.
   4.9, so that test suites do not introspect the API). An application that set them, as 4.9 asked, sees no change;
   otherwise, mind the relations no longer selected beyond the first level (raise `max_depth`, or map them with
   `Fetch::Lazy`), and an API refusing introspection, whose values are then sent inline with a logged warning.
+- `Direction::ASC` and `Direction::DESC` are removed: use the cases `Direction::Asc` and `Direction::Desc`. The values
+  sent (`ASC`, `DESC`) are unchanged.
 - `symfony/deprecation-contracts` is no longer a direct dependency.
 
 ### Added

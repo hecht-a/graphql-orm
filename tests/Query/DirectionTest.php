@@ -17,9 +17,9 @@ final class DirectionTest extends TestCase
     }
 
     #[Test]
-    public function itKeepsTheUppercaseNamesOfVersion48AsConstants(): void
+    public function itNoLongerHasTheUppercaseNamesOfVersion48(): void
     {
-        self::assertSame(Direction::Asc, \constant(Direction::class . '::ASC'));
-        self::assertSame(Direction::Desc, \constant(Direction::class . '::DESC'));
+        self::assertFalse(\defined(Direction::class . '::ASC'));
+        self::assertFalse(\defined(Direction::class . '::DESC'));
     }
 }
