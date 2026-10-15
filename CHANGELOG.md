@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `GraphqlManager::getRepository()`, as Doctrine `EntityManager::getRepository()`: the repository service named in the
+  `repositoryClass` of `#[GraphqlEntity]`, a generic one otherwise. The repositories extending
+  `GraphqlEntityRepository` are found by autoconfiguration (`graphql_orm.repository` tag).
+
+### Changed
+
+- The `query_builder` option of `GraphqlEntityType`, the controller argument resolver and `graphqlorm:find` use the
+  repository of the application: its own methods and overrides apply there too.
+
+---
+
 ## [4.8.0] — 2026-10-13
 
 ### Added

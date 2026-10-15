@@ -15,6 +15,18 @@ class TaskRepository extends GraphqlEntityRepository
 }
 ```
 
+Declared as a service (autowired, as with the default Symfony configuration) and named in the `repositoryClass` of
+`#[GraphqlEntity]`, the repository is the one `GraphqlManager::getRepository()` gives, as Doctrine
+`EntityManager::getRepository()`; an entity without one gets a generic `GraphqlEntityRepository`:
+
+```php
+$tasks = $manager->getRepository(Task::class); // TaskRepository
+```
+
+The form type, the controller argument resolver and the `graphqlorm:find` command go through it, so your own methods
+and overrides apply there too. The lazy loading keeps a generic repository, so that an override of `find()` does not
+change how lazy relations are loaded.
+
 ## Built-in methods
 
 ```php

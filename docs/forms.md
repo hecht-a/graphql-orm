@@ -21,7 +21,7 @@ another query.
 | Option          | Default                                     | Description                                                         |
 |-----------------|---------------------------------------------|---------------------------------------------------------------------|
 | `class`         | required                                    | class of the entities                                               |
-| `query_builder` | `null`: `findAll()`                         | callable receiving a repository and returning a query builder       |
+| `query_builder` | `null`: `findAll()`                         | callable receiving the repository and returning a query builder     |
 | `choice_label`  | `__toString()`, otherwise the identifier    | property path or callable, as with `ChoiceType`                     |
 
 The other options are those of `ChoiceType` (`multiple`, `expanded`, `placeholder`...).
@@ -30,14 +30,14 @@ The other options are those of `ChoiceType` (`multiple`, `expanded`, `placeholde
 $builder->add('task', GraphqlEntityType::class, [
     'class' => Task::class,
     'choice_label' => 'title',
-    'query_builder' => fn (GraphqlEntityRepository $repository) => $repository->createQueryBuilder()
+    'query_builder' => fn (TaskRepository $repository) => $repository->createQueryBuilder()
         ->where($repository->createQueryBuilder()->expr()->eq('done', false))
         ->orderBy('title', Direction::ASC),
 ]);
 ```
 
-The callable receives a `GraphqlEntityRepository` of the class, not your own repository service: build the query from
-its query builder.
+The callable receives the repository of the class, as `GraphqlManager::getRepository()` gives it: your own repository
+service when the entity names one in its `repositoryClass`, a generic `GraphqlEntityRepository` otherwise.
 
 The choices are loaded once the form needs them (rendering or submission), with one query. Mind the page size of your
 API: Data API Builder returns 100 rows by default (`runtime.pagination.default-page-size`), so limit the choices with `query_builder` or raise the page size.
