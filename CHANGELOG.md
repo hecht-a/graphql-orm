@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Direction::ASC` and `Direction::DESC`: use `Direction::Asc` and `Direction::Desc`, the cases being named in
   PascalCase as the other enums of the bundle. The old names are constants of the enum, pointing to the new cases, so
   that `Direction::ASC === Direction::Asc`; they are removed in 5.0. The values sent (`ASC`, `DESC`) are unchanged.
+- Not setting `identity_map`, `max_depth`, `variables.enabled` and `schema_validation.mode`: their default value changes
+  in 5.0 (`true`, `1`, `true`, `warning` in debug mode). Set them, see "Defaults changing in 5.0" in
+  docs/configuration.md.
 
 ---
 

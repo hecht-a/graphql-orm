@@ -101,6 +101,35 @@ $task->user->name;                  // users(...) { id name ... }: the user is l
 
 Lazy ghosts are a PHP 8.4 feature: they need no proxy class, and work with `final` entity classes.
 
+## Defaults changing in 5.0
+
+Four options get a new default value in 5.0. Not setting them is deprecated since 4.9 (`Not setting the
+"graphql_orm.identity_map" option is deprecated...`): set them, to the new value to adopt it now, or to the current
+one to keep it.
+
+| Option                   | Default in 4.x | Default in 5.0            |
+|--------------------------|----------------|---------------------------|
+| `identity_map`           | `false`        | `true`                    |
+| `max_depth`              | `2`            | `1`, with [lazy relations](entity-mapping.md#lazy-relations) for what is read |
+| `variables.enabled`      | `false`        | `true`                    |
+| `schema_validation.mode` | `disabled`     | `warning` in debug mode   |
+
+```yaml
+# config/packages/graphql_orm.yaml: the defaults of 5.0, adopted now
+graphql_orm:
+    identity_map: true
+    max_depth: 1
+    variables:
+        enabled: true
+    schema_validation:
+        mode: disabled
+
+when@dev:
+    graphql_orm:
+        schema_validation:
+            mode: warning
+```
+
 ## Shared identity map
 
 By default each query has its own identity map: two `find(1)` send two queries and give two instances. With
