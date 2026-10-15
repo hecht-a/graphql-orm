@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Profiler: opening a stored profile with slow queries failed with "Typed property ...::$slowQueryThreshold must not be
   accessed before initialization": a profile read from the storage only has its data, the threshold is now kept there.
+  Fixed in 4.10.2 as well.
 
 ### Changed
 
@@ -69,6 +70,19 @@ Fix the deprecations reported by 4.9 first: each of them is a change of 5.0. The
   these options.
 
 ---
+
+
+## [4.10.2] — 2026-10-15
+
+4.10.1 is withdrawn: its tag pointed by mistake at the code of 5.0. 4.10.2 holds the fix meant for it, on top of 4.10.0.
+
+### Fixed
+
+- Profiler: opening a stored profile with slow queries failed with "Typed property ...::$slowQueryThreshold must not be
+  accessed before initialization": a profile read from the storage only has its data, the threshold is now kept there.
+
+---
+
 
 ## [4.10.0] — 2026-10-15
 
