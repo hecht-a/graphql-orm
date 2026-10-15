@@ -278,6 +278,22 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itRendersAProfileReadFromTheStorage(): void
+    {
+        $collector = new GraphqlOrmDataCollector(slowQueryThreshold: 500.0, configuration: ['max_depth' => 1]);
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { tasks { id } }';
+        $trace->duration = 750.0;
+        $collector->addQuery($trace);
+        $collector->collect(new Request(), new Response());
+
+        $restored = unserialize(serialize($collector));
+        self::assertInstanceOf(GraphqlOrmDataCollector::class, $restored);
+
+        self::assertStringContainsString('Slow (≥ 500 ms)', self::text($this->render($restored)));
+    }
+
+    #[Test]
     public function itWarnsAboutRepeatedQueries(): void
     {
         $collector = $this->collector([

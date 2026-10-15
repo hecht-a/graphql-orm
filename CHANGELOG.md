@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `GraphqlEntityRepository::getClassName()`, as Doctrine, and `GraphqlQuery::getEntityClass()`.
 - `GraphqlQueryTrace::$startedAt`, `$origin` and `$entityClass`, the two last ones filled when the profiler is enabled.
 
+### Fixed
+
+- Profiler: opening a stored profile with slow queries failed with "Typed property ...::$slowQueryThreshold must not be
+  accessed before initialization": a profile read from the storage only has its data, the threshold is now kept there.
+
 ### Changed
 
 - The profiler panel is reorganized: metrics first (queries, time, slow queries, errors, entities hydrated, bytes

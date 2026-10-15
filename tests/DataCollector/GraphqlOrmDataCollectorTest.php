@@ -259,6 +259,20 @@ final class GraphqlOrmDataCollectorTest extends TestCase
         self::assertSame(['max_depth' => 1, 'identity_map' => true], $collector->getConfiguration());
     }
 
+    #[Test]
+    public function itKeepsTheSlowQueryThresholdInTheStoredProfile(): void
+    {
+        $collector = new GraphqlOrmDataCollector(slowQueryThreshold: 500.0);
+        $collector->addQuery(self::trace(duration: 750.0, errors: null));
+        $collector->collect(new Request(), new Response());
+
+        $restored = unserialize(serialize($collector));
+
+        self::assertInstanceOf(GraphqlOrmDataCollector::class, $restored);
+        self::assertSame(500.0, $restored->getSlowQueryThreshold());
+        self::assertSame(1, $restored->getSlowQueryCount());
+    }
+
     private static function lazyLoad(string $relation, float $duration, int $line): GraphqlQueryTrace
     {
         $trace = self::traceOf('query { users(id: 3) { id name } }');
