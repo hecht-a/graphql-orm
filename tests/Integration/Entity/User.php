@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Integration\Entity;
 
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\GraphqlField;
-use GraphqlOrm\Attribute\Identifier;
-use GraphqlOrm\Attribute\Relation;
+use GraphqlOrm\Mapping\Entity;
+use GraphqlOrm\Mapping\Field;
+use GraphqlOrm\Mapping\Identifier;
+use GraphqlOrm\Mapping\Relation;
 
-#[GraphqlEntity(name: 'users')]
+#[Entity(name: 'users')]
 class User
 {
-    #[GraphqlField(mappedFrom: 'id')]
+    #[Field(mappedFrom: 'id')]
     #[Identifier]
     public int $id;
 
-    #[GraphqlField(mappedFrom: 'name')]
+    #[Field(mappedFrom: 'name')]
     public string $name;
 
     /** @var Task[] */

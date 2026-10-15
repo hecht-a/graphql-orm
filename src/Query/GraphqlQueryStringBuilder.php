@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Query;
 
-use GraphqlOrm\Attribute\Fetch;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\GraphqlManager;
+use GraphqlOrm\Mapping\Fetch;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Ast\QueryNode;

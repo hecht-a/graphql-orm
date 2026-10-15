@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\ValueResolver;
 
-use GraphqlOrm\Attribute\GraphqlEntity;
 use GraphqlOrm\Attribute\MapGraphqlEntity;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\GraphqlManager;
@@ -65,7 +64,7 @@ final readonly class GraphqlEntityValueResolver implements ValueResolverInterfac
      */
     private function isEntity(?string $class): bool
     {
-        return $class !== null && class_exists($class) && (new \ReflectionClass($class))->getAttributes(GraphqlEntity::class) !== [];
+        return $class !== null && $this->manager->getMetadataFactory()->isEntityClass($class);
     }
 
     /**

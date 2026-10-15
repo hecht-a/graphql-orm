@@ -41,7 +41,7 @@ final class MakeGraphqlEntityCommandTest extends TestCase
         $exitCode = $tester->execute(['name' => 'Task']);
 
         self::assertSame(Command::SUCCESS, $exitCode);
-        self::assertStringContainsString("#[GraphqlField(mappedFrom: 'title')]", $this->entityCode());
+        self::assertStringContainsString("#[Field(mappedFrom: 'title')]", $this->entityCode());
     }
 
     #[Test]
@@ -90,10 +90,10 @@ final class MakeGraphqlEntityCommandTest extends TestCase
 
         self::assertSame(Command::SUCCESS, $exitCode);
         $code = $this->entityCode();
-        self::assertStringContainsString("#[GraphqlField(mappedFrom: 'id')]\n    #[Identifier]\n    private int \$id;", $code);
-        self::assertStringContainsString("#[GraphqlField(mappedFrom: 'title')]\n    private ?string \$title = null;", $code);
+        self::assertStringContainsString("#[Field(mappedFrom: 'id')]\n    #[Identifier]\n    private int \$id;", $code);
+        self::assertStringContainsString("#[Field(mappedFrom: 'title')]\n    private ?string \$title = null;", $code);
         self::assertStringContainsString("#[Relation(mappedFrom: 'owner')]\n    private ?User \$owner = null;", $code);
-        self::assertStringContainsString("use GraphqlOrm\\Attribute\\Identifier;\nuse GraphqlOrm\\Attribute\\Relation;", $code);
+        self::assertStringContainsString("use GraphqlOrm\\Mapping\\Identifier;\nuse GraphqlOrm\\Mapping\\Relation;", $code);
         self::assertStringContainsString('use App\GraphQL\Entity\User;', $code);
         self::assertStringContainsString('User', $tester->getDisplay());
     }

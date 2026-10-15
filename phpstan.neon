@@ -8,4 +8,8 @@ parameters:
 		# Code analysed by the tests of the bundle rules, with deliberate errors
 		- tests/PHPStan/data/*
 
+	# The deprecated alias GraphqlOrm\Attribute\Fetch is declared with class_alias(), which PHPStan only sees once loaded
+	bootstrapFiles:
+		- src/Attribute/Fetch.php
+
 	tmpDir: cache

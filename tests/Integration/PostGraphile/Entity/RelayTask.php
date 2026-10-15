@@ -4,28 +4,28 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Integration\PostGraphile\Entity;
 
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\GraphqlField;
-use GraphqlOrm\Attribute\Identifier;
-use GraphqlOrm\Attribute\Relation;
+use GraphqlOrm\Mapping\Entity;
+use GraphqlOrm\Mapping\Field;
+use GraphqlOrm\Mapping\Identifier;
+use GraphqlOrm\Mapping\Relation;
 
 /**
  * PostGraphile Relay connections (RelayDialect).
  */
-#[GraphqlEntity(name: 'allTasks')]
+#[Entity(name: 'allTasks')]
 class RelayTask
 {
-    #[GraphqlField(mappedFrom: 'id')]
+    #[Field(mappedFrom: 'id')]
     #[Identifier]
     public int $id;
 
-    #[GraphqlField(mappedFrom: 'title')]
+    #[Field(mappedFrom: 'title')]
     public string $title;
 
-    #[GraphqlField(mappedFrom: 'done')]
+    #[Field(mappedFrom: 'done')]
     public bool $done;
 
-    #[GraphqlField(mappedFrom: 'dueDate')]
+    #[Field(mappedFrom: 'dueDate')]
     public ?\DateTimeImmutable $dueDate = null;
 
     #[Relation(mappedFrom: 'userByUserId')]

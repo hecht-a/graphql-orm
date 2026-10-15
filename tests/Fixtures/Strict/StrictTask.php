@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Fixtures\Strict;
 
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\GraphqlField;
-use GraphqlOrm\Attribute\Identifier;
-use GraphqlOrm\Attribute\Relation;
+use GraphqlOrm\Mapping\Entity;
+use GraphqlOrm\Mapping\Field;
+use GraphqlOrm\Mapping\Identifier;
+use GraphqlOrm\Mapping\Relation;
 
-#[GraphqlEntity(name: 'strictTasks')]
+#[Entity(name: 'strictTasks')]
 class StrictTask
 {
-    #[GraphqlField(mappedFrom: 'id')]
+    #[Field(mappedFrom: 'id')]
     #[Identifier]
     public int $id;
 
-    #[GraphqlField(mappedFrom: 'title')]
+    #[Field(mappedFrom: 'title')]
     public string $title;
 
     #[Relation(mappedFrom: 'owner')]

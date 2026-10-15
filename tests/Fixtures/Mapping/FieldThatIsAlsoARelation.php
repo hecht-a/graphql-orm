@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Fixtures\Mapping;
 
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\GraphqlField;
-use GraphqlOrm\Attribute\Relation;
+use GraphqlOrm\Mapping\Entity;
+use GraphqlOrm\Mapping\Field;
+use GraphqlOrm\Mapping\Relation;
 
-#[GraphqlEntity(name: 'items')]
+#[Entity(name: 'items')]
 class FieldThatIsAlsoARelation
 {
-    #[GraphqlField]
+    #[Field]
     #[Relation]
     public ?MappedUser $user = null;
 }

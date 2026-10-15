@@ -6,11 +6,11 @@ namespace GraphqlOrm\Hydrator;
 
 use GraphqlOrm\Attribute\AfterHydrate;
 use GraphqlOrm\Attribute\BeforeHydrate;
-use GraphqlOrm\Attribute\Fetch;
 use GraphqlOrm\Exception\CastException;
 use GraphqlOrm\Exception\EntityNotFoundException;
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
+use GraphqlOrm\Mapping\Fetch;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;

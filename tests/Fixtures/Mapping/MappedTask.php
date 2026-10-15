@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Fixtures\Mapping;
 
-use GraphqlOrm\Attribute\Fetch;
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\GraphqlField;
-use GraphqlOrm\Attribute\Identifier;
-use GraphqlOrm\Attribute\Relation;
+use GraphqlOrm\Mapping\Entity;
+use GraphqlOrm\Mapping\Fetch;
+use GraphqlOrm\Mapping\Field;
+use GraphqlOrm\Mapping\Identifier;
+use GraphqlOrm\Mapping\Relation;
 
-#[GraphqlEntity(name: 'tasks')]
+#[Entity(name: 'tasks')]
 class MappedTask
 {
-    #[GraphqlField]
+    #[Field]
     #[Identifier]
     public int $id;
 
-    #[GraphqlField]
+    #[Field]
     public string $title;
 
     #[Relation(fetch: Fetch::Lazy)]

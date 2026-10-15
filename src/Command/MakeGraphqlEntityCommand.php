@@ -306,8 +306,8 @@ final readonly class MakeGraphqlEntityCommand
         foreach ($properties as $property) {
             $attribute = match (true) {
                 $property->relation => "#[Relation(mappedFrom: '{$property->mappedFrom}')]",
-                $property->identifier => "#[GraphqlField(mappedFrom: '{$property->mappedFrom}')]\n    #[Identifier]",
-                default => "#[GraphqlField(mappedFrom: '{$property->mappedFrom}')]",
+                $property->identifier => "#[Field(mappedFrom: '{$property->mappedFrom}')]\n    #[Identifier]",
+                default => "#[Field(mappedFrom: '{$property->mappedFrom}')]",
             };
 
             if ($property->relation) {
@@ -356,10 +356,10 @@ PHP;
      */
     private function attributeImports(array $properties): string
     {
-        $attributes = ['GraphqlEntity'];
+        $attributes = ['Entity'];
 
         foreach ($properties as $property) {
-            $attributes[] = $property->relation ? 'Relation' : 'GraphqlField';
+            $attributes[] = $property->relation ? 'Relation' : 'Field';
 
             if ($property->identifier && !$property->relation) {
                 $attributes[] = 'Identifier';
@@ -369,7 +369,7 @@ PHP;
         $attributes = array_unique($attributes);
         sort($attributes);
 
-        return implode("\n", array_map(fn (string $attribute) => 'use GraphqlOrm\\Attribute\\' . $attribute . ';', $attributes));
+        return implode("\n", array_map(fn (string $attribute) => 'use GraphqlOrm\\Mapping\\' . $attribute . ';', $attributes));
     }
 
     /**

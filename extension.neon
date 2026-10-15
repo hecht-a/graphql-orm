@@ -1,6 +1,9 @@
 # PHPStan rules of the bundle: included automatically with phpstan/extension-installer, otherwise add
 # "vendor/hecht-a/graphql-orm/extension.neon" to the includes of your PHPStan configuration.
 parameters:
+    # The deprecated alias GraphqlOrm\Attribute\Fetch is declared with class_alias(), which PHPStan only sees once loaded.
+    bootstrapFiles:
+        - src/Attribute/Fetch.php
     graphqlOrm:
         # Report field names that the entity does not map; false only reports what is certainly wrong.
         reportUnmappedFields: true

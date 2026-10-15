@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Fixtures\FakeEntity;
 
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\GraphqlField;
+use GraphqlOrm\Mapping\Entity;
+use GraphqlOrm\Mapping\Field;
 
-#[GraphqlEntity(name: 'logs')]
+#[Entity(name: 'logs')]
 class FakeEntityWithoutIdentifier
 {
-    #[GraphqlField(mappedFrom: 'message')]
+    #[Field(mappedFrom: 'message')]
     public string $message;
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Metadata;
 
-use GraphqlOrm\Attribute\Fetch;
+use GraphqlOrm\Mapping\Fetch;
 
 /**
  * @internal

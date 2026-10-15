@@ -4,23 +4,23 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Fixtures\FakeEntity;
 
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\GraphqlField;
-use GraphqlOrm\Attribute\Identifier;
+use GraphqlOrm\Mapping\Entity;
+use GraphqlOrm\Mapping\Field;
+use GraphqlOrm\Mapping\Identifier;
 
 /**
  * Each property has the GraphQL name of the other field.
  */
-#[GraphqlEntity(name: 'items')]
+#[Entity(name: 'items')]
 class FakeEntityWithSwappedNames
 {
-    #[GraphqlField(mappedFrom: 'id')]
+    #[Field(mappedFrom: 'id')]
     #[Identifier]
     public int $id;
 
-    #[GraphqlField(mappedFrom: 'label')]
+    #[Field(mappedFrom: 'label')]
     public string $name;
 
-    #[GraphqlField(mappedFrom: 'name')]
+    #[Field(mappedFrom: 'name')]
     public string $label;
 }

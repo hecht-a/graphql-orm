@@ -4,22 +4,22 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Integration\PostGraphile\Entity;
 
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\GraphqlField;
-use GraphqlOrm\Attribute\Identifier;
-use GraphqlOrm\Attribute\Relation;
+use GraphqlOrm\Mapping\Entity;
+use GraphqlOrm\Mapping\Field;
+use GraphqlOrm\Mapping\Identifier;
+use GraphqlOrm\Mapping\Relation;
 
 /**
  * PostGraphile simple collections (DefaultDialect).
  */
-#[GraphqlEntity(name: 'allUsersList')]
+#[Entity(name: 'allUsersList')]
 class ListUser
 {
-    #[GraphqlField(mappedFrom: 'id')]
+    #[Field(mappedFrom: 'id')]
     #[Identifier]
     public int $id;
 
-    #[GraphqlField(mappedFrom: 'name')]
+    #[Field(mappedFrom: 'name')]
     public string $name;
 
     /** @var ListTask[] */

@@ -5,22 +5,22 @@ declare(strict_types=1);
 namespace GraphqlOrm\Tests\Fixtures\FakeEntity;
 
 use GraphqlOrm\Attribute\AfterHydrate;
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\GraphqlField;
-use GraphqlOrm\Attribute\Identifier;
+use GraphqlOrm\Mapping\Entity;
+use GraphqlOrm\Mapping\Field;
+use GraphqlOrm\Mapping\Identifier;
 use GraphqlOrm\Tests\Fixtures\FakeRepository\FakeRepository;
 
-#[GraphqlEntity(name: 'products', repositoryClass: FakeRepository::class)]
+#[Entity(name: 'products', repositoryClass: FakeRepository::class)]
 class FakeEntityWithAfterHydrate
 {
-    #[GraphqlField(mappedFrom: 'id')]
+    #[Field(mappedFrom: 'id')]
     #[Identifier]
     public int $id;
 
-    #[GraphqlField(mappedFrom: 'price')]
+    #[Field(mappedFrom: 'price')]
     public float $price;
 
-    #[GraphqlField(mappedFrom: 'taxRate')]
+    #[Field(mappedFrom: 'taxRate')]
     public float $taxRate;
 
     public float $priceWithTax = 0.0;

@@ -4,23 +4,23 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Integration\Entity;
 
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\GraphqlField;
-use GraphqlOrm\Attribute\Identifier;
-use GraphqlOrm\Attribute\Relation;
+use GraphqlOrm\Mapping\Entity;
+use GraphqlOrm\Mapping\Field;
+use GraphqlOrm\Mapping\Identifier;
+use GraphqlOrm\Mapping\Relation;
 
 /**
  * A deliberately wrong mapping of the tasks, for the schema validation tests: due_date is nullable in the database,
  * and a task has a single user.
  */
-#[GraphqlEntity(name: 'tasks')]
+#[Entity(name: 'tasks')]
 class BrokenTask
 {
-    #[GraphqlField(mappedFrom: 'id')]
+    #[Field(mappedFrom: 'id')]
     #[Identifier]
     public int $id;
 
-    #[GraphqlField(mappedFrom: 'due_date')]
+    #[Field(mappedFrom: 'due_date')]
     public \DateTimeImmutable $dueDate;
 
     /** @var User[] */

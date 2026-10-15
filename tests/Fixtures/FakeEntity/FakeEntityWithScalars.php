@@ -4,24 +4,24 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Fixtures\FakeEntity;
 
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\GraphqlField;
-use GraphqlOrm\Attribute\Identifier;
+use GraphqlOrm\Mapping\Entity;
+use GraphqlOrm\Mapping\Field;
+use GraphqlOrm\Mapping\Identifier;
 use GraphqlOrm\Tests\Fixtures\FakeRepository\FakeRepository;
 
-#[GraphqlEntity(name: 'scalars', repositoryClass: FakeRepository::class)]
+#[Entity(name: 'scalars', repositoryClass: FakeRepository::class)]
 class FakeEntityWithScalars
 {
-    #[GraphqlField(mappedFrom: 'id')]
+    #[Field(mappedFrom: 'id')]
     #[Identifier]
     public ?int $id = null;
 
-    #[GraphqlField(mappedFrom: 'price')]
+    #[Field(mappedFrom: 'price')]
     public ?float $price = null;
 
-    #[GraphqlField(mappedFrom: 'active')]
+    #[Field(mappedFrom: 'active')]
     public ?bool $active = null;
 
-    #[GraphqlField(mappedFrom: 'label')]
+    #[Field(mappedFrom: 'label')]
     public ?string $label = null;
 }

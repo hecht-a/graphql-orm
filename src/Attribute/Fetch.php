@@ -4,14 +4,8 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Attribute;
 
-/**
- * When a relation is loaded, as Doctrine fetch modes.
- */
-enum Fetch
-{
-    /** Selected with its entity, up to max_depth. */
-    case Eager;
+use GraphqlOrm\Mapping\Fetch as MappingFetch;
 
-    /** Selected by its identifier only, and loaded on first access with the other relations of the response. */
-    case Lazy;
-}
+trigger_deprecation('hecht-a/graphql-orm', '4.9', 'The "%s" enum is deprecated, use "%s" instead.', 'GraphqlOrm\Attribute\Fetch', MappingFetch::class);
+
+class_alias(MappingFetch::class, 'GraphqlOrm\Attribute\Fetch');

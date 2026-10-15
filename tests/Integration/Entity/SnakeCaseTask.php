@@ -4,25 +4,25 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Integration\Entity;
 
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\GraphqlField;
-use GraphqlOrm\Attribute\Identifier;
-use GraphqlOrm\Attribute\Relation;
+use GraphqlOrm\Mapping\Entity;
+use GraphqlOrm\Mapping\Field;
+use GraphqlOrm\Mapping\Identifier;
+use GraphqlOrm\Mapping\Relation;
 
 /**
  * The tasks mapped without "mappedFrom", named by SnakeCaseNamingStrategy.
  */
-#[GraphqlEntity(name: 'tasks')]
+#[Entity(name: 'tasks')]
 class SnakeCaseTask
 {
-    #[GraphqlField]
+    #[Field]
     #[Identifier]
     public int $id;
 
-    #[GraphqlField]
+    #[Field]
     public string $title;
 
-    #[GraphqlField]
+    #[Field]
     public ?\DateTimeImmutable $dueDate = null;
 
     #[Relation]

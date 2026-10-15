@@ -6,6 +6,9 @@ namespace GraphqlOrm\Attribute;
 
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 
+/**
+ * @deprecated since 4.9, use #[GraphqlOrm\Mapping\Entity]
+ */
 #[\Attribute(\Attribute::TARGET_CLASS)]
 final readonly class GraphqlEntity
 {

@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Fixtures\Mapping;
 
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\GraphqlField;
-use GraphqlOrm\Attribute\Identifier;
-use GraphqlOrm\Attribute\Relation;
+use GraphqlOrm\Mapping\Entity;
+use GraphqlOrm\Mapping\Field;
+use GraphqlOrm\Mapping\Identifier;
+use GraphqlOrm\Mapping\Relation;
 
-#[GraphqlEntity(name: 'users')]
+#[Entity(name: 'users')]
 class MappedUser
 {
-    #[GraphqlField(mappedFrom: 'user_id')]
+    #[Field(mappedFrom: 'user_id')]
     #[Identifier]
     public int $id;
 

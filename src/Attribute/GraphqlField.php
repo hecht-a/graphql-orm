@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Attribute;
 
+use GraphqlOrm\Mapping\Fetch;
+
 /**
- * Maps a field holding a value: a scalar, a date, an enum. A relation is mapped with #[Relation], the identifier marked
- * with #[Identifier].
+ * @deprecated since 4.9, use #[GraphqlOrm\Mapping\Field], #[GraphqlOrm\Mapping\Identifier] and #[GraphqlOrm\Mapping\Relation]
  */
 #[\Attribute(\Attribute::TARGET_PROPERTY)]
 final readonly class GraphqlField

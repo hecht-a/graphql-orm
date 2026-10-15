@@ -4,25 +4,25 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Fixtures\FakeEntity;
 
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\GraphqlField;
-use GraphqlOrm\Attribute\Identifier;
-use GraphqlOrm\Attribute\Relation;
+use GraphqlOrm\Mapping\Entity;
+use GraphqlOrm\Mapping\Field;
+use GraphqlOrm\Mapping\Identifier;
+use GraphqlOrm\Mapping\Relation;
 
-#[GraphqlEntity(name: 'tasks')]
+#[Entity(name: 'tasks')]
 class FakeEntityNamedByStrategy
 {
-    #[GraphqlField]
+    #[Field]
     #[Identifier]
     public int $id;
 
-    #[GraphqlField]
+    #[Field]
     public string $title;
 
-    #[GraphqlField]
+    #[Field]
     public ?\DateTimeImmutable $dueDate = null;
 
-    #[GraphqlField(mappedFrom: 'deadline_at')]
+    #[Field(mappedFrom: 'deadline_at')]
     public ?\DateTimeImmutable $deadline = null;
 
     #[Relation]

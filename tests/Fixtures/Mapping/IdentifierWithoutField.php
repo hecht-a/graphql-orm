@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Fixtures\Mapping;
 
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\Identifier;
+use GraphqlOrm\Mapping\Entity;
+use GraphqlOrm\Mapping\Identifier;
 
-#[GraphqlEntity(name: 'items')]
+#[Entity(name: 'items')]
 class IdentifierWithoutField
 {
     #[Identifier]

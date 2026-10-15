@@ -4,25 +4,25 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Integration\Entity;
 
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\GraphqlField;
-use GraphqlOrm\Attribute\Identifier;
-use GraphqlOrm\Attribute\Relation;
+use GraphqlOrm\Mapping\Entity;
+use GraphqlOrm\Mapping\Field;
+use GraphqlOrm\Mapping\Identifier;
+use GraphqlOrm\Mapping\Relation;
 
-#[GraphqlEntity(name: 'tasks')]
+#[Entity(name: 'tasks')]
 class Task
 {
-    #[GraphqlField(mappedFrom: 'id')]
+    #[Field(mappedFrom: 'id')]
     #[Identifier]
     public int $id;
 
-    #[GraphqlField(mappedFrom: 'title')]
+    #[Field(mappedFrom: 'title')]
     public string $title;
 
-    #[GraphqlField(mappedFrom: 'done')]
+    #[Field(mappedFrom: 'done')]
     public bool $done;
 
-    #[GraphqlField(mappedFrom: 'due_date')]
+    #[Field(mappedFrom: 'due_date')]
     public ?\DateTimeImmutable $dueDate = null;
 
     #[Relation(mappedFrom: 'user')]

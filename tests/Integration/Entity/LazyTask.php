@@ -4,23 +4,23 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Integration\Entity;
 
-use GraphqlOrm\Attribute\Fetch;
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\GraphqlField;
-use GraphqlOrm\Attribute\Identifier;
-use GraphqlOrm\Attribute\Relation;
+use GraphqlOrm\Mapping\Entity;
+use GraphqlOrm\Mapping\Fetch;
+use GraphqlOrm\Mapping\Field;
+use GraphqlOrm\Mapping\Identifier;
+use GraphqlOrm\Mapping\Relation;
 
 /**
  * The tasks with their user loaded on first access.
  */
-#[GraphqlEntity(name: 'tasks')]
+#[Entity(name: 'tasks')]
 class LazyTask
 {
-    #[GraphqlField(mappedFrom: 'id')]
+    #[Field(mappedFrom: 'id')]
     #[Identifier]
     public int $id;
 
-    #[GraphqlField(mappedFrom: 'title')]
+    #[Field(mappedFrom: 'title')]
     public string $title;
 
     #[Relation(mappedFrom: 'user', fetch: Fetch::Lazy)]

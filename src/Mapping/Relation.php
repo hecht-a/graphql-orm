@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace GraphqlOrm\Attribute;
+namespace GraphqlOrm\Mapping;
 
 /**
  * Maps a relation to another entity, or a collection of them, as Doctrine #[ManyToOne] and #[OneToMany].

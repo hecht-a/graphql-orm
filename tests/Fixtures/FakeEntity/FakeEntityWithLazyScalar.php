@@ -4,18 +4,19 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Fixtures\FakeEntity;
 
-use GraphqlOrm\Attribute\Fetch;
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\GraphqlField;
-use GraphqlOrm\Attribute\Identifier;
+use GraphqlOrm\Mapping\Entity;
+use GraphqlOrm\Mapping\Fetch;
+use GraphqlOrm\Mapping\Field;
+use GraphqlOrm\Mapping\Identifier;
+use GraphqlOrm\Mapping\Relation;
 
-#[GraphqlEntity(name: 'items')]
+#[Entity(name: 'items')]
 class FakeEntityWithLazyScalar
 {
-    #[GraphqlField(mappedFrom: 'id')]
+    #[Field(mappedFrom: 'id')]
     #[Identifier]
     public int $id;
 
-    #[GraphqlField(mappedFrom: 'title', fetch: Fetch::Lazy)]
+    #[Relation(mappedFrom: 'title', fetch: Fetch::Lazy)]
     public string $title;
 }
