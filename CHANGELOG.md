@@ -23,6 +23,8 @@ Fix the deprecations reported by 4.9 first: each of them is a change of 5.0.
   `Fetch::Lazy`), and an API refusing introspection, whose values are then sent inline with a logged warning.
 - `Direction::ASC` and `Direction::DESC` are removed: use the cases `Direction::Asc` and `Direction::Desc`. The values
   sent (`ASC`, `DESC`) are unchanged.
+- `GraphqlManager` is final (`@final` since 4.9): depend on `GraphqlManagerInterface` to simulate or decorate it.
+  `EntityHydrator` and `GraphqlEntityMetadataFactory`, internal, are final as well.
 - `symfony/deprecation-contracts` is no longer a direct dependency.
 
 ### Added
