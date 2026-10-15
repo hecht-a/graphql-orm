@@ -88,6 +88,18 @@ $qb
 
 Ordering requires a dialect that supports it, see [dialects.md](dialects.md).
 
+## Keyed result
+
+`indexBy()` keys the result by a field of its entities, a GraphQL name or a PHP property, as Doctrine `indexBy`:
+
+```php
+$labels = $labelRepository->createQueryBuilder()->indexBy('code')->getQuery()->getResult();
+$labels['bug']->name;
+```
+
+The items of a page are keyed the same way. The field must hold an integer, a string, a backed enum or a `Stringable`;
+two entities with the same value keep the last one. `findBy()` takes it too, by name: `findBy([], indexBy: 'code')`.
+
 ## Raw GraphQL query
 
 You can bypass the builder entirely and provide a raw query string:

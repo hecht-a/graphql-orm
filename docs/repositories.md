@@ -51,6 +51,9 @@ $task = $repository->find(42);
 $tasks = $repository->findBy(['status' => 'active']);
 $tasks = $repository->findBy(['status' => 'active'], ['createdAt' => Direction::Desc], 10);
 
+// Keyed by a field, as Doctrine indexBy: ['bug' => Label, 'docs' => Label, ...]
+$labels = $labelRepository->findBy([], indexBy: 'code');
+
 // First entity matching the criteria (null when none)
 $task = $repository->findOneBy(['status' => 'active'], ['createdAt' => Direction::Desc]);
 

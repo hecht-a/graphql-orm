@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `indexBy`, as Doctrine: `findBy([], indexBy: 'code')` and `$qb->indexBy('code')` key the result (or the items of a
+  page) by a field of its entities, a GraphQL name or a PHP property. An unmapped field throws an
+  `InvalidArgumentException` suggesting the closest one.
+
+---
+
 ## [5.2.0] — 2026-10-15
 
 ### Added
