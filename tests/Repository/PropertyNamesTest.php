@@ -28,7 +28,7 @@ final class PropertyNamesTest extends TestCase
     {
         $client = new FakeGraphqlClient(self::NO_TASK);
 
-        $this->tasks($client)->findBy(['dueDate' => null], ['dueDate' => Direction::DESC]);
+        $this->tasks($client)->findBy(['dueDate' => null], ['dueDate' => Direction::Desc]);
 
         self::assertStringContainsString('filter: { due_date: { isNull: true } }', $client->lastQuery);
         self::assertStringContainsString('orderBy: { due_date: DESC }', $client->lastQuery);
@@ -39,7 +39,7 @@ final class PropertyNamesTest extends TestCase
     {
         $client = new FakeGraphqlClient(self::NO_TASK);
 
-        $this->tasks($client)->findBy(['due_date' => null], ['title' => Direction::ASC]);
+        $this->tasks($client)->findBy(['due_date' => null], ['title' => Direction::Asc]);
 
         self::assertStringContainsString('filter: { due_date: { isNull: true } }', $client->lastQuery);
         self::assertStringContainsString('orderBy: { title: ASC }', $client->lastQuery);
@@ -62,7 +62,7 @@ final class PropertyNamesTest extends TestCase
         $qb = $this->tasks($client)->createQueryBuilder();
 
         $qb->where($qb->expr()->orX($qb->expr()->isNull('dueDate'), $qb->expr()->andX($qb->expr()->eq('done', true), $qb->expr()->lt('dueDate', '2026-01-01'))))
-            ->orderBy('dueDate', Direction::ASC)
+            ->orderBy('dueDate', Direction::Asc)
             ->getQuery()
             ->getResult();
 

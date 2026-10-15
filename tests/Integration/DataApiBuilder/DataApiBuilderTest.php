@@ -87,8 +87,8 @@ final class DataApiBuilderTest extends IntegrationTestCase
     #[Test]
     public function itOrdersAndLimitsResults(): void
     {
-        $tasks = $this->tasks()->findBy([], ['title' => Direction::DESC], 2);
-        $first = $this->tasks()->findOneBy(['done' => false], ['id' => Direction::DESC]);
+        $tasks = $this->tasks()->findBy([], ['title' => Direction::Desc], 2);
+        $first = $this->tasks()->findOneBy(['done' => false], ['id' => Direction::Desc]);
 
         self::assertSame(['Write the docs', 'Review the tests'], array_map(fn (Task $task) => $task->title, $tasks));
         self::assertSame(4, $first?->id);
@@ -101,7 +101,7 @@ final class DataApiBuilderTest extends IntegrationTestCase
 
         $tasks = $qb
             ->where($qb->expr()->orX($qb->expr()->contains('title', 'docs'), $qb->expr()->eq('id', 3)))
-            ->orderBy('id', Direction::ASC)
+            ->orderBy('id', Direction::Asc)
             ->getQuery()
             ->getResult();
 
@@ -125,7 +125,7 @@ final class DataApiBuilderTest extends IntegrationTestCase
             ->getResult();
         $others = $this->tasks()->createQueryBuilder()
             ->where($expr->notIn('id', [1, 2]))
-            ->orderBy('id', Direction::ASC)
+            ->orderBy('id', Direction::Asc)
             ->getQuery()
             ->getResult();
 
@@ -141,7 +141,7 @@ final class DataApiBuilderTest extends IntegrationTestCase
     public function itIteratesOverEveryPage(): void
     {
         $tasks = $this->tasks()->createQueryBuilder()
-            ->orderBy('id', Direction::ASC)
+            ->orderBy('id', Direction::Asc)
             ->limit(3)
             ->paginate()
             ->getQuery()
@@ -153,9 +153,9 @@ final class DataApiBuilderTest extends IntegrationTestCase
     #[Test]
     public function itAcceptsThePropertyNamesOfTheEntity(): void
     {
-        $withoutDueDate = $this->tasks()->findBy(['dueDate' => null], ['id' => Direction::ASC]);
+        $withoutDueDate = $this->tasks()->findBy(['dueDate' => null], ['id' => Direction::Asc]);
         $qb = $this->tasks()->createQueryBuilder();
-        $withDueDate = $qb->where($qb->expr()->isNotNull('dueDate'))->orderBy('dueDate', Direction::DESC)->getQuery()->getResult();
+        $withDueDate = $qb->where($qb->expr()->isNotNull('dueDate'))->orderBy('dueDate', Direction::Desc)->getQuery()->getResult();
 
         self::assertSame([2, 4], self::ids($withoutDueDate));
         self::assertIsArray($withDueDate);
@@ -193,7 +193,7 @@ final class DataApiBuilderTest extends IntegrationTestCase
         $tasks = $this->repository(SnakeCaseTask::class, namingStrategy: new SnakeCaseNamingStrategy());
 
         $task = $tasks->find(1);
-        $withoutDueDate = $tasks->findBy(['dueDate' => null], ['id' => Direction::ASC]);
+        $withoutDueDate = $tasks->findBy(['dueDate' => null], ['id' => Direction::Asc]);
 
         self::assertInstanceOf(SnakeCaseTask::class, $task);
         self::assertSame('2026-01-15', $task->dueDate?->format('Y-m-d'));
@@ -205,7 +205,7 @@ final class DataApiBuilderTest extends IntegrationTestCase
     public function itFiltersThroughRelations(): void
     {
         $qb = $this->tasks()->createQueryBuilder();
-        $tasks = $qb->where($qb->expr()->orX($qb->expr()->eq('user.name', 'User B'), $qb->expr()->eq('id', 1)))->orderBy('id', Direction::ASC)->getQuery()->getResult();
+        $tasks = $qb->where($qb->expr()->orX($qb->expr()->eq('user.name', 'User B'), $qb->expr()->eq('id', 1)))->orderBy('id', Direction::Asc)->getQuery()->getResult();
         $users = $this->users()->createQueryBuilder();
         $withDoneTasks = $users->where($users->expr()->eq('tasks.done', true))->getQuery()->getResult();
 
@@ -231,8 +231,8 @@ final class DataApiBuilderTest extends IntegrationTestCase
     public function itRunsQueriesConcurrently(): void
     {
         [$tasks, $users] = GraphqlQuery::concurrently(
-            $this->tasks()->createQueryBuilder()->orderBy('id', Direction::ASC)->getQuery(),
-            $this->users()->createQueryBuilder()->orderBy('id', Direction::ASC)->getQuery(),
+            $this->tasks()->createQueryBuilder()->orderBy('id', Direction::Asc)->getQuery(),
+            $this->users()->createQueryBuilder()->orderBy('id', Direction::Asc)->getQuery(),
         );
 
         self::assertSame([1, 2, 3, 4], self::ids($tasks instanceof PaginatedResult ? $tasks->items : $tasks));
@@ -242,7 +242,7 @@ final class DataApiBuilderTest extends IntegrationTestCase
     #[Test]
     public function itMatchesAListOfValues(): void
     {
-        self::assertSame([1, 3], self::ids($this->tasks()->findBy(['id' => [1, 3]], ['id' => Direction::ASC])));
+        self::assertSame([1, 3], self::ids($this->tasks()->findBy(['id' => [1, 3]], ['id' => Direction::Asc])));
         self::assertSame([], $this->tasks()->findBy(['id' => []]));
         self::assertSame(2, $this->tasks()->count(['id' => [1, 3, 99]]));
     }
@@ -275,7 +275,7 @@ final class DataApiBuilderTest extends IntegrationTestCase
     public function itLoadsTheLazyRelationsOnFirstAccess(): void
     {
         $collector = new GraphqlOrmDataCollector();
-        $tasks = $this->repository(LazyTask::class, collector: $collector)->findBy(['id' => [1, 3]], ['id' => Direction::ASC]);
+        $tasks = $this->repository(LazyTask::class, collector: $collector)->findBy(['id' => [1, 3]], ['id' => Direction::Asc]);
         $users = $this->repository(UserWithLazyTasks::class, collector: $collector)->findBy(['id' => 1]);
 
         self::assertSame(2, $collector->getQueryCount());
@@ -293,8 +293,8 @@ final class DataApiBuilderTest extends IntegrationTestCase
         $tasks = (new GraphqlEntityRepository($manager, Task::class))->createQueryBuilder();
 
         [$open, $users] = GraphqlQuery::batch(
-            $tasks->where($tasks->expr()->eq('done', false))->orderBy('id', Direction::ASC)->getQuery(),
-            (new GraphqlEntityRepository($manager, User::class))->createQueryBuilder()->orderBy('id', Direction::ASC)->getQuery(),
+            $tasks->where($tasks->expr()->eq('done', false))->orderBy('id', Direction::Asc)->getQuery(),
+            (new GraphqlEntityRepository($manager, User::class))->createQueryBuilder()->orderBy('id', Direction::Asc)->getQuery(),
         );
 
         self::assertSame(1, $collector->getQueryCount());
@@ -307,7 +307,7 @@ final class DataApiBuilderTest extends IntegrationTestCase
     #[Test]
     public function itNavigatesBetweenPages(): void
     {
-        $firstPage = $this->tasks()->createQueryBuilder()->orderBy('id', Direction::ASC)->limit(3)->paginate()->getQuery()->getResult();
+        $firstPage = $this->tasks()->createQueryBuilder()->orderBy('id', Direction::Asc)->limit(3)->paginate()->getQuery()->getResult();
         self::assertInstanceOf(PaginatedResult::class, $firstPage);
 
         $secondPage = $firstPage->next();
@@ -322,11 +322,11 @@ final class DataApiBuilderTest extends IntegrationTestCase
     #[Test]
     public function itGoesBackToTheFirstPageFromAPaginationStartedAtACursor(): void
     {
-        $firstPage = $this->tasks()->createQueryBuilder()->orderBy('id', Direction::ASC)->limit(2)->paginate()->getQuery()->getResult();
+        $firstPage = $this->tasks()->createQueryBuilder()->orderBy('id', Direction::Asc)->limit(2)->paginate()->getQuery()->getResult();
         self::assertInstanceOf(PaginatedResult::class, $firstPage);
         self::assertNotNull($firstPage->endCursor);
 
-        $secondPage = $this->tasks()->createQueryBuilder()->orderBy('id', Direction::ASC)->limit(2)->paginate($firstPage->endCursor)->getQuery()->getResult();
+        $secondPage = $this->tasks()->createQueryBuilder()->orderBy('id', Direction::Asc)->limit(2)->paginate($firstPage->endCursor)->getQuery()->getResult();
         self::assertInstanceOf(PaginatedResult::class, $secondPage);
         $backToFirst = $secondPage->previous();
 
@@ -351,8 +351,8 @@ final class DataApiBuilderTest extends IntegrationTestCase
     {
         $resolver = new RootArgumentTypeResolver($this->client, new ArrayAdapter(), 60);
 
-        $tasks = $this->repository(Task::class, $resolver)->findBy(['done' => false], ['id' => Direction::ASC], 2);
-        $listed = $this->repository(Task::class, $resolver)->findBy(['id' => [2, 4]], ['id' => Direction::ASC]);
+        $tasks = $this->repository(Task::class, $resolver)->findBy(['done' => false], ['id' => Direction::Asc], 2);
+        $listed = $this->repository(Task::class, $resolver)->findBy(['id' => [2, 4]], ['id' => Direction::Asc]);
 
         self::assertSame([1, 3], array_map(fn (Task $task) => $task->id, $tasks));
         self::assertSame([2, 4], self::ids($listed));
@@ -373,7 +373,7 @@ final class DataApiBuilderTest extends IntegrationTestCase
     public function itLoadsTheLazyRelationsOfAResponseWithOneQuery(): void
     {
         $collector = new GraphqlOrmDataCollector();
-        $tasks = $this->repository(Task::class, maxDepth: 0, lazyLoading: true, collector: $collector)->findBy([], ['id' => Direction::ASC]);
+        $tasks = $this->repository(Task::class, maxDepth: 0, lazyLoading: true, collector: $collector)->findBy([], ['id' => Direction::Asc]);
 
         $names = array_map(fn (Task $task) => $task->user?->name, $tasks);
 

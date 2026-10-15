@@ -30,7 +30,7 @@ final class UnmappedFieldHintsTest extends TestCase
     {
         $tasks = $this->tasks((new MockGraphqlServer())->respondWithErrors(self::SERVER_ERROR));
 
-        $message = self::failure(fn () => $tasks->findBy(['titel' => 'A'], ['dueDat' => Direction::ASC]));
+        $message = self::failure(fn () => $tasks->findBy(['titel' => 'A'], ['dueDat' => Direction::Asc]));
 
         self::assertStringContainsString('The specified input object field `titel` does not exist.', $message);
         self::assertStringContainsString(\sprintf('Field "titel" is not mapped on %s: did you mean "title"?', Task::class), $message);

@@ -53,7 +53,7 @@ final class RepositoryFindMethodsTest extends TestCase
     {
         $client = new FakeGraphqlClient(self::DAB_TASKS);
 
-        $this->repository($client, new DataApiBuilderDialect())->findBy([], ['title' => Direction::DESC], 5);
+        $this->repository($client, new DataApiBuilderDialect())->findBy([], ['title' => Direction::Desc], 5);
 
         self::assertStringContainsString('first: 5', $client->lastQuery);
         self::assertStringContainsString('orderBy: { title: DESC }', $client->lastQuery);
@@ -74,7 +74,7 @@ final class RepositoryFindMethodsTest extends TestCase
         $repository = $this->repository(new FakeGraphqlClient(), new DefaultDialect());
 
         $this->expectException(LogicException::class);
-        $repository->findBy([], ['title' => Direction::ASC]);
+        $repository->findBy([], ['title' => Direction::Asc]);
     }
 
     #[Test]

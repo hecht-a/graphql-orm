@@ -26,7 +26,7 @@ final class HasuraEndToEndTest extends TestCase
     {
         $client = new FakeGraphqlClient(['data' => ['tasks' => [['id' => 1, 'title' => 'A'], ['id' => 2, 'title' => 'B']]]]);
 
-        $tasks = $this->repository($client, FakeTask::class)->findBy(['title' => 'A'], ['id' => Direction::DESC], 2);
+        $tasks = $this->repository($client, FakeTask::class)->findBy(['title' => 'A'], ['id' => Direction::Desc], 2);
 
         self::assertStringContainsString('tasks(where: { title: { _eq: "A" } }, order_by: { id: desc }, limit: 2) {', $client->lastQuery);
         self::assertSame(['A', 'B'], array_map(fn (FakeTask $task) => $task->title, $tasks));

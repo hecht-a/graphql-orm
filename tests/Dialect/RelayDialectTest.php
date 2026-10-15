@@ -61,7 +61,7 @@ final class RelayDialectTest extends TestCase
     public function itRejectsOrderingWhichRelayDoesNotStandardize(): void
     {
         $options = new QueryOptions();
-        $options->orderBy = ['title' => Direction::ASC];
+        $options->orderBy = ['title' => Direction::Asc];
 
         $this->expectException(LogicException::class);
         $this->dialect->applyQueryOptions([], $options);

@@ -28,7 +28,7 @@ final class DefaultDialectQueryOptionsTest extends TestCase
     public function itRejectsOrderingInsteadOfSilentlyIgnoringIt(): void
     {
         $options = new QueryOptions();
-        $options->orderBy = ['createdAt' => Direction::DESC];
+        $options->orderBy = ['createdAt' => Direction::Desc];
 
         $this->expectException(LogicException::class);
         (new DefaultDialect())->applyQueryOptions([], $options);

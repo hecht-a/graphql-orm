@@ -59,7 +59,7 @@ final class HasuraTest extends IntegrationTestCase
             ->getResult();
         $others = $this->repository(Task::class)->createQueryBuilder()
             ->where($expr->notIn('id', [1, 2]))
-            ->orderBy('id', Direction::ASC)
+            ->orderBy('id', Direction::Asc)
             ->getQuery()
             ->getResult();
 
@@ -75,7 +75,7 @@ final class HasuraTest extends IntegrationTestCase
     public function itIteratesOverEveryPage(): void
     {
         $tasks = $this->repository(Task::class)->createQueryBuilder()
-            ->orderBy('id', Direction::ASC)
+            ->orderBy('id', Direction::Asc)
             ->limit(3)
             ->paginate()
             ->getQuery()
@@ -87,9 +87,9 @@ final class HasuraTest extends IntegrationTestCase
     #[Test]
     public function itAcceptsThePropertyNamesOfTheEntity(): void
     {
-        $withoutDueDate = $this->repository(Task::class)->findBy(['dueDate' => null], ['id' => Direction::ASC]);
+        $withoutDueDate = $this->repository(Task::class)->findBy(['dueDate' => null], ['id' => Direction::Asc]);
         $qb = $this->repository(Task::class)->createQueryBuilder();
-        $withDueDate = $qb->where($qb->expr()->isNotNull('dueDate'))->orderBy('dueDate', Direction::DESC)->getQuery()->getResult();
+        $withDueDate = $qb->where($qb->expr()->isNotNull('dueDate'))->orderBy('dueDate', Direction::Desc)->getQuery()->getResult();
 
         self::assertSame([2, 4], self::ids($withoutDueDate));
         self::assertIsArray($withDueDate);
@@ -127,7 +127,7 @@ final class HasuraTest extends IntegrationTestCase
         $tasks = $this->repository(SnakeCaseTask::class, namingStrategy: new SnakeCaseNamingStrategy());
 
         $task = $tasks->find(1);
-        $withoutDueDate = $tasks->findBy(['dueDate' => null], ['id' => Direction::ASC]);
+        $withoutDueDate = $tasks->findBy(['dueDate' => null], ['id' => Direction::Asc]);
 
         self::assertInstanceOf(SnakeCaseTask::class, $task);
         self::assertSame('2026-01-15', $task->dueDate?->format('Y-m-d'));
@@ -139,7 +139,7 @@ final class HasuraTest extends IntegrationTestCase
     public function itFiltersThroughRelations(): void
     {
         $qb = $this->repository(Task::class)->createQueryBuilder();
-        $tasks = $qb->where($qb->expr()->orX($qb->expr()->eq('user.name', 'User B'), $qb->expr()->eq('id', 1)))->orderBy('id', Direction::ASC)->getQuery()->getResult();
+        $tasks = $qb->where($qb->expr()->orX($qb->expr()->eq('user.name', 'User B'), $qb->expr()->eq('id', 1)))->orderBy('id', Direction::Asc)->getQuery()->getResult();
         $users = $this->repository(User::class)->createQueryBuilder();
         $withDoneTasks = $users->where($users->expr()->eq('tasks.done', true))->getQuery()->getResult();
 
@@ -166,8 +166,8 @@ final class HasuraTest extends IntegrationTestCase
     public function itRunsQueriesConcurrently(): void
     {
         [$tasks, $users] = GraphqlQuery::concurrently(
-            $this->repository(Task::class)->createQueryBuilder()->orderBy('id', Direction::ASC)->getQuery(),
-            $this->repository(User::class)->createQueryBuilder()->orderBy('id', Direction::ASC)->getQuery(),
+            $this->repository(Task::class)->createQueryBuilder()->orderBy('id', Direction::Asc)->getQuery(),
+            $this->repository(User::class)->createQueryBuilder()->orderBy('id', Direction::Asc)->getQuery(),
         );
 
         self::assertSame([1, 2, 3, 4], self::ids($tasks instanceof PaginatedResult ? $tasks->items : $tasks));
@@ -177,7 +177,7 @@ final class HasuraTest extends IntegrationTestCase
     #[Test]
     public function itMatchesAListOfValues(): void
     {
-        self::assertSame([1, 3], self::ids($this->repository(Task::class)->findBy(['id' => [1, 3]], ['id' => Direction::ASC])));
+        self::assertSame([1, 3], self::ids($this->repository(Task::class)->findBy(['id' => [1, 3]], ['id' => Direction::Asc])));
         self::assertSame([], $this->repository(Task::class)->findBy(['id' => []]));
         self::assertSame(2, $this->repository(Task::class)->count(['id' => [1, 3, 99]]));
     }
@@ -210,7 +210,7 @@ final class HasuraTest extends IntegrationTestCase
     public function itLoadsTheLazyRelationsOnFirstAccess(): void
     {
         $collector = new GraphqlOrmDataCollector();
-        $tasks = $this->repository(LazyTask::class, collector: $collector)->findBy(['id' => [1, 3]], ['id' => Direction::ASC]);
+        $tasks = $this->repository(LazyTask::class, collector: $collector)->findBy(['id' => [1, 3]], ['id' => Direction::Asc]);
         $users = $this->repository(UserWithLazyTasks::class, collector: $collector)->findBy(['id' => 1]);
 
         self::assertSame(2, $collector->getQueryCount());
@@ -228,8 +228,8 @@ final class HasuraTest extends IntegrationTestCase
         $tasks = (new GraphqlEntityRepository($manager, Task::class))->createQueryBuilder();
 
         [$open, $users] = GraphqlQuery::batch(
-            $tasks->where($tasks->expr()->eq('done', false))->orderBy('id', Direction::ASC)->getQuery(),
-            (new GraphqlEntityRepository($manager, User::class))->createQueryBuilder()->orderBy('id', Direction::ASC)->getQuery(),
+            $tasks->where($tasks->expr()->eq('done', false))->orderBy('id', Direction::Asc)->getQuery(),
+            (new GraphqlEntityRepository($manager, User::class))->createQueryBuilder()->orderBy('id', Direction::Asc)->getQuery(),
         );
 
         self::assertSame(1, $collector->getQueryCount());
@@ -276,8 +276,8 @@ final class HasuraTest extends IntegrationTestCase
     #[Test]
     public function itOrdersAndLimitsResults(): void
     {
-        $tasks = $this->repository(Task::class)->findBy([], ['title' => Direction::DESC], 2);
-        $last = $this->repository(Task::class)->findOneBy(['done' => false], ['id' => Direction::DESC]);
+        $tasks = $this->repository(Task::class)->findBy([], ['title' => Direction::Desc], 2);
+        $last = $this->repository(Task::class)->findOneBy(['done' => false], ['id' => Direction::Desc]);
 
         self::assertSame(['Write the docs', 'Review the tests'], array_map(fn (Task $task) => $task->title, $tasks));
         self::assertSame(4, $last?->id);
@@ -290,7 +290,7 @@ final class HasuraTest extends IntegrationTestCase
 
         $tasks = $qb
             ->where($qb->expr()->orX($qb->expr()->contains('title', 'docs'), $qb->expr()->in('id', [3, 4])))
-            ->orderBy('id', Direction::ASC)
+            ->orderBy('id', Direction::Asc)
             ->getQuery()
             ->getResult();
 
@@ -311,7 +311,7 @@ final class HasuraTest extends IntegrationTestCase
     #[Test]
     public function itReturnsArrayResults(): void
     {
-        $rows = $this->repository(User::class)->createQueryBuilder()->select('name', 'tasks.title')->orderBy('id', Direction::ASC)->getQuery()->getArrayResult();
+        $rows = $this->repository(User::class)->createQueryBuilder()->select('name', 'tasks.title')->orderBy('id', Direction::Asc)->getQuery()->getArrayResult();
 
         self::assertEquals(['id' => 1, 'name' => 'User A', 'tasks' => [
             ['id' => 1, 'title' => 'Write the docs'],
@@ -324,8 +324,8 @@ final class HasuraTest extends IntegrationTestCase
     {
         $resolver = new RootArgumentTypeResolver($this->client, new ArrayAdapter(), 60);
 
-        $tasks = $this->repository(Task::class, $resolver)->findBy(['done' => false], ['id' => Direction::ASC], 2);
-        $listed = $this->repository(Task::class, $resolver)->findBy(['id' => [2, 4]], ['id' => Direction::ASC]);
+        $tasks = $this->repository(Task::class, $resolver)->findBy(['done' => false], ['id' => Direction::Asc], 2);
+        $listed = $this->repository(Task::class, $resolver)->findBy(['id' => [2, 4]], ['id' => Direction::Asc]);
 
         self::assertSame([1, 3], self::ids($tasks));
         self::assertSame([2, 4], self::ids($listed));
@@ -336,7 +336,7 @@ final class HasuraTest extends IntegrationTestCase
     public function itLoadsTheLazyRelationsOfAResponseWithOneQuery(): void
     {
         $collector = new GraphqlOrmDataCollector();
-        $tasks = $this->repository(Task::class, maxDepth: 0, lazyLoading: true, collector: $collector)->findBy([], ['id' => Direction::ASC]);
+        $tasks = $this->repository(Task::class, maxDepth: 0, lazyLoading: true, collector: $collector)->findBy([], ['id' => Direction::Asc]);
 
         $names = array_map(fn (Task $task) => $task->user?->name, $tasks);
 
@@ -347,7 +347,7 @@ final class HasuraTest extends IntegrationTestCase
     #[Test]
     public function itNavigatesPagesWithAnOffset(): void
     {
-        $firstPage = $this->repository(Task::class)->createQueryBuilder()->orderBy('id', Direction::ASC)->limit(3)->paginate()->getQuery()->getResult();
+        $firstPage = $this->repository(Task::class)->createQueryBuilder()->orderBy('id', Direction::Asc)->limit(3)->paginate()->getQuery()->getResult();
         self::assertInstanceOf(PaginatedResult::class, $firstPage);
 
         $secondPage = $firstPage->next();

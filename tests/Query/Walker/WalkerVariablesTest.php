@@ -50,7 +50,7 @@ final class WalkerVariablesTest extends TestCase
     public function itSendsVariableValuesAsJsonCompatibleValues(VariableAwareWalkerInterface $walker): void
     {
         $query = $this->queryWithArguments([
-            'orderBy' => ['title' => Direction::DESC],
+            'orderBy' => ['title' => Direction::Desc],
             'since' => new \DateTimeImmutable('2026-01-15T10:00:00+00:00'),
             'status' => FakeStatus::Open,
         ]);

@@ -16,6 +16,6 @@ function queryBuilderFieldNames(GraphqlEntityRepository $tasks, string $field): 
     $tasks->createQueryBuilder()->select('title', 'user.name')->addSelect('dueDate');
     $tasks->createQueryBuilder()->select('user.nmae');
     $tasks->createQueryBuilder()->select('title.length');
-    $tasks->createQueryBuilder()->orderBy('dueDate', Direction::ASC);
-    $tasks->createQueryBuilder()->orderBy('due_date', Direction::ASC)->addSelect($field);
+    $tasks->createQueryBuilder()->orderBy('dueDate', Direction::Asc);
+    $tasks->createQueryBuilder()->orderBy('due_date', Direction::Asc)->addSelect($field);
 }

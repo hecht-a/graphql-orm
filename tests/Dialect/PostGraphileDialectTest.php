@@ -33,7 +33,7 @@ final class PostGraphileDialectTest extends TestCase
     public function itOrdersWithTheEnumValuesOfTheFields(): void
     {
         $options = new QueryOptions();
-        $options->orderBy = ['dueDate' => Direction::DESC, 'id' => Direction::ASC];
+        $options->orderBy = ['dueDate' => Direction::Desc, 'id' => Direction::Asc];
         $options->limit = 5;
 
         $arguments = $this->dialect->applyQueryOptions([], $options);

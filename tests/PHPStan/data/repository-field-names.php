@@ -17,8 +17,8 @@ function repositoryFieldNames(GraphqlEntityRepository $tasks, array $criteria): 
     $tasks->findBy(['title' => 'A', 'done' => true]);
     $tasks->findBy(['dueDate' => null]);
     $tasks->findBy(['titel' => 'A']);
-    $tasks->findOneBy([], ['due_date' => Direction::ASC]);
-    $tasks->findBy([], ['dueDate' => Direction::ASC]);
+    $tasks->findOneBy([], ['due_date' => Direction::Asc]);
+    $tasks->findBy([], ['dueDate' => Direction::Asc]);
     $tasks->findOneBy(['user_id' => 1]);
     $tasks->findBy($criteria);
     $tasks->count(['dueDate' => null]);

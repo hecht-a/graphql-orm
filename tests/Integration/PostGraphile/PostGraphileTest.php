@@ -59,9 +59,9 @@ final class PostGraphileTest extends IntegrationTestCase
     #[Test]
     public function itOrdersAndLimitsResults(): void
     {
-        $tasks = $this->repository(RelayTask::class)->findBy([], ['title' => Direction::DESC], 2);
-        $last = $this->repository(RelayTask::class)->findOneBy(['done' => false], ['id' => Direction::DESC]);
-        $byDueDate = $this->repository(RelayTask::class)->findBy(['done' => false], ['dueDate' => Direction::ASC, 'id' => Direction::ASC]);
+        $tasks = $this->repository(RelayTask::class)->findBy([], ['title' => Direction::Desc], 2);
+        $last = $this->repository(RelayTask::class)->findOneBy(['done' => false], ['id' => Direction::Desc]);
+        $byDueDate = $this->repository(RelayTask::class)->findBy(['done' => false], ['dueDate' => Direction::Asc, 'id' => Direction::Asc]);
 
         self::assertSame(['Write the docs', 'Review the tests'], array_map(fn (RelayTask $task) => $task->title, $tasks));
         self::assertSame(4, $last?->id);
@@ -71,7 +71,7 @@ final class PostGraphileTest extends IntegrationTestCase
     #[Test]
     public function itIteratesOverEveryPage(): void
     {
-        $tasks = $this->repository(RelayTask::class)->createQueryBuilder()->orderBy('id', Direction::DESC)->limit(3)->paginate()->getQuery()->toIterable();
+        $tasks = $this->repository(RelayTask::class)->createQueryBuilder()->orderBy('id', Direction::Desc)->limit(3)->paginate()->getQuery()->toIterable();
 
         self::assertSame([4, 3, 2, 1], self::ids($tasks));
     }
@@ -103,7 +103,7 @@ final class PostGraphileTest extends IntegrationTestCase
         $manager = $this->manager($collector);
 
         [$tasks, $users] = GraphqlQuery::batch(
-            (new GraphqlEntityRepository($manager, RelayTask::class))->createQueryBuilder()->orderBy('id', Direction::DESC)->getQuery(),
+            (new GraphqlEntityRepository($manager, RelayTask::class))->createQueryBuilder()->orderBy('id', Direction::Desc)->getQuery(),
             (new GraphqlEntityRepository($manager, RelayUser::class))->createQueryBuilder()->getQuery(),
         );
 
@@ -117,7 +117,7 @@ final class PostGraphileTest extends IntegrationTestCase
     #[Test]
     public function itNavigatesOrderedPages(): void
     {
-        $firstPage = $this->repository(RelayTask::class)->createQueryBuilder()->orderBy('id', Direction::DESC)->limit(3)->paginate()->getQuery()->getResult();
+        $firstPage = $this->repository(RelayTask::class)->createQueryBuilder()->orderBy('id', Direction::Desc)->limit(3)->paginate()->getQuery()->getResult();
         self::assertInstanceOf(PaginatedResult::class, $firstPage);
 
         $secondPage = $firstPage->next();
@@ -131,7 +131,7 @@ final class PostGraphileTest extends IntegrationTestCase
     {
         $resolver = new RootArgumentTypeResolver($this->client, new ArrayAdapter(), 60);
 
-        $tasks = $this->repository(RelayTask::class, $resolver)->findBy(['done' => false], ['id' => Direction::ASC], 2);
+        $tasks = $this->repository(RelayTask::class, $resolver)->findBy(['done' => false], ['id' => Direction::Asc], 2);
 
         self::assertSame([1, 3], self::ids($tasks));
         self::assertSame('TaskCondition', $resolver->argumentTypes('allTasks')['condition'] ?? null);

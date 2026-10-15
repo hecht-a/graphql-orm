@@ -17,8 +17,8 @@ enum HasuraOrderDirection: string
     public static function fromDirection(Direction $direction): self
     {
         return match ($direction) {
-            Direction::ASC => self::Asc,
-            Direction::DESC => self::Desc,
+            Direction::Asc => self::Asc,
+            Direction::Desc => self::Desc,
         };
     }
 }

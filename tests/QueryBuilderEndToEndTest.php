@@ -64,7 +64,7 @@ final class QueryBuilderEndToEndTest extends TestCase
                         $qb->expr()->eq('title', 'Task')
                     ))
                 ->limit(10)
-                ->orderBy('title', Direction::ASC)
+                ->orderBy('title', Direction::Asc)
                 ->getQuery()
                 ->getResult();
 

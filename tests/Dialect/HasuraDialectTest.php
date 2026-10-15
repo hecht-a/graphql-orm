@@ -105,7 +105,7 @@ final class HasuraDialectTest extends TestCase
     public function itOrdersAndLimitsWithHasuraArguments(): void
     {
         $options = new QueryOptions();
-        $options->orderBy = ['title' => Direction::DESC, 'id' => Direction::ASC];
+        $options->orderBy = ['title' => Direction::Desc, 'id' => Direction::Asc];
         $options->limit = 5;
 
         $arguments = $this->dialect->applyQueryOptions([], $options);
