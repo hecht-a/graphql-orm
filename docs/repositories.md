@@ -16,7 +16,7 @@ class TaskRepository extends GraphqlEntityRepository
 ```
 
 Declared as a service (autowired, as with the default Symfony configuration) and named in the `repositoryClass` of
-`#[GraphqlEntity]`, the repository is the one `GraphqlManager::getRepository()` gives, as Doctrine
+`#[Entity]`, the repository is the one `GraphqlManager::getRepository()` gives, as Doctrine
 `EntityManager::getRepository()`; an entity without one gets a generic `GraphqlEntityRepository`:
 
 ```php

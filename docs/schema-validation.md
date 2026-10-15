@@ -15,7 +15,7 @@ match or when the schema cannot be introspected. Run it in CI against an environ
 ## What is validated
 
 - Every mapped entity has a corresponding GraphQL type in the schema. The type is the one returned by the root query
-  field (`#[GraphqlEntity(name: ...)]`); for a connection (Data API Builder `items`, Relay `edges { node }`), the type of
+  field (`#[Entity(name: ...)]`); for a connection (Data API Builder `items`, Relay `edges { node }`), the type of
   its entities is used. If the root field is not found, the type name is guessed from the root name (`tasks` → `Task`)
 - Every mapped field exists on that type
 - Scalar types are compatible between PHP and GraphQL (e.g. `int` ↔ `Int`, `string` ↔ `String`, `\DateTimeImmutable`

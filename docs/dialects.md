@@ -134,7 +134,7 @@ query {
 }
 ```
 
-Entities map the names PostGraphile gives: `#[GraphqlEntity('allTasks')]`, `dueDate`, `userByUserId` for a foreign
+Entities map the names PostGraphile gives: `#[Entity('allTasks')]`, `dueDate`, `userByUserId` for a foreign
 key, `tasksByUserId` for the reverse connection. A `null` criterion matches `IS NULL`. The query builder filters need
 [postgraphile-plugin-connection-filter](https://github.com/graphile-contrib/postgraphile-plugin-connection-filter),
 which core PostGraphile does not provide: `where()` throws a `LogicException`, and lazy relations are loaded one query

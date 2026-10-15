@@ -16,18 +16,18 @@ capture fields that are not mapped (e.g. `__typename`, pagination metadata).
 
 ```php
 use GraphqlOrm\Attribute\BeforeHydrate;
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\GraphqlField;
-use GraphqlOrm\Attribute\Identifier;
+use GraphqlOrm\Mapping\Entity;
+use GraphqlOrm\Mapping\Field;
+use GraphqlOrm\Mapping\Identifier;
 
-#[GraphqlEntity(name: 'products', repositoryClass: ProductRepository::class)]
+#[Entity(name: 'products', repositoryClass: ProductRepository::class)]
 class Product
 {
-    #[GraphqlField(mappedFrom: 'id')]
+    #[Field(mappedFrom: 'id')]
     #[Identifier]
     public int $id;
 
-    #[GraphqlField(mappedFrom: 'name')]
+    #[Field(mappedFrom: 'name')]
     public string $name;
 
     // Populated from raw data — not a mapped field
@@ -59,21 +59,21 @@ Called after all fields have been assigned. Use it to compute virtual fields or 
 
 ```php
 use GraphqlOrm\Attribute\AfterHydrate;
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\GraphqlField;
-use GraphqlOrm\Attribute\Identifier;
+use GraphqlOrm\Mapping\Entity;
+use GraphqlOrm\Mapping\Field;
+use GraphqlOrm\Mapping\Identifier;
 
-#[GraphqlEntity(name: 'tasks', repositoryClass: TaskRepository::class)]
+#[Entity(name: 'tasks', repositoryClass: TaskRepository::class)]
 class Task
 {
-    #[GraphqlField(mappedFrom: 'id')]
+    #[Field(mappedFrom: 'id')]
     #[Identifier]
     public int $id;
 
-    #[GraphqlField(mappedFrom: 'title')]
+    #[Field(mappedFrom: 'title')]
     public string $title;
 
-    #[GraphqlField(mappedFrom: 'dueDate')]
+    #[Field(mappedFrom: 'dueDate')]
     public ?\DateTimeImmutable $dueDate = null;
 
     // Virtual field — not in the GraphQL schema
@@ -92,9 +92,9 @@ class Task
 
 - The method must be **public** and take **no arguments**
 - Multiple `#[AfterHydrate]` methods are supported — all are called
-- **Skipped** if any mapped field (`#[GraphqlField]`) is not initialized — this happens on partial hydration (e.g. a
+- **Skipped** if any mapped field (`#[Field]`) is not initialized — this happens on partial hydration (e.g. a
   nested relation with only a subset of fields selected)
-- Virtual fields (no `#[GraphqlField]`) are ignored in this check — they are meant to be set by the hook
+- Virtual fields (no `#[Field]`) are ignored in this check — they are meant to be set by the hook
 
 ### Partial hydration
 
@@ -124,17 +124,17 @@ The two hooks can coexist on the same entity. Execution order is always: **Befor
 AfterHydrate**.
 
 ```php
-#[GraphqlEntity(name: 'products', repositoryClass: ProductRepository::class)]
+#[Entity(name: 'products', repositoryClass: ProductRepository::class)]
 class Product
 {
-    #[GraphqlField(mappedFrom: 'id')]
+    #[Field(mappedFrom: 'id')]
     #[Identifier]
     public int $id;
 
-    #[GraphqlField(mappedFrom: 'price')]
+    #[Field(mappedFrom: 'price')]
     public float $price;
 
-    #[GraphqlField(mappedFrom: 'taxRate')]
+    #[Field(mappedFrom: 'taxRate')]
     public float $taxRate;
 
     public string $graphqlType = '';
