@@ -17,6 +17,9 @@ For each request, the panel shows:
 - **A timeline** of the queries during the request: overlapping bars are queries sent together, e.g. by
   `GraphqlQuery::concurrently()`.
 
+The introspection queries of the bundle (typed variables, schema validation, the countable fields of Data API Builder)
+are listed too, with the origin `introspection`: they count in the time of the request, once per cache lifetime.
+
 The origin is the method of the bundle the application called: `findBy`, `count`, `getResult` on a query built with
 the query builder, the method of a custom repository calling the bundle, or `lazy` for a relation loaded on first
 access (see [lazy loading](configuration.md#lazy-loading)).

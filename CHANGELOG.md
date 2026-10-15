@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   no longer counted as repeated queries. `GraphqlQueryTrace::$lazyRelation` names the relation of a lazy load.
 - Profiler: the entities that `find()` served from the shared identity map without a query, with the lines calling it,
   in a metric and an "Identity map" tab.
+- Profiler: the introspection queries of the bundle (typed variables, schema validation, countable fields of Data API
+  Builder), sent without the manager, are listed with the origin `introspection`.
 - `GraphqlEntityRepository::getClassName()`, as Doctrine, and `GraphqlQuery::getEntityClass()`.
 - `GraphqlQueryTrace::$startedAt`, `$origin` and `$entityClass`, the two last ones filled when the profiler is enabled.
 
