@@ -74,6 +74,8 @@
     {% else %}
         {% set durations = collector.queries|map(query => query.duration) %}
         {% set maxDuration = max(durations|merge([0.001])) %}
+        {% set offsets = collector.queryOffsets %}
+        {% set span = max(collector.timelineSpan, 0.001) %}
         <div id="graphql-orm-panel">
             <div class="metrics">
                 <div class="metric">
@@ -115,6 +117,7 @@
                 <button type="button" class="tab-control active" role="tab" aria-selected="true" data-graphql-orm-tab="queries">
                     Queries <span class="badge">{{ collector.queryCount }}</span>
                 </button>
+                <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="timeline">Timeline</button>
                 {% if collector.repeatedQueries is not empty %}
                     <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="repeated">
                         Repeated <span class="badge status-warning">{{ collector.repeatedQueries|length }}</span>
@@ -138,6 +141,7 @@
                     <thead>
                         <tr>
                             <th>#</th>
+                            <th>Origin</th>
                             <th>Root field</th>
                             <th>Duration</th>
                             <th class="graphql-orm-number">Size</th>
@@ -155,8 +159,12 @@
                                 data-graphql-orm-status="{{ status }}"
                                 data-graphql-orm-text="{{ query.graphql|lower }}">
                                 <td class="graphql-orm-number">{{ loop.index }}</td>
+                                <td>{{ _self.renderOrigin(query) }}</td>
                                 <td>
                                     <code>{{ query.root_field ?? '-' }}</code>
+                                    {% if query.entity_class ?? null %}
+                                        <span class="graphql-orm-muted" title="{{ query.entity_class }}">{{ query.entity_class|split('\\')|last }}</span>
+                                    {% endif %}
                                     {% if query.caller %}
                                         <div class="graphql-orm-muted">{{ query.caller.file|split('/')|last }}:{{ query.caller.line }}</div>
                                     {% endif %}
@@ -180,7 +188,7 @@
                                 </td>
                             </tr>
                             <tr class="graphql-orm-detail" data-graphql-orm-detail="{{ loop.index }}" hidden>
-                                <td colspan="6">
+                                <td colspan="7">
                                     {{ _self.renderDetail(query, loop.index) }}
                                 </td>
                             </tr>
@@ -188,6 +196,30 @@
                     </tbody>
                 </table>
                 <p class="graphql-orm-muted">Click a query to see its GraphQL, its variables, its AST and its hydration.</p>
+            </div>
+
+            <div data-graphql-orm-view="timeline" hidden>
+                <div class="graphql-orm-timeline">
+                    {% for query in collector.queries %}
+                        {% set status = query.errors ? 'error' : ((query.slow ?? false) ? 'slow' : 'ok') %}
+                        <div class="graphql-orm-timeline-row">
+                            <a href="#graphql-orm-query-{{ loop.index }}" data-graphql-orm-open="{{ loop.index }}" class="graphql-orm-timeline-label">
+                                <span class="graphql-orm-muted">#{{ loop.index }}</span> {{ query.origin ?? query.root_field ?? '' }}
+                                {% if query.entity_class ?? null %}<span class="graphql-orm-muted">{{ query.entity_class|split('\\')|last }}</span>{% endif %}
+                            </a>
+                            <div class="graphql-orm-timeline-track">
+                                <span class="graphql-orm-timeline-bar graphql-orm-fill-{{ status }} graphql-orm-kind-{{ _self.originKind(query.origin ?? null)|trim }}"
+                                      style="left: {{ (offsets[loop.index0] / span * 100)|round(1) }}%; width: {{ max(0.3, query.duration / span * 100)|round(1) }}%"
+                                      title="{{ offsets[loop.index0]|number_format(1) }} ms, lasting {{ query.duration|number_format(1) }} ms"></span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    <div class="graphql-orm-timeline-row graphql-orm-muted">
+                        <span></span>
+                        <div class="graphql-orm-timeline-axis"><span>0 ms</span><span>{{ span|number_format(0) }} ms</span></div>
+                    </div>
+                </div>
+                <p class="graphql-orm-muted">From the start of the request. Overlapping bars are queries sent together, e.g. by <code>GraphqlQuery::concurrently()</code>.</p>
             </div>
 
             {% if collector.repeatedQueries is not empty %}
@@ -238,6 +270,21 @@
         .graphql-orm-fill { display: block; height: 100%; border-radius: 3px; background: var(--color-link, #1d4ed8); }
         .graphql-orm-fill-slow { background: var(--color-warning, #785b02); }
         .graphql-orm-fill-error { background: var(--color-error, #b41939); }
+        .graphql-orm-origin { display: inline-block; font-size: 12px; font-weight: bold; border-radius: 4px; padding: 1px 6px; white-space: nowrap; background: var(--badge-light-background, #f5f5f5); color: var(--color-link, #1d4ed8); }
+        .graphql-orm-origin-lazy { color: var(--highlight-variable, #e36209); }
+        .graphql-orm-origin-count { color: var(--color-success, #4f805d); }
+        .graphql-orm-origin-introspection { color: var(--color-muted, #737373); }
+        .graphql-orm-timeline { display: flex; flex-direction: column; gap: 4px; overflow-x: auto; }
+        .graphql-orm-timeline-row { display: grid; grid-template-columns: 220px minmax(400px, 1fr); gap: 12px; align-items: center; }
+        .graphql-orm-timeline-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: inherit; text-decoration: none; }
+        .graphql-orm-timeline-track { position: relative; height: 14px; border-radius: 3px; background: var(--table-header, #f5f5f5); }
+        .graphql-orm-timeline-bar { position: absolute; top: 3px; height: 8px; min-width: 2px; border-radius: 2px; background: var(--color-link, #1d4ed8); }
+        .graphql-orm-timeline-bar.graphql-orm-kind-lazy { background: var(--highlight-variable, #e36209); }
+        .graphql-orm-timeline-bar.graphql-orm-kind-count { background: var(--color-success, #4f805d); }
+        .graphql-orm-timeline-bar.graphql-orm-kind-introspection { background: var(--color-muted, #737373); }
+        .graphql-orm-timeline-bar.graphql-orm-fill-slow { background: var(--color-warning, #785b02); }
+        .graphql-orm-timeline-bar.graphql-orm-fill-error { background: var(--color-error, #b41939); }
+        .graphql-orm-timeline-axis { display: flex; justify-content: space-between; font-size: 11px; border-top: 1px solid var(--table-border-color, #d4d4d4); }
         .graphql-orm-detail > td { padding: 0; }
         .graphql-orm-detail-box { display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; border-left: 3px solid var(--color-link, #1d4ed8); }
         .graphql-orm-subtabs { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -412,6 +459,16 @@
 {% endblock %}
 
 {# ================= MACROS ================= #}
+
+{% macro originKind(origin) %}{{ origin in ['lazy', 'introspection'] ? origin : (origin in ['count', 'sum', 'avg', 'min', 'max'] ? 'count' : 'query') }}{% endmacro %}
+
+{% macro renderOrigin(query) %}
+    {% if query.origin ?? null %}
+        <span class="graphql-orm-origin graphql-orm-origin-{{ _self.originKind(query.origin)|trim }}">{{ query.origin }}</span>
+    {% else %}
+        <span class="graphql-orm-muted">-</span>
+    {% endif %}
+{% endmacro %}
 
 {% macro renderDetail(query, number) %}
     <div class="graphql-orm-detail-box">

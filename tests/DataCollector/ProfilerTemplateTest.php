@@ -6,6 +6,7 @@ namespace GraphqlOrm\Tests\DataCollector;
 
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Query\GraphqlQueryTrace;
+use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Twig\Environment;
@@ -180,6 +181,41 @@ final class ProfilerTemplateTest extends TestCase
         self::assertStringContainsString('where={"status":{"_eq":"done"}}', $text);
         self::assertStringContainsString('limit=10', $text);
         self::assertStringContainsString('distinct=false', $text);
+    }
+
+    #[Test]
+    public function itShowsTheOriginOfEachQuery(): void
+    {
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { tasks { id } }';
+        $trace->origin = 'findBy';
+        $trace->entityClass = FakeTask::class;
+        $collector = new GraphqlOrmDataCollector();
+        $collector->addQuery($trace);
+
+        $text = self::text($this->render($collector));
+
+        self::assertStringContainsString('findBy', $text);
+        self::assertStringContainsString('FakeTask', $text);
+    }
+
+    #[Test]
+    public function itDrawsTheQueriesOnATimeline(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+
+        foreach ([100.0, 100.5] as $startedAt) {
+            $trace = new GraphqlQueryTrace();
+            $trace->graphql = 'query { tasks { id } }';
+            $trace->startedAt = $startedAt;
+            $trace->duration = 250.0;
+            $collector->addQuery($trace);
+        }
+
+        $html = $this->render($collector);
+
+        self::assertStringContainsString('data-graphql-orm-tab="timeline"', $html);
+        self::assertStringContainsString('left: 66.7%; width: 33.3%', $html);
     }
 
     #[Test]

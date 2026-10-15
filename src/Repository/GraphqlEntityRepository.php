@@ -38,6 +38,14 @@ class GraphqlEntityRepository
     }
 
     /**
+     * @return class-string<T> the class of the entities of this repository, as Doctrine EntityRepository::getClassName()
+     */
+    public function getClassName(): string
+    {
+        return $this->entityClass;
+    }
+
+    /**
      * @return GraphqlQueryBuilder<T>
      */
     public function createQueryBuilder(): GraphqlQueryBuilder

@@ -36,6 +36,14 @@ final readonly class GraphqlQuery
     ) {
     }
 
+    /**
+     * @return class-string<T> the class of the entities this query returns
+     */
+    public function getEntityClass(): string
+    {
+        return $this->entityClass;
+    }
+
     public function getGraphQL(): string
     {
         if ($this->graphql instanceof QueryNode) {

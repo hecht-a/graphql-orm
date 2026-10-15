@@ -29,6 +29,12 @@ final class GraphqlQueryTrace
     public int $hydratedCollections = 0;
     public int $hydrationMaxDepth = 0;
     public float|int $duration = 0;
+    /** The Unix time the query was sent at, in seconds with microseconds. */
+    public ?float $startedAt = null;
+    /** The method of the bundle the application called (e.g. findBy, getResult), "lazy" for a lazy load; profiler only. */
+    public ?string $origin = null;
+    /** @var class-string|null the entities read, when known; profiler only */
+    public ?string $entityClass = null;
 
     public function __construct()
     {

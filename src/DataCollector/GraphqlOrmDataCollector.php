@@ -51,6 +51,9 @@ final class GraphqlOrmDataCollector extends DataCollector
             'hydrated_entities' => $trace->hydratedEntities,
             'hydrated_relations' => $trace->hydratedRelations,
             'duration' => $trace->duration,
+            'started_at' => $trace->startedAt,
+            'origin' => $trace->origin,
+            'entity_class' => $trace->entityClass,
             'slow' => $this->slowQueryThreshold !== null && $trace->duration >= $this->slowQueryThreshold,
         ];
         $this->data['queries'] = $queries;
@@ -90,6 +93,8 @@ final class GraphqlOrmDataCollector extends DataCollector
         ?\Throwable $exception = null,
     ): void {
         $this->data['queries'] ??= [];
+        $startedAt = $request->server->get('REQUEST_TIME_FLOAT');
+        $this->data['request_started_at'] = \is_float($startedAt) || \is_int($startedAt) ? (float) $startedAt : null;
     }
 
     public function reset(): void
@@ -161,6 +166,38 @@ final class GraphqlOrmDataCollector extends DataCollector
         }
 
         return $repeated;
+    }
+
+    /**
+     * When each query started, in milliseconds since the request started, or since the first query when unknown.
+     *
+     * @return list<float>
+     */
+    public function getQueryOffsets(): array
+    {
+        $startedAts = array_map(fn (array $query): ?float => \is_float($query['started_at'] ?? null) ? $query['started_at'] : null, $this->getQueries());
+        $known = array_filter($startedAts, fn (?float $startedAt): bool => $startedAt !== null);
+        $origin = $this->data['request_started_at'] ?? ($known !== [] ? min($known) : null);
+
+        return array_values(array_map(
+            fn (?float $startedAt): float => $startedAt !== null && \is_float($origin) ? max(0.0, ($startedAt - $origin) * 1000) : 0.0,
+            $startedAts,
+        ));
+    }
+
+    /**
+     * @return float the milliseconds from the start of the timeline to the end of the last query
+     */
+    public function getTimelineSpan(): float
+    {
+        $span = 0.0;
+
+        foreach ($this->getQueryOffsets() as $index => $offset) {
+            $duration = $this->getQueries()[$index]['duration'] ?? 0;
+            $span = max($span, $offset + (\is_int($duration) || \is_float($duration) ? $duration : 0));
+        }
+
+        return $span;
     }
 
     public function getHydratedEntityCount(): int

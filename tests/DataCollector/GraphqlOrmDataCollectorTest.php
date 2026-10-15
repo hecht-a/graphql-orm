@@ -180,6 +180,34 @@ final class GraphqlOrmDataCollectorTest extends TestCase
         self::assertSame(3072, $this->collector->getResponseSize());
     }
 
+    #[Test]
+    public function itPlacesTheQueriesOnTheTimelineOfTheRequest(): void
+    {
+        foreach ([[100.010, 5.0], [100.050, 20.0]] as [$startedAt, $duration]) {
+            $trace = self::trace(duration: $duration, errors: null);
+            $trace->startedAt = $startedAt;
+            $this->collector->addQuery($trace);
+        }
+        $request = new Request(server: ['REQUEST_TIME_FLOAT' => 100.0]);
+
+        $this->collector->collect($request, new Response());
+
+        self::assertEqualsWithDelta([10.0, 50.0], $this->collector->getQueryOffsets(), 0.001);
+        self::assertEqualsWithDelta(70.0, $this->collector->getTimelineSpan(), 0.001);
+    }
+
+    #[Test]
+    public function itPlacesTheQueriesFromTheFirstOneWithoutRequest(): void
+    {
+        foreach ([100.010, 100.050] as $startedAt) {
+            $trace = self::trace(duration: 1.0, errors: null);
+            $trace->startedAt = $startedAt;
+            $this->collector->addQuery($trace);
+        }
+
+        self::assertEqualsWithDelta([0.0, 40.0], $this->collector->getQueryOffsets(), 0.001);
+    }
+
     /**
      * @param array<string|int, mixed>|null $errors
      */

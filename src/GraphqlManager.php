@@ -21,6 +21,7 @@ use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Query\Ast\AstExporter;
 use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\CompiledQuery;
+use GraphqlOrm\Query\GraphqlQuery;
 use GraphqlOrm\Query\GraphqlQueryCompiler;
 use GraphqlOrm\Query\GraphqlQueryTrace;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
@@ -42,6 +43,11 @@ final class GraphqlManager implements GraphqlManagerInterface
      * Identifiers loaded by one lazy loading query.
      */
     private const LAZY_LOADING_BATCH_SIZE = 100;
+
+    /** Frames read to find the origin of a query: deep enough for a custom repository method calling the bundle. */
+    private const ORIGIN_STACK_DEPTH = 40;
+
+    private const LAZY_ORIGIN = 'lazy';
 
     private bool $loadingLazily = false;
 
@@ -165,6 +171,11 @@ final class GraphqlManager implements GraphqlManagerInterface
 
         $context->trace->graphql = $compiled;
         $context->trace->variables = $variables;
+        $context->trace->startedAt = microtime(true);
+
+        if ($this->collector !== null) {
+            [$context->trace->origin, $context->trace->entityClass] = $this->origin();
+        }
 
         $this->eventDispatcher?->dispatch(new QueryStartedEvent($this->redact(clone $context->trace)));
 
@@ -198,6 +209,56 @@ final class GraphqlManager implements GraphqlManagerInterface
 
             return $entities;
         };
+    }
+
+    /**
+     * The method of the bundle the application called to send the query, the outermost one in the call stack (e.g.
+     * findBy, getResult, or a method of a custom repository), and the class of the entities it reads.
+     *
+     * @return array{string|null, class-string|null}
+     */
+    private function origin(): array
+    {
+        $origin = null;
+        $entityClass = null;
+
+        foreach (debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, self::ORIGIN_STACK_DEPTH) as $frame) {
+            $object = $frame['object'] ?? null;
+            $class = $frame['class'] ?? null;
+
+            $entityClass ??= match (true) {
+                $object instanceof GraphqlEntityRepository => $object->getClassName(),
+                $object instanceof GraphqlQuery => $object->getEntityClass(),
+                default => null,
+            };
+
+            if ($class === null) {
+                // A function, such as array_map(), between two methods of the bundle.
+                continue;
+            }
+
+            if (!$object instanceof GraphqlEntityRepository && !self::isBundleClass($class)) {
+                break;
+            }
+
+            $origin = $frame['function'];
+        }
+
+        return [$this->loadingLazily ? self::LAZY_ORIGIN : $origin, $entityClass];
+    }
+
+    /**
+     * Whether the class is declared by the bundle, rather than by the application or another package.
+     */
+    private static function isBundleClass(string $class): bool
+    {
+        if (!class_exists($class) && !interface_exists($class) && !trait_exists($class)) {
+            return false;
+        }
+
+        $file = (new \ReflectionClass($class))->getFileName();
+
+        return \is_string($file) && str_starts_with($file, __DIR__ . \DIRECTORY_SEPARATOR);
     }
 
     /**
