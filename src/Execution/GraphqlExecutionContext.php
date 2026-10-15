@@ -16,7 +16,8 @@ final class GraphqlExecutionContext
      *
      * @internal set by GraphqlManager
      *
-     * @var (\Closure(class-string, list<int|string>): list<object>)|null
+     * @var (\Closure(class-string, list<int|string>, string|null=): list<object>)|null the third argument is the relation
+     *                                                                                  accessed, e.g. Task::$assignee
      */
     public ?\Closure $lazyLoader = null;
 

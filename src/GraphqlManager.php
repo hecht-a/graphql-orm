@@ -51,6 +51,9 @@ final class GraphqlManager implements GraphqlManagerInterface
 
     private bool $loadingLazily = false;
 
+    /** The relation whose lazy load is running, e.g. Task::$assignee. */
+    private ?string $lazyRelation = null;
+
     /** @var array<class-string, GraphqlEntityRepository<object>> */
     private array $genericRepositories = [];
 
@@ -177,6 +180,10 @@ final class GraphqlManager implements GraphqlManagerInterface
             [$context->trace->origin, $context->trace->entityClass] = $this->origin();
         }
 
+        if ($this->loadingLazily) {
+            $context->trace->lazyRelation = $this->lazyRelation;
+        }
+
         $this->eventDispatcher?->dispatch(new QueryStartedEvent($this->redact(clone $context->trace)));
 
         try {
@@ -278,14 +285,17 @@ final class GraphqlManager implements GraphqlManagerInterface
      *
      * @param class-string     $class
      * @param list<int|string> $identifiers
+     * @param string|null      $relation    the relation accessed, e.g. Task::$assignee, recorded with the queries
      *
      * @return list<object> the entities found
      */
-    private function loadLazily(string $class, array $identifiers): array
+    private function loadLazily(string $class, array $identifiers, ?string $relation = null): array
     {
         // A ghost is loaded while it initializes: its query must not meet it again through the shared identity map.
         $loadingLazily = $this->loadingLazily;
+        $lazyRelation = $this->lazyRelation;
         $this->loadingLazily = true;
+        $this->lazyRelation = $relation;
 
         try {
             $repository = new GraphqlEntityRepository($this, $class);
@@ -306,6 +316,7 @@ final class GraphqlManager implements GraphqlManagerInterface
             return $entities;
         } finally {
             $this->loadingLazily = $loadingLazily;
+            $this->lazyRelation = $lazyRelation;
         }
     }
 

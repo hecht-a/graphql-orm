@@ -219,6 +219,27 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itWarnsAboutARelationLoadedOneEntityAtATime(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+
+        foreach ([1, 2, 3] as $id) {
+            $trace = new GraphqlQueryTrace();
+            $trace->graphql = \sprintf('query { users(id: %d) { id name } }', $id);
+            $trace->origin = 'lazy';
+            $trace->lazyRelation = 'App\\Entity\\Task::$assignee';
+            $collector->addQuery($trace);
+        }
+
+        $html = $this->render($collector);
+        $text = self::text($html);
+
+        self::assertStringContainsString('Task::$assignee loaded 3 times', $text);
+        self::assertStringContainsString('data-graphql-orm-tab="findings"', $html);
+        self::assertStringNotContainsString('Repeated queries', $html);
+    }
+
+    #[Test]
     public function itWarnsAboutRepeatedQueries(): void
     {
         $collector = $this->collector([

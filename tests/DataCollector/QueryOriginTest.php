@@ -74,6 +74,7 @@ final class QueryOriginTest extends TestCase
 
         self::assertSame(['findAll', ChainA::class], $this->origin(0));
         self::assertSame(['lazy', ChainB::class], $this->origin(1));
+        self::assertSame(ChainA::class . '::$next', $this->collector->getQueries()[1]['lazy_relation'] ?? null);
     }
 
     #[Test]

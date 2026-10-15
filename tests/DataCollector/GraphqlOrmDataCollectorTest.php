@@ -208,6 +208,44 @@ final class GraphqlOrmDataCollectorTest extends TestCase
         self::assertEqualsWithDelta([0.0, 40.0], $this->collector->getQueryOffsets(), 0.001);
     }
 
+    #[Test]
+    public function itGroupsTheLazyLoadsOfARelationLoadedOneByOne(): void
+    {
+        foreach ([['App\\Entity\\Task::$assignee', 2.0, 18], ['App\\Entity\\Task::$assignee', 3.0, 18], ['App\\Entity\\Task::$project', 1.0, 30], ['App\\Entity\\Task::$assignee', 4.0, 21]] as [$relation, $duration, $line]) {
+            $this->collector->addQuery(self::lazyLoad($relation, $duration, $line));
+        }
+
+        $loads = $this->collector->getLazyLoadsByRelation();
+
+        self::assertCount(1, $loads);
+        self::assertSame('App\\Entity\\Task::$assignee', $loads[0]['relation']);
+        self::assertSame(3, $loads[0]['count']);
+        self::assertSame([1, 2, 4], $loads[0]['queries']);
+        self::assertEqualsWithDelta(9.0, $loads[0]['duration'], 0.001);
+        self::assertSame(['templates/task/board.html.twig:18', 'templates/task/board.html.twig:21'], $loads[0]['callers']);
+    }
+
+    #[Test]
+    public function itLeavesTheLazyLoadsOutOfTheRepeatedQueries(): void
+    {
+        foreach ([1, 2, 3] as $line) {
+            $this->collector->addQuery(self::lazyLoad('App\\Entity\\Task::$assignee', 1.0, $line));
+        }
+
+        self::assertSame([], $this->collector->getRepeatedQueries());
+    }
+
+    private static function lazyLoad(string $relation, float $duration, int $line): GraphqlQueryTrace
+    {
+        $trace = self::traceOf('query { users(id: 3) { id name } }');
+        $trace->origin = 'lazy';
+        $trace->lazyRelation = $relation;
+        $trace->duration = $duration;
+        $trace->caller = ['file' => 'templates/task/board.html.twig', 'line' => $line, 'class' => null, 'function' => null];
+
+        return $trace;
+    }
+
     /**
      * @param array<string|int, mixed>|null $errors
      */

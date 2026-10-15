@@ -20,6 +20,8 @@ final class GraphqlOrmDataCollector extends DataCollector
      */
     public const REPEATED_QUERY_THRESHOLD = 3;
 
+    private const LAZY_ORIGIN = 'lazy';
+
     /**
      * @param float|null $slowQueryThreshold duration in milliseconds from which a query is reported as slow
      */
@@ -54,6 +56,7 @@ final class GraphqlOrmDataCollector extends DataCollector
             'started_at' => $trace->startedAt,
             'origin' => $trace->origin,
             'entity_class' => $trace->entityClass,
+            'lazy_relation' => $trace->lazyRelation,
             'slow' => $this->slowQueryThreshold !== null && $trace->duration >= $this->slowQueryThreshold,
         ];
         $this->data['queries'] = $queries;
@@ -152,7 +155,8 @@ final class GraphqlOrmDataCollector extends DataCollector
         foreach ($this->getQueries() as $index => $query) {
             $shape = $query['shape'] ?? null;
 
-            if (\is_string($shape)) {
+            // The lazy loads are grouped by relation instead: see getLazyLoadsByRelation().
+            if (\is_string($shape) && ($query['origin'] ?? null) !== self::LAZY_ORIGIN) {
                 $queriesByShape[$shape][] = $index + 1;
             }
         }
@@ -211,6 +215,41 @@ final class GraphqlOrmDataCollector extends DataCollector
     public function getResponseSize(): int
     {
         return array_sum(array_map(fn (array $query): int => \is_int($query['response_size'] ?? null) ? $query['response_size'] : 0, $this->getQueries()));
+    }
+
+    /**
+     * The relations loaded on first access at least REPEATED_QUERY_THRESHOLD times, one query each: the N+1 problem of
+     * lazy loading. With the numbers of their queries (from 1), their total duration and the lines reading them.
+     *
+     * @return list<array{relation: string, count: int, queries: list<int>, duration: float, callers: list<string>}>
+     */
+    public function getLazyLoadsByRelation(): array
+    {
+        $byRelation = [];
+
+        foreach ($this->getQueries() as $index => $query) {
+            $relation = $query['lazy_relation'] ?? null;
+
+            if (($query['origin'] ?? null) !== self::LAZY_ORIGIN || !\is_string($relation)) {
+                continue;
+            }
+
+            $duration = $query['duration'] ?? 0;
+            $caller = $query['caller'] ?? null;
+            $group = $byRelation[$relation] ?? ['relation' => $relation, 'count' => 0, 'queries' => [], 'duration' => 0.0, 'callers' => []];
+            ++$group['count'];
+            $group['queries'][] = $index + 1;
+            $group['duration'] += \is_int($duration) || \is_float($duration) ? $duration : 0;
+
+            if (\is_array($caller) && \is_string($caller['file'] ?? null)) {
+                $line = $caller['file'] . (\is_int($caller['line'] ?? null) ? ':' . $caller['line'] : '');
+                $group['callers'] = array_values(array_unique([...$group['callers'], $line]));
+            }
+
+            $byRelation[$relation] = $group;
+        }
+
+        return array_values(array_filter($byRelation, fn (array $group): bool => $group['count'] >= self::REPEATED_QUERY_THRESHOLD));
     }
 
     public function getErrorCount(): int

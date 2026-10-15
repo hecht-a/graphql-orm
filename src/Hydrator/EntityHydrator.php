@@ -72,6 +72,7 @@ final class EntityHydrator
         GraphqlExecutionContext $context,
         int $depth,
         bool $lazy,
+        ?string $relation = null,
     ): object {
         $context->trace->hydrationMaxDepth = max(
             $context->trace->hydrationMaxDepth,
@@ -107,7 +108,7 @@ final class EntityHydrator
         ++$context->trace->hydratedEntities;
 
         if ($identifier !== null && $uniqueField !== null && $context->lazyLoader !== null && ($lazy || $context->lazyLoading) && $this->isReducedToIdentifier($metadata, $data, $identifier->mappedFrom)) {
-            $ghost = $this->lazyGhost($metadata, $identifier, $uniqueField, $context);
+            $ghost = $this->lazyGhost($metadata, $identifier, $uniqueField, $context, $relation);
             $property = $this->property($metadata->class, $identifier->property);
             $property->setRawValueWithoutLazyInitialization($ghost, $this->normalizeValue($data[$identifier->mappedFrom], $property));
 
@@ -173,6 +174,7 @@ final class EntityHydrator
                             $context,
                             $depth + 1,
                             $field->fetch === Fetch::Lazy,
+                            $metadata->class . '::$' . $field->property,
                         ),
                         $context->dialect->extractCollection($value)
                     );
@@ -185,6 +187,7 @@ final class EntityHydrator
                         $context,
                         $depth + 1,
                         $field->fetch === Fetch::Lazy,
+                        $metadata->class . '::$' . $field->property,
                     );
                 }
             }
@@ -215,12 +218,14 @@ final class EntityHydrator
     /**
      * An entity of which only the identifier is set: its other properties are loaded on first access. The other ghosts
      * of its class met in the same response are loaded by the same query when the dialect allows it.
+     *
+     * @param string|null $relation the relation holding the ghost, e.g. Task::$assignee, told to the loader
      */
-    private function lazyGhost(GraphqlEntityMetadata $metadata, GraphqlFieldMetadata $identifierField, int|string $identifier, GraphqlExecutionContext $context): object
+    private function lazyGhost(GraphqlEntityMetadata $metadata, GraphqlFieldMetadata $identifierField, int|string $identifier, GraphqlExecutionContext $context, ?string $relation): object
     {
         $class = $metadata->class;
 
-        return $this->classReflection($class)->newLazyGhost(function (object $ghost) use ($class, $identifierField, $identifier, $context): void {
+        return $this->classReflection($class)->newLazyGhost(function (object $ghost) use ($class, $identifierField, $identifier, $context, $relation): void {
             $pending = [$identifier => $ghost];
 
             foreach ($context->identityMap[$class] ?? [] as $key => $entity) {
@@ -233,7 +238,7 @@ final class EntityHydrator
             $identifierProperty = $this->property($class, $identifierField->property);
             $loaded = [];
 
-            foreach ($loader($class, array_keys($pending)) as $entity) {
+            foreach ($loader($class, array_keys($pending), $relation) as $entity) {
                 $key = $identifierProperty->getValue($entity);
 
                 if (\is_int($key) || \is_string($key)) {
