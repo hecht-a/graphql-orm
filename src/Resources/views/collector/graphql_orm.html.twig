@@ -338,7 +338,24 @@ border-radius:6px;
 
     <script>
         function copyToClipboard(button) {
-            navigator.clipboard.writeText(button.dataset.copy)
+            // The Clipboard API only exists in a secure context (HTTPS or localhost): an application served over plain
+            // HTTP, e.g. http://app.docker, copies through a selected textarea instead.
+            const copied = navigator.clipboard && window.isSecureContext
+                ? navigator.clipboard.writeText(button.dataset.copy)
+                : new Promise((resolve, reject) => {
+                    const textarea = document.createElement("textarea");
+                    textarea.value = button.dataset.copy;
+                    textarea.setAttribute("readonly", "");
+                    textarea.style.position = "fixed";
+                    textarea.style.opacity = "0";
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    const succeeded = document.execCommand("copy");
+                    textarea.remove();
+                    succeeded ? resolve() : reject();
+                });
+
+            copied
                 .then(() => {
                     const original = button.innerText;
                     button.innerText = "Copied ✓";
