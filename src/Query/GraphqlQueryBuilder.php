@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Query;
 
+use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Query\Expr\ExpressionBuilder;
 use GraphqlOrm\Query\Expr\FilterExpressionInterface;
@@ -58,6 +59,22 @@ final class GraphqlQueryBuilder
     public function where(FilterExpressionInterface $expr): self
     {
         $this->filter = $expr;
+
+        return $this;
+    }
+
+    /**
+     * Keys the result by a field of its entities, as Doctrine indexBy: an identifier, a code...
+     *
+     * @param string $field GraphQL field name or PHP property
+     *
+     * @return GraphqlQueryBuilder<T>
+     *
+     * @throws InvalidArgumentException when the entity maps no such field
+     */
+    public function indexBy(string $field): self
+    {
+        $this->options->indexBy = $this->manager->getMetadataFactory()->getMetadata($this->entityClass)->property($field);
 
         return $this;
     }

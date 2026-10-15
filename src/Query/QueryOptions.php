@@ -24,4 +24,11 @@ final class QueryOptions
      * @internal set by GraphqlQuery::toIterable()
      */
     public bool $detached = false;
+
+    /**
+     * The property keying the result, as Doctrine indexBy.
+     *
+     * @internal set by GraphqlQueryBuilder::indexBy() and GraphqlEntityRepository::findBy()
+     */
+    public ?string $indexBy = null;
 }

@@ -7,6 +7,7 @@ namespace GraphqlOrm\Query;
 use GraphqlOrm\Dialect\CursorPaginationDialect;
 use GraphqlOrm\Dialect\OffsetPaginationDialect;
 use GraphqlOrm\Exception\GraphqlRequestException;
+use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\Exception\NonUniqueResultException;
@@ -239,6 +240,10 @@ final readonly class GraphqlQuery
                     ->hydrate($metadata, $row, $context),
                 $rows
             );
+
+            if ($this->options->indexBy !== null) {
+                $items = self::indexed($items, $this->options->indexBy);
+            }
 
             if (!$this->options->paginate) {
                 return $items;
@@ -481,6 +486,31 @@ final readonly class GraphqlQuery
             1 => $items[0],
             default => throw NonUniqueResultException::forClass($this->entityClass),
         };
+    }
+
+    /**
+     * @param T[] $entities
+     *
+     * @return array<int|string, T>
+     *
+     * @throws InvalidArgumentException when an entity has no value usable as a key
+     */
+    private static function indexed(array $entities, string $property): array
+    {
+        $indexed = [];
+
+        foreach ($entities as $entity) {
+            $value = (new \ReflectionProperty($entity, $property))->getValue($entity);
+            $key = match (true) {
+                \is_int($value), \is_string($value) => $value,
+                $value instanceof \BackedEnum => $value->value,
+                $value instanceof \Stringable => (string) $value,
+                default => throw new InvalidArgumentException(\sprintf('"%s::$%s" holds no value usable as a key of the result.', $entity::class, $property)),
+            };
+            $indexed[$key] = $entity;
+        }
+
+        return $indexed;
     }
 
     /**

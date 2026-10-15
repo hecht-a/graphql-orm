@@ -88,12 +88,14 @@ class GraphqlEntityRepository
     /**
      * @param array<string, mixed>          $criteria GraphQL field name or PHP property => expected value
      * @param array<string, Direction>|null $orderBy  GraphQL field name or PHP property => direction
+     * @param string|null                   $indexBy  GraphQL field name or PHP property keying the result, as Doctrine
+     *                                                indexBy (pass it by name: Doctrine has an offset there)
      *
      * @return T[]
      *
-     * @throws InvalidArgumentException when an ordering is not a Direction
+     * @throws InvalidArgumentException when an ordering is not a Direction, or when the entity maps no indexBy field
      */
-    public function findBy(array $criteria, ?array $orderBy = null, ?int $limit = null): array
+    public function findBy(array $criteria, ?array $orderBy = null, ?int $limit = null, ?string $indexBy = null): array
     {
         foreach ($orderBy ?? [] as $field => $direction) {
             // Callers without static analysis may still pass 'ASC' or 'DESC' strings.
@@ -109,6 +111,7 @@ class GraphqlEntityRepository
         // An empty ordering, accepted by Doctrine, would be sent as an empty argument that servers reject.
         $options->orderBy = $orderBy !== null && $orderBy !== [] ? $metadata->withGraphqlNames($orderBy) : null;
         $options->limit = $limit;
+        $options->indexBy = $indexBy !== null ? $metadata->property($indexBy) : null;
 
         $query = (new GraphqlQueryStringBuilder($this->manager))
             ->entity($this->entityClass)

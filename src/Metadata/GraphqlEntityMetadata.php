@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Metadata;
 
+use GraphqlOrm\Exception\InvalidArgumentException;
+
 /**
  * @internal
  */
@@ -48,6 +50,24 @@ final readonly class GraphqlEntityMetadata
     /**
      * The GraphQL name of a field named after its GraphQL name or its PHP property; an unknown name is kept as is.
      */
+    /**
+     * The PHP property of a field named after its GraphQL name or its PHP property.
+     *
+     * @throws InvalidArgumentException when the entity maps no such field
+     */
+    public function property(string $name): string
+    {
+        $field = $this->field($name);
+
+        if ($field !== null) {
+            return $field->property;
+        }
+
+        $closest = $this->closestField($name);
+
+        throw new InvalidArgumentException(\sprintf('"%s" is not a field of "%s"%s.', $name, $this->class, $closest !== null ? \sprintf(': did you mean "%s"?', $closest) : ''));
+    }
+
     public function graphqlName(string $name): string
     {
         return $this->field($name)->mappedFrom ?? $name;
