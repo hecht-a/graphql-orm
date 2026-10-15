@@ -9,6 +9,8 @@ use GraphqlOrm\Query\GraphqlQueryTrace;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Twig\Environment;
 use Twig\Extension\DebugExtension;
 use Twig\Loader\ArrayLoader;
@@ -252,6 +254,27 @@ final class ProfilerTemplateTest extends TestCase
         self::assertStringContainsString('data-graphql-orm-tab="identity-map"', $html);
         self::assertStringContainsString('FakeTask', $text);
         self::assertStringContainsString('TaskController.php:51', $text);
+    }
+
+    #[Test]
+    public function itShowsTheConfigurationAndTheSchemaValidation(): void
+    {
+        $collector = new GraphqlOrmDataCollector(configuration: ['dialect' => 'GraphqlOrm\\Dialect\\DataApiBuilderDialect', 'max_depth' => 1, 'identity_map' => true]);
+        $collector->collect(new Request(), new Response());
+        $collector->setSchemaValidation('warning', ['Report::$margin is a Float in the schema'], null);
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { tasks { id } }';
+        $trace->responsePreview = '{"data": {"tasks": []}}';
+        $collector->addQuery($trace);
+
+        $html = $this->render($collector);
+        $text = self::text($html);
+
+        self::assertStringContainsString('data-graphql-orm-tab="configuration"', $html);
+        self::assertStringContainsString('max_depth 1', $text);
+        self::assertStringContainsString('Report::$margin is a Float in the schema', $text);
+        self::assertStringContainsString('data-graphql-orm-pane="response"', $html);
+        self::assertStringContainsString('{"data": {"tasks": []}}', html_entity_decode($html));
     }
 
     #[Test]

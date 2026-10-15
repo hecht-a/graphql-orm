@@ -135,7 +135,24 @@ final class GraphqlOrmExtension extends Extension
         if (!$debug) {
             $container->removeDefinition(GraphqlOrmDataCollector::class);
         } else {
-            $container->getDefinition(GraphqlOrmDataCollector::class)->setArgument('$slowQueryThreshold', $slowQueryThreshold);
+            $container->getDefinition(GraphqlOrmDataCollector::class)
+                ->setArgument('$slowQueryThreshold', $slowQueryThreshold)
+                // Shown by the profiler: the names of the headers only, and no credentials in the endpoint.
+                ->setArgument('$configuration', [
+                    'dialect' => $config['dialect'],
+                    'endpoint' => GraphqlOrmDataCollector::withoutCredentials($config['endpoint']),
+                    'headers' => array_keys($config['headers']),
+                    'headers_provider' => $config['headers_provider'],
+                    'http_client' => $config['http_client'],
+                    'max_depth' => $config['max_depth'],
+                    'identity_map' => $config['identity_map'],
+                    'lazy_loading' => $config['lazy_loading'],
+                    'variables' => $config['variables'],
+                    'naming_strategy' => $config['naming_strategy'],
+                    'slow_query_threshold' => $slowQueryThreshold,
+                    'redact_query_values' => $config['redact_query_values'],
+                    'schema_validation' => '%graphql_orm.schema_validation.mode%',
+                ]);
         }
 
         $container->getDefinition(GraphqlEntityMetadataFactory::class)->setArgument('$namingStrategy', new Reference($config['naming_strategy']));

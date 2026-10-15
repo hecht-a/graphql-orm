@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\EventListener;
 
+use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Exception\SchemaValidationException;
 use GraphqlOrm\Schema\SchemaIntrospector;
 use GraphqlOrm\Schema\SchemaValidationMode;
@@ -24,6 +25,11 @@ final class SchemaValidationListener
      */
     private bool $validated = false;
 
+    /** @var list<string>|null the violations found, null until the schema is validated */
+    private ?array $violations = null;
+
+    private ?string $failure = null;
+
     /**
      * @param class-string[] $entityClasses
      */
@@ -33,6 +39,7 @@ final class SchemaValidationListener
         private readonly SchemaValidationMode $mode,
         private readonly array $entityClasses,
         private readonly ?LoggerInterface $logger = null,
+        private readonly ?GraphqlOrmDataCollector $collector = null,
     ) {
     }
 
@@ -42,11 +49,20 @@ final class SchemaValidationListener
             return;
         }
 
-        if ($this->mode === SchemaValidationMode::Disabled) {
-            return;
+        try {
+            $this->validate();
+        } finally {
+            // Reported on every request: the profile of each one tells the outcome of the validation.
+            $this->collector?->setSchemaValidation($this->mode->value, $this->violations, $this->failure);
         }
+    }
 
-        if ($this->validated) {
+    /**
+     * @throws SchemaValidationException in exception mode, when the schema cannot be introspected or does not match
+     */
+    private function validate(): void
+    {
+        if ($this->mode === SchemaValidationMode::Disabled || $this->validated) {
             return;
         }
 
@@ -60,6 +76,7 @@ final class SchemaValidationListener
             $schema = $this->introspector->introspectSchema();
         } catch (\Throwable $e) {
             $message = 'GraphQL schema introspection failed: ' . $e->getMessage();
+            $this->failure = $message;
 
             if ($this->mode === SchemaValidationMode::Exception) {
                 throw new SchemaValidationException([$message]);
@@ -71,6 +88,7 @@ final class SchemaValidationListener
         }
 
         $violations = $this->validator->validate($this->entityClasses, $schema['types'], $schema['queryType']);
+        $this->violations = array_values($violations);
 
         if ($violations === []) {
             return;

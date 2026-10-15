@@ -37,6 +37,8 @@ final class GraphqlQueryTrace
     public ?string $entityClass = null;
     /** The relation whose first access sent this lazy load, e.g. App\Entity\Task::$assignee. */
     public ?string $lazyRelation = null;
+    /** The beginning of the response, its values masked unless redact_query_values is false; profiler only. */
+    public ?string $responsePreview = null;
 
     public function __construct()
     {

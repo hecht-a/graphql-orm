@@ -251,6 +251,23 @@ final class GraphqlOrmExtensionTest extends TestCase
     }
 
     #[Test]
+    public function itShowsTheConfigurationInTheProfilerWithoutItsSecrets(): void
+    {
+        $container = $this->createContainer(debug: true, config: [
+            'endpoint' => 'https://user:secret@graphql.example.com/graphql',
+            'headers' => ['X-API-Key' => 'secret'],
+        ]);
+
+        $configuration = $container->getDefinition(GraphqlOrmDataCollector::class)->getArgument('$configuration');
+
+        self::assertIsArray($configuration);
+        self::assertSame('https://graphql.example.com/graphql', $configuration['endpoint'] ?? null);
+        self::assertSame(['X-API-Key'], $configuration['headers'] ?? null);
+        self::assertSame(1, $configuration['max_depth'] ?? null);
+        self::assertStringNotContainsString('secret', (string) json_encode($configuration));
+    }
+
+    #[Test]
     public function itDoesNotRegisterTheCountableFieldsForTheOtherDialects(): void
     {
         $container = $this->createContainer(debug: false);

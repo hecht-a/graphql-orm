@@ -25,9 +25,13 @@ final class GraphqlOrmDataCollector extends DataCollector
     /**
      * @param float|null $slowQueryThreshold duration in milliseconds from which a query is reported as slow
      */
+    /**
+     * @param array<string, mixed> $configuration the options of the bundle shown by the profiler, without secrets
+     */
     public function __construct(
         private readonly QueryRedactor $redactor = new QueryRedactor(),
         private readonly ?float $slowQueryThreshold = null,
+        private readonly array $configuration = [],
     ) {
     }
 
@@ -57,6 +61,7 @@ final class GraphqlOrmDataCollector extends DataCollector
             'origin' => $trace->origin,
             'entity_class' => $trace->entityClass,
             'lazy_relation' => $trace->lazyRelation,
+            'response_preview' => $trace->responsePreview,
             'slow' => $this->slowQueryThreshold !== null && $trace->duration >= $this->slowQueryThreshold,
         ];
         $this->data['queries'] = $queries;
@@ -68,6 +73,47 @@ final class GraphqlOrmDataCollector extends DataCollector
     private static function rootField(string $graphql): ?string
     {
         return preg_match('/\{\s*(\w+)/', $graphql, $matches) === 1 ? $matches[1] : null;
+    }
+
+    /**
+     * The URL without the user and password it may hold, e.g. https://user:secret@api.example.com/graphql.
+     */
+    public static function withoutCredentials(string $url): string
+    {
+        return (string) preg_replace('#^([a-z][a-z0-9+.-]*://)[^/@]*@#i', '$1', $url);
+    }
+
+    /**
+     * Records the outcome of the schema validation, made on the first request of the container.
+     *
+     * @param list<string>|null $violations null when the schema was not validated
+     * @param string|null       $failure    why the schema could not be introspected
+     */
+    public function setSchemaValidation(string $mode, ?array $violations, ?string $failure): void
+    {
+        $this->data['schema_validation'] = ['mode' => $mode, 'violations' => $violations, 'failure' => $failure];
+    }
+
+    /**
+     * @return array{mode: string, violations: list<string>|null, failure: string|null}|null
+     */
+    public function getSchemaValidation(): ?array
+    {
+        /** @var array{mode: string, violations: list<string>|null, failure: string|null}|null $validation */
+        $validation = $this->data['schema_validation'] ?? null;
+
+        return $validation;
+    }
+
+    /**
+     * @return array<string, mixed> the options of the bundle, without secrets
+     */
+    public function getConfiguration(): array
+    {
+        /** @var array<string, mixed> $configuration */
+        $configuration = $this->data['configuration'] ?? [];
+
+        return $configuration;
     }
 
     /**
@@ -140,6 +186,14 @@ final class GraphqlOrmDataCollector extends DataCollector
         ?\Throwable $exception = null,
     ): void {
         $this->data['queries'] ??= [];
+        $configuration = $this->configuration;
+
+        // The endpoint may come from an environment variable, only resolved now.
+        if (\is_string($configuration['endpoint'] ?? null)) {
+            $configuration['endpoint'] = self::withoutCredentials($configuration['endpoint']);
+        }
+
+        $this->data['configuration'] = $configuration;
         $startedAt = $request->server->get('REQUEST_TIME_FLOAT');
         $this->data['request_started_at'] = \is_float($startedAt) || \is_int($startedAt) ? (float) $startedAt : null;
     }

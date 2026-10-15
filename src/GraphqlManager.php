@@ -49,6 +49,9 @@ final class GraphqlManager implements GraphqlManagerInterface
 
     private const LAZY_ORIGIN = 'lazy';
 
+    /** The bytes of a response kept for the profiler. */
+    private const RESPONSE_PREVIEW_BYTES = 2048;
+
     private bool $loadingLazily = false;
 
     /** The relation whose lazy load is running, e.g. Task::$assignee. */
@@ -206,7 +209,13 @@ final class GraphqlManager implements GraphqlManagerInterface
             $failure = null;
 
             try {
-                $entities = $hydration($response(), $context);
+                $result = $response();
+
+                if ($this->collector !== null) {
+                    $context->trace->responsePreview = $this->preview($result);
+                }
+
+                $entities = $hydration($result, $context);
                 $context->trace->hydratedCount = \count($entities instanceof PaginatedResult ? $entities->items : $entities);
 
                 if ($shared) {
@@ -274,6 +283,22 @@ final class GraphqlManager implements GraphqlManagerInterface
         }
 
         return null;
+    }
+
+    /**
+     * The beginning of a response as indented JSON, its values masked as those of the queries.
+     *
+     * @param array<string, mixed> $response
+     */
+    private function preview(array $response): string
+    {
+        $json = json_encode(
+            $this->redactor?->redactValues($response) ?? $response,
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR,
+        );
+        $json = \is_string($json) ? $json : '';
+
+        return \strlen($json) > self::RESPONSE_PREVIEW_BYTES ? mb_strcut($json, 0, self::RESPONSE_PREVIEW_BYTES) . "\n…" : $json;
     }
 
     /**

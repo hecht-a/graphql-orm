@@ -249,6 +249,16 @@ final class GraphqlOrmDataCollectorTest extends TestCase
         ], $this->collector->getIdentityMapHits());
     }
 
+    #[Test]
+    public function itKeepsTheConfigurationInTheProfile(): void
+    {
+        $collector = new GraphqlOrmDataCollector(configuration: ['max_depth' => 1, 'identity_map' => true]);
+
+        $collector->collect(new Request(), new Response());
+
+        self::assertSame(['max_depth' => 1, 'identity_map' => true], $collector->getConfiguration());
+    }
+
     private static function lazyLoad(string $relation, float $duration, int $line): GraphqlQueryTrace
     {
         $trace = self::traceOf('query { users(id: 3) { id name } }');

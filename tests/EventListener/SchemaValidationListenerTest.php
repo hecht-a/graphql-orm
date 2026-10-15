@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\EventListener;
 
+use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\EventListener\SchemaValidationListener;
 use GraphqlOrm\Exception\SchemaValidationException;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
@@ -27,6 +28,32 @@ final class SchemaValidationListenerTest extends TestCase
     protected function setUp(): void
     {
         $this->logger = new FakeLogger();
+    }
+
+    #[Test]
+    public function itReportsTheViolationsToTheProfilerOnEveryRequest(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $listener = $this->listener(new FakeGraphqlClient(self::schema(withPrice: false)), SchemaValidationMode::Warning, collector: $collector);
+        $listener($this->event());
+        $collector->reset();
+
+        $listener($this->event());
+
+        $validation = $collector->getSchemaValidation();
+        self::assertSame('warning', $validation['mode'] ?? null);
+        self::assertCount(1, $validation['violations'] ?? []);
+        self::assertStringContainsString('price', ($validation['violations'] ?? [''])[0]);
+    }
+
+    #[Test]
+    public function itReportsTheModeOnlyWhenTheValidationIsDisabled(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+
+        $this->listener(new FakeGraphqlClient(), SchemaValidationMode::Disabled, collector: $collector)($this->event());
+
+        self::assertSame(['mode' => 'disabled', 'violations' => null, 'failure' => null], $collector->getSchemaValidation());
     }
 
     #[Test]
@@ -128,7 +155,7 @@ final class SchemaValidationListenerTest extends TestCase
     /**
      * @param class-string[] $entityClasses
      */
-    private function listener(FakeGraphqlClient $client, SchemaValidationMode $mode, array $entityClasses = [FakeValidEntity::class]): SchemaValidationListener
+    private function listener(FakeGraphqlClient $client, SchemaValidationMode $mode, array $entityClasses = [FakeValidEntity::class], ?GraphqlOrmDataCollector $collector = null): SchemaValidationListener
     {
         return new SchemaValidationListener(
             new SchemaIntrospector($client),
@@ -136,6 +163,7 @@ final class SchemaValidationListenerTest extends TestCase
             $mode,
             $entityClasses,
             $this->logger,
+            $collector,
         );
     }
 

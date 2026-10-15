@@ -139,6 +139,10 @@
                     Queries <span class="badge">{{ collector.queryCount }}</span>
                 </button>
                 <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="timeline">Timeline</button>
+                <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="configuration">
+                    Configuration
+                    {% if collector.schemaValidation.violations ?? null %}<span class="badge status-warning">{{ collector.schemaValidation.violations|length }}</span>{% endif %}
+                </button>
                 {% if collector.identityMapHitCount > 0 %}
                     <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="identity-map">
                         Identity map <span class="badge">{{ collector.identityMapHitCount }}</span>
@@ -246,6 +250,40 @@
                     </div>
                 </div>
                 <p class="graphql-orm-muted">From the start of the request. Overlapping bars are queries sent together, e.g. by <code>GraphqlQuery::concurrently()</code>.</p>
+            </div>
+
+            <div data-graphql-orm-view="configuration" hidden>
+                {% if collector.configuration is not empty %}
+                    <table>
+                        <tbody>
+                            {% for name, value in collector.configuration %}
+                                <tr>
+                                    <th>{{ name }}</th>
+                                    <td>{{ _self.renderValue(value) }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+
+                <h3>Schema validation</h3>
+                {% set validation = collector.schemaValidation %}
+                {% if validation is null %}
+                    <p class="graphql-orm-muted">Not reported for this request.</p>
+                {% elseif validation.failure %}
+                    <div class="graphql-orm-error">{{ validation.failure }}</div>
+                {% elseif validation.violations is null %}
+                    <p class="graphql-orm-muted">Mode <code>{{ validation.mode }}</code>: the mapping is not checked against the schema.</p>
+                {% elseif validation.violations is empty %}
+                    <p>Mode <code>{{ validation.mode }}</code>: <span class="badge badge-success">the mapping matches the schema</span></p>
+                {% else %}
+                    <p>Mode <code>{{ validation.mode }}</code>: <span class="badge badge-warning">{{ validation.violations|length }} {{ validation.violations|length > 1 ? 'violations' : 'violation' }}</span></p>
+                    <ul>
+                        {% for violation in validation.violations %}
+                            <li>{{ violation }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
             </div>
 
             {% if collector.identityMapHitCount > 0 %}
@@ -531,6 +569,24 @@
 
 {# ================= MACROS ================= #}
 
+{% macro renderValue(value) %}
+    {%- if value is same as(true) -%}
+        true
+    {%- elseif value is same as(false) -%}
+        false
+    {%- elseif value is null -%}
+        <span class="graphql-orm-muted">-</span>
+    {%- elseif value is iterable -%}
+        {%- if value is empty -%}
+            <span class="graphql-orm-muted">-</span>
+        {%- else -%}
+            {%- for key, item in value -%}{{ key matches '/^\\d+$/' ? '' : key ~ ': ' }}{{ _self.renderValue(item) }}{{ loop.last ? '' : ', ' }}{%- endfor -%}
+        {%- endif -%}
+    {%- else -%}
+        <code>{{ value }}</code>
+    {%- endif -%}
+{% endmacro %}
+
 {% macro originKind(origin) %}{{ origin in ['lazy', 'introspection'] ? origin : (origin in ['count', 'sum', 'avg', 'min', 'max'] ? 'count' : 'query') }}{% endmacro %}
 
 {% macro renderOrigin(query) %}
@@ -561,6 +617,9 @@
         <div class="graphql-orm-subtabs" role="tablist" aria-label="Query #{{ number }}">
             <button type="button" class="graphql-orm-subtab" role="tab" aria-selected="true" data-graphql-orm-subtab="graphql">GraphQL</button>
             <button type="button" class="graphql-orm-subtab" role="tab" aria-selected="false" data-graphql-orm-subtab="variables">Variables</button>
+            {% if query.response_preview ?? null %}
+                <button type="button" class="graphql-orm-subtab" role="tab" aria-selected="false" data-graphql-orm-subtab="response">Response</button>
+            {% endif %}
             {% if query.ast %}
                 <button type="button" class="graphql-orm-subtab" role="tab" aria-selected="false" data-graphql-orm-subtab="ast">AST</button>
             {% endif %}
@@ -577,6 +636,12 @@
                 <p class="graphql-orm-muted">No variables: the values are written in the query.</p>
             {% endif %}
         </div>
+        {% if query.response_preview ?? null %}
+            <div data-graphql-orm-pane="response" hidden>
+                <pre class="graphql-orm-code">{{ query.response_preview }}</pre>
+                <p class="graphql-orm-muted">The first 2 KB of {{ (query.response_size / 1024)|number_format(1) }} KB, values masked unless <code>redact_query_values</code> is false.</p>
+            </div>
+        {% endif %}
         {% if query.ast %}
             <div data-graphql-orm-pane="ast" hidden>
                 <div class="graphql-ast-tree">

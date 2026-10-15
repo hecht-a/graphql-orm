@@ -122,6 +122,7 @@ return static function (ContainerConfigurator $config) {
         ->arg(0, param('graphql_orm.schema_validation.mode'));
 
     $services->set(SchemaValidationListener::class)
+        ->arg('$collector', service(GraphqlOrmDataCollector::class)->nullOnInvalid())
         ->arg('$mode', service('graphql_orm.schema_validation_mode'))
         ->arg('$entityClasses', param('graphql_orm.schema_validation.entity_classes'));
 };

@@ -10,6 +10,7 @@ use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\Dialect\HasuraDialect;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
+use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Tests\Fixtures\Depth\ChainA;
@@ -90,6 +91,30 @@ final class QueryOriginTest extends TestCase
         self::assertLessThanOrEqual(microtime(true), $startedAt);
     }
 
+    #[Test]
+    public function itKeepsAPreviewOfTheResponseWithItsValuesMasked(): void
+    {
+        $this->repository(new FakeGraphqlClient(['data' => ['tasks' => [['id' => 1, 'title' => 'Secret']]]]), FakeTask::class)->findAll();
+
+        $preview = $this->collector->getQueries()[0]['response_preview'] ?? null;
+        self::assertIsString($preview);
+        self::assertStringContainsString('"title": "***"', $preview);
+        self::assertStringNotContainsString('Secret', $preview);
+    }
+
+    #[Test]
+    public function itCutsTheResponsePreview(): void
+    {
+        $tasks = array_map(fn (int $id) => ['id' => $id, 'title' => str_repeat('a', 100)], range(1, 100));
+
+        $this->repository(new FakeGraphqlClient(['data' => ['tasks' => $tasks]]), FakeTask::class)->findAll();
+
+        $preview = $this->collector->getQueries()[0]['response_preview'] ?? null;
+        self::assertIsString($preview);
+        self::assertLessThanOrEqual(2048 + 4, \strlen($preview));
+        self::assertStringEndsWith('…', $preview);
+    }
+
     /**
      * @return array{mixed, mixed} the origin and the entity class of a recorded query
      */
@@ -116,6 +141,7 @@ final class QueryOriginTest extends TestCase
             $lazyLoading ? 0 : 2,
             dialect: $dialect ?? new DefaultDialect(),
             lazyLoading: $lazyLoading,
+            redactor: new QueryRedactor(),
         );
 
         return new GraphqlEntityRepository($manager, $entityClass);
