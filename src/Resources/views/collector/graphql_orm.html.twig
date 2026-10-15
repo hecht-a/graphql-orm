@@ -147,6 +147,11 @@
                     Configuration
                     {% if collector.schemaValidation.violations ?? null %}<span class="badge status-warning">{{ collector.schemaValidation.violations|length }}</span>{% endif %}
                 </button>
+                {% if collector.entities is not empty %}
+                    <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="entities">
+                        Entities <span class="badge">{{ collector.entities|length }}</span>
+                    </button>
+                {% endif %}
                 {% if collector.identityMapHitCount > 0 %}
                     <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="identity-map">
                         Identity map <span class="badge">{{ collector.identityMapHitCount }}</span>
@@ -294,6 +299,47 @@
                 {% endif %}
             </div>
 
+            {% if collector.entities is not empty %}
+                <div data-graphql-orm-view="entities" hidden>
+                    <p class="graphql-orm-muted">
+                        The entities of the mapping directory, and those read by the queries of this request (first), as the
+                        bundle maps them.
+                    </p>
+                    {% for entity in collector.entities %}
+                        <div class="graphql-orm-entity">
+                            <h3>
+                                <code title="{{ entity.class }}">{{ entity.class|split('\\')|last }}</code>
+                                {% if entity.queries > 0 %}<span class="badge">{{ entity.queries }} {{ entity.queries > 1 ? 'queries' : 'query' }}</span>{% endif %}
+                            </h3>
+                            {% if entity.error %}
+                                <div class="graphql-orm-error">{{ entity.error }}</div>
+                            {% else %}
+                                <p class="graphql-orm-muted">
+                                    Root field <code>{{ entity.name }}</code>,
+                                    {% if entity.identifier %}identified by <code>{{ entity.identifier }}</code>{% else %}no identifier{% endif %}{% if entity.repository %},
+                                    repository <code title="{{ entity.repository }}">{{ entity.repository|split('\\')|last }}</code>{% endif %}
+                                </p>
+                                <table>
+                                    <thead>
+                                        <tr><th>Property</th><th>GraphQL field</th><th>Relation</th><th>Fetch</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for field in entity.fields %}
+                                            <tr>
+                                                <td>{{ field.property }}{% if field.property == entity.identifier %} <span class="badge">identifier</span>{% endif %}</td>
+                                                <td><code>{{ field.field }}</code></td>
+                                                <td>{% if field.relation %}<span title="{{ field.relation }}">{{ field.relation|split('\\')|last }}{{ field.collection ? '[]' }}</span>{% else %}<span class="graphql-orm-muted">-</span>{% endif %}</td>
+                                                <td>{{ field.fetch ?? '-' }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
             {% if collector.identityMapHitCount > 0 %}
                 <div data-graphql-orm-view="identity-map" hidden>
                     <p class="graphql-orm-muted">
@@ -383,6 +429,8 @@
         .graphql-orm-tabs { margin: 0; }
         .graphql-orm-finding { border: 1px solid var(--table-border-color, #d4d4d4); border-left: 4px solid var(--color-warning, #785b02); border-radius: 0 6px 6px 0; padding: 4px 16px; margin-bottom: 12px; }
         .graphql-orm-finding h3 { margin: 10px 0 0; }
+        .graphql-orm-entity { margin-bottom: 18px; }
+        .graphql-orm-entity h3 { margin: 0 0 4px; display: flex; gap: 8px; align-items: center; }
         .graphql-orm-suggestion { margin: 6px 0 0; padding-left: 10px; border-left: 3px solid var(--color-success, #4f805d); }
         .graphql-orm-tabs .tab-control { border: 0; background: transparent; font: inherit; cursor: pointer; }
         .graphql-orm-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }

@@ -40,6 +40,8 @@ use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class GraphqlOrmExtensionTest extends TestCase
@@ -289,6 +291,22 @@ final class GraphqlOrmExtensionTest extends TestCase
         $container = $this->createContainer(debug: true);
 
         self::assertTrue($container->getDefinition(GraphqlOrmTwigExtension::class)->hasTag('twig.extension'));
+    }
+
+    #[Test]
+    public function itGivesTheProfilerTheEntitiesOfTheMappingDirectory(): void
+    {
+        $container = $this->createContainer(debug: true, config: ['mapping' => ['entity' => [
+            'dir' => '%kernel.project_dir%/tests/Fixtures/Depth',
+            'namespace' => 'GraphqlOrm\\Tests\\Fixtures\\Depth',
+        ]]]);
+
+        $container->compile();
+        $collector = $container->get(GraphqlOrmDataCollector::class);
+        self::assertInstanceOf(GraphqlOrmDataCollector::class, $collector);
+        $collector->collect(new Request(), new Response());
+
+        self::assertContains(ChainA::class, array_column($collector->getEntities(), 'class'));
     }
 
     #[Test]

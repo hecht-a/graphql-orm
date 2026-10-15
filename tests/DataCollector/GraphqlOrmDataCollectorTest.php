@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace GraphqlOrm\Tests\DataCollector;
 
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
+use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Query\GraphqlQueryTrace;
+use GraphqlOrm\Tests\Fixtures\Depth\ChainA;
+use GraphqlOrm\Tests\Fixtures\Depth\ChainB;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -314,6 +317,38 @@ final class GraphqlOrmDataCollectorTest extends TestCase
         }
 
         self::assertNull($this->collector->getRepeatedQueries()[0]['find_entity']);
+    }
+
+    #[Test]
+    public function itDescribesTheMappedEntitiesAndTheQueriesReadingThem(): void
+    {
+        $collector = new GraphqlOrmDataCollector(metadataFactory: new GraphqlEntityMetadataFactory(), entityClasses: [ChainA::class]);
+        $trace = self::traceOf('query { chainAs { id } }');
+        $trace->entityClass = ChainA::class;
+        $collector->addQuery($trace);
+
+        $collector->collect(new Request(), new Response());
+
+        $entity = $collector->getEntities()[0];
+        self::assertSame([ChainA::class, 'chainAs', 1, 'id'], [$entity['class'], $entity['name'], $entity['queries'], $entity['identifier']]);
+        self::assertIsArray($entity['fields']);
+        self::assertSame(
+            ['property' => 'next', 'field' => 'next', 'relation' => ChainB::class, 'collection' => false, 'fetch' => 'Eager'],
+            $entity['fields'][2] ?? null,
+        );
+    }
+
+    #[Test]
+    public function itAddsTheEntitiesReadByTheQueriesToThoseOfTheMappingDirectory(): void
+    {
+        $collector = new GraphqlOrmDataCollector(metadataFactory: new GraphqlEntityMetadataFactory());
+        $trace = self::traceOf('query { tasks { id } }');
+        $trace->entityClass = FakeTask::class;
+        $collector->addQuery($trace);
+
+        $collector->collect(new Request(), new Response());
+
+        self::assertSame([FakeTask::class], array_column($collector->getEntities(), 'class'));
     }
 
     private static function lazyLoad(string $relation, float $duration, int $line): GraphqlQueryTrace

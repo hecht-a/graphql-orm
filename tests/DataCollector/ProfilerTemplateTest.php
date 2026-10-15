@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GraphqlOrm\Tests\DataCollector;
 
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
+use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Query\GraphqlQueryTrace;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use GraphqlOrm\Twig\GraphqlOrmTwigExtension;
@@ -338,6 +339,26 @@ final class ProfilerTemplateTest extends TestCase
         $text = self::text($this->render($collector));
 
         self::assertStringContainsString("Each one is a find() of a FakeTask: load them at once with \$repository->findBy(['id' => [/* the 3 identifiers */]])", $text);
+    }
+
+    #[Test]
+    public function itListsTheMappedEntities(): void
+    {
+        $collector = new GraphqlOrmDataCollector(metadataFactory: new GraphqlEntityMetadataFactory(), entityClasses: [FakeTask::class]);
+        $collector->addQuery((function (): GraphqlQueryTrace {
+            $trace = new GraphqlQueryTrace();
+            $trace->graphql = 'query { tasks { id } }';
+
+            return $trace;
+        })());
+        $collector->collect(new Request(), new Response());
+
+        $html = $this->render($collector);
+        $text = self::text($html);
+
+        self::assertStringContainsString('data-graphql-orm-tab="entities"', $html);
+        self::assertStringContainsString('FakeTask', $text);
+        self::assertStringContainsString('title title', $text);
     }
 
     #[Test]

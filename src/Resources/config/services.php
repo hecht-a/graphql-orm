@@ -94,6 +94,7 @@ return static function (ContainerConfigurator $config) {
     $services->alias(GraphqlClientInterface::class, GraphqlClient::class);
 
     $services->set(GraphqlOrmDataCollector::class)
+        ->arg('$entityClasses', param('graphql_orm.schema_validation.entity_classes'))
         ->tag('data_collector', [
             'id' => 'graphql_orm',
             'template' => '@GraphqlOrm/collector/graphql_orm.html.twig',

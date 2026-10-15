@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace GraphqlOrm\DataCollector;
 
 use GraphqlOrm\Logging\QueryRedactor;
+use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Query\GraphqlQueryTrace;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -27,11 +29,14 @@ final class GraphqlOrmDataCollector extends DataCollector
      */
     /**
      * @param array<string, mixed> $configuration the options of the bundle shown by the profiler, without secrets
+     * @param list<class-string>   $entityClasses the entities of the mapping directory, described with those the queries read
      */
     public function __construct(
         private readonly QueryRedactor $redactor = new QueryRedactor(),
         private readonly ?float $slowQueryThreshold = null,
         private readonly array $configuration = [],
+        private readonly ?GraphqlEntityMetadataFactory $metadataFactory = null,
+        private readonly array $entityClasses = [],
     ) {
     }
 
@@ -75,6 +80,69 @@ final class GraphqlOrmDataCollector extends DataCollector
     private static function rootField(string $graphql): ?string
     {
         return preg_match('/\{\s*(\w+)/', $graphql, $matches) === 1 ? $matches[1] : null;
+    }
+
+    /**
+     * The mapped entities, those read by the queries of the request first, with their fields as the bundle maps them.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function getEntities(): array
+    {
+        /** @var list<array<string, mixed>> $entities */
+        $entities = $this->data['entities'] ?? [];
+
+        return $entities;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function describeEntities(): array
+    {
+        if ($this->metadataFactory === null) {
+            return [];
+        }
+
+        $queriesByClass = array_count_values(array_filter(array_column($this->getQueries(), 'entity_class'), 'is_string'));
+        $classes = array_values(array_unique([...array_keys($queriesByClass), ...$this->entityClasses]));
+        $entities = [];
+
+        foreach ($classes as $class) {
+            $entities[] = ['queries' => $queriesByClass[$class] ?? 0, ...$this->describeEntity($class)];
+        }
+
+        usort($entities, fn (array $a, array $b): int => [$b['queries'], $a['class']] <=> [$a['queries'], $b['class']]);
+
+        return $entities;
+    }
+
+    /**
+     * @return array<string, mixed> the mapping of the entity, or the error making it no entity
+     */
+    private function describeEntity(string $class): array
+    {
+        try {
+            /** @var class-string $class */
+            $metadata = $this->metadataFactory?->getMetadata($class) ?? throw new \LogicException('No metadata factory.');
+        } catch (\Throwable $exception) {
+            return ['class' => $class, 'error' => $exception->getMessage()];
+        }
+
+        return [
+            'class' => $class,
+            'name' => $metadata->name,
+            'repository' => $metadata->repositoryClass,
+            'identifier' => $metadata->identifier?->property,
+            'fields' => array_map(fn (GraphqlFieldMetadata $field): array => [
+                'property' => $field->property,
+                'field' => $field->mappedFrom,
+                'relation' => $field->relation,
+                'collection' => $field->isCollection,
+                'fetch' => $field->relation !== null ? $field->fetch->name : null,
+            ], array_values($metadata->fields)),
+            'error' => null,
+        ];
     }
 
     /**
@@ -198,6 +266,7 @@ final class GraphqlOrmDataCollector extends DataCollector
         $this->data['configuration'] = $configuration;
         // A profile read from the storage only has its data: the constructor is not called again.
         $this->data['slow_query_threshold'] = $this->slowQueryThreshold;
+        $this->data['entities'] = $this->describeEntities();
         $startedAt = $request->server->get('REQUEST_TIME_FLOAT');
         $this->data['request_started_at'] = \is_float($startedAt) || \is_int($startedAt) ? (float) $startedAt : null;
     }
