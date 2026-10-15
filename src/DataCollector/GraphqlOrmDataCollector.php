@@ -62,6 +62,7 @@ final class GraphqlOrmDataCollector extends DataCollector
             'origin' => $trace->origin,
             'entity_class' => $trace->entityClass,
             'lazy_relation' => $trace->lazyRelation,
+            'identifier_property' => $trace->identifierProperty,
             'response_preview' => $trace->responsePreview,
             'slow' => $this->slowQueryThreshold !== null && $trace->duration >= $this->slowQueryThreshold,
         ];
@@ -248,8 +249,9 @@ final class GraphqlOrmDataCollector extends DataCollector
 
     /**
      * The shapes of queries sent at least REPEATED_QUERY_THRESHOLD times, with the numbers of these queries (from 1).
+     * When they are all a find() of the same entity, its class and identifier property tell the findBy() replacing them.
      *
-     * @return list<array{shape: string, count: int, queries: list<int>}>
+     * @return list<array{shape: string, count: int, queries: list<int>, find_entity: string|null, find_identifier: string|null}>
      */
     public function getRepeatedQueries(): array
     {
@@ -268,7 +270,8 @@ final class GraphqlOrmDataCollector extends DataCollector
 
         foreach ($queriesByShape as $shape => $queries) {
             if (\count($queries) >= self::REPEATED_QUERY_THRESHOLD) {
-                $repeated[] = ['shape' => (string) $shape, 'count' => \count($queries), 'queries' => $queries];
+                [$entity, $identifier] = $this->foundOneByOne($queries);
+                $repeated[] = ['shape' => (string) $shape, 'count' => \count($queries), 'queries' => $queries, 'find_entity' => $entity, 'find_identifier' => $identifier];
             }
         }
 
@@ -326,6 +329,32 @@ final class GraphqlOrmDataCollector extends DataCollector
     public function getResponseSize(): int
     {
         return array_sum(array_map(fn (array $query): int => \is_int($query['response_size'] ?? null) ? $query['response_size'] : 0, $this->getQueries()));
+    }
+
+    /**
+     * The entity class and identifier property when these queries are all a find() of the same entity.
+     *
+     * @param list<int> $numbers the numbers of the queries (from 1)
+     *
+     * @return array{string|null, string|null}
+     */
+    private function foundOneByOne(array $numbers): array
+    {
+        $found = [];
+
+        foreach ($numbers as $number) {
+            $query = $this->getQueries()[$number - 1] ?? [];
+            $entity = $query['entity_class'] ?? null;
+            $identifier = $query['identifier_property'] ?? null;
+
+            if (($query['origin'] ?? null) !== 'find' || !\is_string($entity) || !\is_string($identifier)) {
+                return [null, null];
+            }
+
+            $found[$entity . '::$' . $identifier] = [$entity, $identifier];
+        }
+
+        return \count($found) === 1 ? array_values($found)[0] : [null, null];
     }
 
     /**

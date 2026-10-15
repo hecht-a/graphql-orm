@@ -353,7 +353,16 @@
                                 <tr>
                                     <td>{{ repeated.count }} times</td>
                                     <td>{% for number in repeated.queries %}<a href="#graphql-orm-query-{{ number }}" data-graphql-orm-open="{{ number }}">#{{ number }}</a>{{ loop.last ? '' : ', ' }}{% endfor %}</td>
-                                    <td><pre class="graphql-orm-code">{{ repeated.shape|graphql_orm_highlight }}</pre></td>
+                                    <td>
+                                        <pre class="graphql-orm-code">{{ repeated.shape|graphql_orm_highlight }}</pre>
+                                        {% if repeated.find_entity ?? null %}
+                                            <p class="graphql-orm-suggestion">
+                                                Each one is a <code>find()</code> of a <code title="{{ repeated.find_entity }}">{{ repeated.find_entity|split('\\')|last }}</code>:
+                                                load them at once with
+                                                <code>$repository->findBy(['{{ repeated.find_identifier }}' => [/* the {{ repeated.count }} identifiers */]])</code>
+                                            </p>
+                                        {% endif %}
+                                    </td>
                                 </tr>
                             {% endfor %}
                         </tbody>
@@ -374,6 +383,7 @@
         .graphql-orm-tabs { margin: 0; }
         .graphql-orm-finding { border: 1px solid var(--table-border-color, #d4d4d4); border-left: 4px solid var(--color-warning, #785b02); border-radius: 0 6px 6px 0; padding: 4px 16px; margin-bottom: 12px; }
         .graphql-orm-finding h3 { margin: 10px 0 0; }
+        .graphql-orm-suggestion { margin: 6px 0 0; padding-left: 10px; border-left: 3px solid var(--color-success, #4f805d); }
         .graphql-orm-tabs .tab-control { border: 0; background: transparent; font: inherit; cursor: pointer; }
         .graphql-orm-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
         .graphql-orm-chip { border: 1px solid var(--table-border-color, #d4d4d4); background: var(--page-background, #fff); color: var(--color-text, #262626); border-radius: 14px; padding: 2px 12px; font: inherit; font-size: 13px; cursor: pointer; }

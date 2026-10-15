@@ -41,6 +41,14 @@ final class QueryOriginTest extends TestCase
     }
 
     #[Test]
+    public function itRecordsTheIdentifierOfTheEntityFound(): void
+    {
+        $this->repository(new FakeGraphqlClient(['data' => ['tasks' => []]]), FakeTask::class)->find(3);
+
+        self::assertSame(['find', 'id'], [$this->origin(0)[0], $this->collector->getQueries()[0]['identifier_property'] ?? null]);
+    }
+
+    #[Test]
     public function itRecordsTheQueryMethodCalledOnAQueryBuilder(): void
     {
         $this->repository(new FakeGraphqlClient(['data' => ['tasks' => []]]), FakeTask::class)

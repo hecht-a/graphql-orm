@@ -322,6 +322,25 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itSuggestsTheFindByReplacingAFindInALoop(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+
+        foreach ([3, 7, 12] as $id) {
+            $trace = new GraphqlQueryTrace();
+            $trace->graphql = \sprintf('query { tasks(id: %d) { id } }', $id);
+            $trace->origin = 'find';
+            $trace->entityClass = FakeTask::class;
+            $trace->identifierProperty = 'id';
+            $collector->addQuery($trace);
+        }
+
+        $text = self::text($this->render($collector));
+
+        self::assertStringContainsString("Each one is a find() of a FakeTask: load them at once with \$repository->findBy(['id' => [/* the 3 identifiers */]])", $text);
+    }
+
+    #[Test]
     public function itWarnsAboutRepeatedQueries(): void
     {
         $collector = $this->collector([

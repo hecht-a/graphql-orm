@@ -38,6 +38,8 @@ final class GraphqlQueryTrace
     public ?string $origin = null;
     /** @var class-string|null the entities read, when known; profiler only */
     public ?string $entityClass = null;
+    /** The identifier property of the entity a find() looks for, e.g. "id"; profiler only. */
+    public ?string $identifierProperty = null;
     /** The relation whose first access sent this lazy load, e.g. App\Entity\Task::$assignee. */
     public ?string $lazyRelation = null;
     /** The beginning of the response, its values masked unless redact_query_values is false; profiler only. */

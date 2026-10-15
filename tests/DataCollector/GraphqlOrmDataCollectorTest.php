@@ -6,6 +6,7 @@ namespace GraphqlOrm\Tests\DataCollector;
 
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Query\GraphqlQueryTrace;
+use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
@@ -283,6 +284,36 @@ final class GraphqlOrmDataCollectorTest extends TestCase
         }
 
         self::assertEqualsWithDelta(3.75, $this->collector->getHydrationDuration(), 0.001);
+    }
+
+    #[Test]
+    public function itSuggestsOneFindByForTheEntitiesFoundOneByOne(): void
+    {
+        foreach ([3, 7, 12] as $id) {
+            $trace = self::traceOf(\sprintf('query { tasks(id: %d) { id } }', $id));
+            $trace->origin = 'find';
+            $trace->entityClass = FakeTask::class;
+            $trace->identifierProperty = 'id';
+            $this->collector->addQuery($trace);
+        }
+
+        $repeated = $this->collector->getRepeatedQueries()[0];
+
+        self::assertSame([FakeTask::class, 'id'], [$repeated['find_entity'], $repeated['find_identifier']]);
+    }
+
+    #[Test]
+    public function itSuggestsNothingForRepeatedQueriesOfDifferentOrigins(): void
+    {
+        foreach (['find', 'findBy', 'find'] as $index => $origin) {
+            $trace = self::traceOf(\sprintf('query { tasks(id: %d) { id } }', $index));
+            $trace->origin = $origin;
+            $trace->entityClass = FakeTask::class;
+            $trace->identifierProperty = $origin === 'find' ? 'id' : null;
+            $this->collector->addQuery($trace);
+        }
+
+        self::assertNull($this->collector->getRepeatedQueries()[0]['find_entity']);
     }
 
     private static function lazyLoad(string $relation, float $duration, int $line): GraphqlQueryTrace

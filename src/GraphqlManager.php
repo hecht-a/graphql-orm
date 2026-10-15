@@ -49,6 +49,8 @@ final class GraphqlManager implements GraphqlManagerInterface
 
     private const LAZY_ORIGIN = 'lazy';
 
+    private const FIND_ORIGIN = 'find';
+
     /** The bytes of a response kept for the profiler. */
     private const RESPONSE_PREVIEW_BYTES = 2048;
 
@@ -187,6 +189,11 @@ final class GraphqlManager implements GraphqlManagerInterface
 
         if ($this->collector !== null) {
             [$context->trace->origin, $context->trace->entityClass] = $this->origin();
+
+            // Lets the profiler suggest one findBy() for the entities found one by one in a loop.
+            if ($context->trace->origin === self::FIND_ORIGIN && $context->trace->entityClass !== null) {
+                $context->trace->identifierProperty = $this->metadataFactory->getMetadata($context->trace->entityClass)->identifier?->property;
+            }
         }
 
         if ($this->loadingLazily) {
