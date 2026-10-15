@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Metadata;
 
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\GraphqlField;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Exception\NotAGraphqlEntityException;
 use GraphqlOrm\Exception\TooManyIdentifiersException;
 use GraphqlOrm\Mapping\Entity;
-use GraphqlOrm\Mapping\Fetch;
 use GraphqlOrm\Mapping\Field;
 use GraphqlOrm\Mapping\Identifier;
 use GraphqlOrm\Mapping\Relation;
@@ -80,20 +77,18 @@ class GraphqlEntityMetadataFactory
     {
         $reflection = new \ReflectionClass($class);
 
-        $entityAttr = $reflection->getAttributes(Entity::class)[0] ?? $reflection->getAttributes(GraphqlEntity::class)[0] ?? null;
+        $entityAttr = $reflection->getAttributes(Entity::class)[0] ?? null;
 
         if (!$entityAttr) {
             throw NotAGraphqlEntityException::forClass($class);
         }
 
         $entity = $entityAttr->newInstance();
-        $legacyMapping = $entity instanceof GraphqlEntity;
 
         $fields = [];
         $identifier = null;
 
         foreach ($reflection->getProperties() as $property) {
-            $legacyMapping = $legacyMapping || $property->getAttributes(GraphqlField::class) !== [];
             $field = $this->field($class, $property);
 
             if ($field === null) {
@@ -111,10 +106,6 @@ class GraphqlEntityMetadataFactory
             $fields[] = $field;
         }
 
-        if ($legacyMapping) {
-            trigger_deprecation('hecht-a/graphql-orm', '4.9', 'The mapping of "%s" uses #[GraphqlEntity] or #[GraphqlField], use #[Entity] and #[Field] of GraphqlOrm\\Mapping instead.', $class);
-        }
-
         return new GraphqlEntityMetadata(
             $class,
             $entity->name,
@@ -125,7 +116,7 @@ class GraphqlEntityMetadataFactory
     }
 
     /**
-     * The field mapped on a property with #[Field] or #[Relation] (#[GraphqlField] until 4.9), if any.
+     * The field mapped on a property with #[Field] or #[Relation], if any.
      *
      * @param class-string $class
      *
@@ -134,27 +125,21 @@ class GraphqlEntityMetadataFactory
     private function field(string $class, \ReflectionProperty $property): ?GraphqlFieldMetadata
     {
         $value = $property->getAttributes(Field::class)[0] ?? null;
-        $legacyValue = $property->getAttributes(GraphqlField::class)[0] ?? null;
         $relation = $property->getAttributes(Relation::class)[0] ?? null;
         $isIdentifier = $property->getAttributes(Identifier::class) !== [];
         $name = $class . '::$' . $property->getName();
 
-        if ($value !== null && $legacyValue !== null) {
-            throw new InvalidArgumentException(\sprintf('"%s" is mapped with both #[Field] and #[GraphqlField]: keep #[Field] only.', $name));
-        }
-
-        if ($isIdentifier && $value === null && $legacyValue === null) {
+        if ($isIdentifier && $value === null) {
             throw new InvalidArgumentException(\sprintf('"%s" has #[Identifier] without #[Field]: the identifier is a field holding a value, declare it with #[Field].', $name));
         }
 
-        if (($value !== null || $legacyValue !== null) && $relation !== null) {
+        if ($value !== null && $relation !== null) {
             throw new InvalidArgumentException(\sprintf('"%s" is mapped with both #[Field] and #[Relation]: map a relation with #[Relation] only.', $name));
         }
 
         return match (true) {
             $relation !== null => $this->relationField($name, $property, $relation->newInstance()),
             $value !== null => $this->valueField($name, $property, $value->newInstance(), $isIdentifier),
-            $legacyValue !== null => $this->legacyField($name, $property, $legacyValue->newInstance(), $isIdentifier),
             default => null,
         };
     }
@@ -194,36 +179,6 @@ class GraphqlEntityMetadataFactory
             mappedFrom: $attribute->mappedFrom ?? $this->namingStrategy->fieldName($property->getName()),
             isIdentifier: $isIdentifier,
             ignoreValidation: $attribute->ignoreValidation,
-        );
-    }
-
-    /**
-     * A field of #[GraphqlField], which mapped the identifier and the relations too until 4.9.
-     *
-     * @throws InvalidArgumentException when a value is fetched lazily
-     */
-    private function legacyField(string $name, \ReflectionProperty $property, GraphqlField $attribute, bool $isIdentifier): GraphqlFieldMetadata
-    {
-        if ($attribute->identifier) {
-            trigger_deprecation('hecht-a/graphql-orm', '4.9', 'The "identifier" argument of #[GraphqlField] on "%s" is deprecated, add #[Identifier] instead.', $name);
-        }
-
-        [$relation, $isCollection] = $this->resolveRelation($property, $attribute->targetEntity);
-
-        if ($relation !== null) {
-            trigger_deprecation('hecht-a/graphql-orm', '4.9', 'Mapping the relation "%s" with #[GraphqlField] is deprecated, use #[Relation] instead.', $name);
-        } elseif ($attribute->fetch === Fetch::Lazy) {
-            throw new InvalidArgumentException(\sprintf('"%s" is not a relation: only a relation can be fetched lazily.', $name));
-        }
-
-        return new GraphqlFieldMetadata(
-            property: $property->getName(),
-            mappedFrom: $attribute->mappedFrom ?? $this->namingStrategy->fieldName($property->getName()),
-            relation: $relation,
-            isCollection: $isCollection,
-            isIdentifier: $isIdentifier || $attribute->identifier,
-            ignoreValidation: $attribute->ignoreValidation,
-            fetch: $attribute->fetch,
         );
     }
 
@@ -306,17 +261,11 @@ class GraphqlEntityMetadataFactory
     }
 
     /**
-     * Whether a class is mapped as an entity, with #[Entity] (#[GraphqlEntity] until 4.9).
+     * Whether a class is mapped as an entity, with #[Entity].
      */
     public function isEntityClass(string $class): bool
     {
-        if (!class_exists($class)) {
-            return false;
-        }
-
-        $reflection = new \ReflectionClass($class);
-
-        return $reflection->getAttributes(Entity::class) !== [] || $reflection->getAttributes(GraphqlEntity::class) !== [];
+        return class_exists($class) && (new \ReflectionClass($class))->getAttributes(Entity::class) !== [];
     }
 
     private function isEntity(string $class): bool

@@ -79,7 +79,7 @@ final class Configuration implements ConfigurationInterface
             ->end()
             ->scalarNode('naming_strategy')
             ->defaultValue(DefaultNamingStrategy::class)
-            ->info('Id of a service implementing NamingStrategy, naming the fields whose #[GraphqlField] has no "mappedFrom" from their property: DefaultNamingStrategy keeps the property name, SnakeCaseNamingStrategy turns dueDate into due_date.')
+            ->info('Id of a service implementing NamingStrategy, naming the fields whose #[Field] or #[Relation] has no "mappedFrom" from their property: DefaultNamingStrategy keeps the property name, SnakeCaseNamingStrategy turns dueDate into due_date.')
             ->end()
             ->scalarNode('metadata_cache_pool')
             ->defaultValue('cache.system')

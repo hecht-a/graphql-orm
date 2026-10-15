@@ -68,7 +68,7 @@ class GraphqlManager implements GraphqlManagerInterface
     }
 
     /**
-     * The repository of an entity: the service of the repositoryClass of its #[GraphqlEntity] when the application
+     * The repository of an entity: the service of the repositoryClass of its #[Entity] when the application
      * declares one, a generic repository otherwise, as Doctrine EntityManager::getRepository().
      *
      * @template T of object
