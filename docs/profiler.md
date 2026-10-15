@@ -7,7 +7,8 @@ For each request, the panel shows:
 - **Metrics**: number of queries, time spent in GraphQL (measured via Symfony Stopwatch), slow queries when
   `slow_query_threshold` is set (see [logging.md](logging.md#slow-queries)), errors, entities hydrated and bytes
   received.
-- **An alert** when queries are repeated (see [below](#repeated-queries)).
+- **An alert** for each relation loaded one entity at a time, and when queries are repeated (see
+  [below](#n-1-and-repeated-queries)).
 - **The queries**, one row each: origin, root field and entity, caller, duration bar, response size, entities
   hydrated and status (an error in red, a slow query in yellow). Filter them by status, or search their text. A query in
   error is shown open.
@@ -42,11 +43,17 @@ Headers are not recorded: add yours, such as `-H 'Authorization: Bearer ...'`, s
 profiler. The values are those shown by the profiler, masked by default: to replay the query as sent, disable
 `redact_query_values` in the development environment only.
 
-## Repeated queries
+## N+1 and repeated queries
 
-A loop sending one query per entity is the classic N+1 problem: lazy relations loaded one by one, a `find()` in a
-`foreach`... The panel groups the queries whose shape is the same once their values are masked, and lists those sent
-3 times or more in its "Repeated" tab, with links opening them:
+A loop sending one query per entity is the classic N+1 problem. The "N+1 & repeated" tab of the panel shows two cases.
+
+**A relation loaded on first access** (`Fetch::Lazy`, or `lazy_loading`) 3 times or more, one query each: the panel
+names the relation, such as `Task::$assignee`, with its queries, their total duration and the lines reading it. Select
+the relation with the entities holding it (raise `max_depth`, or select its fields with the query builder). A dialect
+implementing `BatchLoadingDialect` loads the relations met in a same response with one query.
+
+**Repeated queries**, such as a `find()` in a `foreach`: the panel groups the queries whose shape is the same once their
+values are masked, and lists those sent 3 times or more, with links opening them:
 
 | Sent    | Queries         | Query, values masked                      |
 |---------|-----------------|-------------------------------------------|

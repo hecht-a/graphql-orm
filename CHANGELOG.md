@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Profiler: the origin of each query (the method of the bundle the application called, e.g. `findBy`, `getResult`, a
   custom repository method, or `lazy` for a lazy load) and the class of its entities, and a timeline of the queries
   during the request, showing the queries sent together.
+- Profiler: the relations loaded on first access 3 times or more, one query each (an N+1 problem), with their queries,
+  their duration and the lines reading them, in an alert, the toolbar and the "N+1 & repeated" tab. The lazy loads are
+  no longer counted as repeated queries. `GraphqlQueryTrace::$lazyRelation` names the relation of a lazy load.
 - `GraphqlEntityRepository::getClassName()`, as Doctrine, and `GraphqlQuery::getEntityClass()`.
 - `GraphqlQueryTrace::$startedAt`, `$origin` and `$entityClass`, the two last ones filled when the profiler is enabled.
 
