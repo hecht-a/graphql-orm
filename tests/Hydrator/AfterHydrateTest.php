@@ -36,7 +36,7 @@ final class AfterHydrateTest extends TestCase
             ],
         );
 
-        $factory = new FakeMetadataFactory($this->metadata);
+        $factory = FakeMetadataFactory::with($this->metadata);
 
         $this->hydrator = new EntityHydrator($factory);
         $this->context = new GraphqlExecutionContext();
@@ -123,7 +123,7 @@ final class AfterHydrateTest extends TestCase
             ],
         );
 
-        $factory = new FakeMetadataFactory($metadata);
+        $factory = FakeMetadataFactory::with($metadata);
 
         $hydrator = new EntityHydrator($factory);
 
@@ -149,7 +149,7 @@ final class AfterHydrateTest extends TestCase
             ],
         );
 
-        $factory = new FakeMetadataFactory($metadata);
+        $factory = FakeMetadataFactory::with($metadata);
 
         $hydrator = new EntityHydrator($factory);
 

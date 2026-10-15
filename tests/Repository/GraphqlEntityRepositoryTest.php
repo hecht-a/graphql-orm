@@ -8,15 +8,11 @@ use GraphqlOrm\Dialect\DefaultDialect;
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
-use GraphqlOrm\Metadata\GraphqlEntityMetadata;
-use GraphqlOrm\Metadata\GraphqlFieldMetadata;
+use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Query\GraphqlQueryBuilder;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
-use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntity;
-use GraphqlOrm\Tests\Fixtures\FakeEntityHydrator;
+use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
-use GraphqlOrm\Tests\Fixtures\FakeMetadataFactory;
-use GraphqlOrm\Tests\Fixtures\FakeRepository\FakeRepository;
 use PHPUnit\Framework\TestCase;
 
 final class GraphqlEntityRepositoryTest extends TestCase
@@ -25,33 +21,26 @@ final class GraphqlEntityRepositoryTest extends TestCase
     {
         $manager = $this->createManager([]);
 
-        $repo = new GraphqlEntityRepository($manager, FakeEntity::class);
+        $repo = new GraphqlEntityRepository($manager, FakeTask::class);
 
         self::assertInstanceOf(GraphqlQueryBuilder::class, $repo->createQueryBuilder());
     }
 
     public function testFindAllCallsFindBy(): void
     {
-        $stdClass = new \stdClass();
-        $hydrator = new FakeEntityHydrator($stdClass);
-
         $manager = $this->createManager([
             'data' => [
                 'tasks' => [['id' => 1]],
             ],
-        ], $hydrator);
+        ]);
 
-        $repo = new GraphqlEntityRepository($manager, FakeEntity::class);
+        $repo = new GraphqlEntityRepository($manager, FakeTask::class);
 
-        self::assertSame([$stdClass], $repo->findAll());
+        self::assertSame([1], self::ids($repo->findAll()));
     }
 
     public function testFindByHydratesList(): void
     {
-        $stdClass1 = new \stdClass();
-        $stdClass2 = new \stdClass();
-        $hydrator = new FakeEntityHydrator($stdClass1, $stdClass2);
-
         $manager = $this->createManager([
             'data' => [
                 'tasks' => [
@@ -59,31 +48,26 @@ final class GraphqlEntityRepositoryTest extends TestCase
                     ['id' => 2],
                 ],
             ],
-        ], $hydrator);
+        ]);
 
-        $repo = new GraphqlEntityRepository($manager, FakeEntity::class);
+        $repo = new GraphqlEntityRepository($manager, FakeTask::class);
 
-        self::assertSame([$stdClass1, $stdClass2], $repo->findBy(['id' => 1]));
-        self::assertSame(2, $hydrator->callCount);
+        self::assertSame([1, 2], self::ids($repo->findBy(['id' => 1])));
     }
 
     public function testFindByHydratesSingleObject(): void
     {
-        $stdClass = new \stdClass();
-        $hydrator = new FakeEntityHydrator($stdClass);
-
         $manager = $this->createManager([
             'data' => [
                 'tasks' => [
                     'id' => 1,
                 ],
             ],
-        ], $hydrator);
+        ]);
 
-        $repo = new GraphqlEntityRepository($manager, FakeEntity::class);
+        $repo = new GraphqlEntityRepository($manager, FakeTask::class);
 
-        self::assertSame([$stdClass], $repo->findBy([]));
-        self::assertSame(1, $hydrator->callCount);
+        self::assertSame([1], self::ids($repo->findBy([])));
     }
 
     public function testFindByReturnsEmptyWhenNoData(): void
@@ -92,7 +76,7 @@ final class GraphqlEntityRepositoryTest extends TestCase
             'data' => [],
         ]);
 
-        $repo = new GraphqlEntityRepository($manager, FakeEntity::class);
+        $repo = new GraphqlEntityRepository($manager, FakeTask::class);
 
         self::assertSame([], $repo->findBy([]));
     }
@@ -107,28 +91,26 @@ final class GraphqlEntityRepositoryTest extends TestCase
             ],
         ]);
 
-        (new GraphqlEntityRepository($manager, FakeEntity::class))->findBy([]);
+        (new GraphqlEntityRepository($manager, FakeTask::class))->findBy([]);
     }
 
     /**
      * @param array<string, mixed> $response
      */
-    private function createManager(array $response, ?EntityHydrator $hydrator = null): GraphqlManager
+    private function createManager(array $response): GraphqlManager
     {
-        $metadataFactory = new FakeMetadataFactory(
-            new GraphqlEntityMetadata(
-                FakeEntity::class,
-                'tasks',
-                FakeRepository::class,
-                [
-                    new GraphqlFieldMetadata('id', 'id'),
-                ],
-                new GraphqlFieldMetadata('id', 'id')
-            )
-        );
+        $metadataFactory = new GraphqlEntityMetadataFactory();
 
-        $hydrator ??= new FakeEntityHydrator();
+        return new GraphqlManager($metadataFactory, new FakeGraphqlClient($response), new EntityHydrator($metadataFactory), null, 2, new DefaultDialect());
+    }
 
-        return new GraphqlManager($metadataFactory, new FakeGraphqlClient($response), $hydrator, null, 2, new DefaultDialect());
+    /**
+     * @param array<FakeTask> $tasks
+     *
+     * @return list<int>
+     */
+    private static function ids(array $tasks): array
+    {
+        return array_values(array_map(fn (FakeTask $task) => $task->id, $tasks));
     }
 }

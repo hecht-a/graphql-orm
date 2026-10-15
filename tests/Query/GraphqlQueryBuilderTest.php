@@ -9,12 +9,12 @@ use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\Dialect\DefaultDialect;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\GraphqlManager;
+use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Query\GraphqlQuery;
 use GraphqlOrm\Query\GraphqlQueryBuilder;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntity;
-use GraphqlOrm\Tests\Fixtures\FakeEntityHydrator;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
 use GraphqlOrm\Tests\Fixtures\FakeMetadataFactory;
 use GraphqlOrm\Tests\Fixtures\FakeRepository\FakeRepository;
@@ -114,7 +114,7 @@ final class GraphqlQueryBuilderTest extends TestCase
 
     private function createManager(GraphqlQueryDialect $dialect = new DefaultDialect()): GraphqlManager
     {
-        $metadataFactory = new FakeMetadataFactory(
+        $metadataFactory = FakeMetadataFactory::with(
             new GraphqlEntityMetadata(
                 FakeEntity::class,
                 'tasks',
@@ -143,7 +143,7 @@ final class GraphqlQueryBuilderTest extends TestCase
         return new GraphqlManager(
             $metadataFactory,
             new FakeGraphqlClient(),
-            new FakeEntityHydrator(),
+            new EntityHydrator($metadataFactory),
             new GraphqlOrmDataCollector(),
             3,
             $dialect,

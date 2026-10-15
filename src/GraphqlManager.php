@@ -33,10 +33,10 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
- * @final since 4.9, final in 5.0: depend on GraphqlManagerInterface to simulate or decorate it
+ * Depend on GraphqlManagerInterface to simulate or decorate it.
  */
 #[AutoconfigureTag('graphql.manager')]
-class GraphqlManager implements GraphqlManagerInterface
+final class GraphqlManager implements GraphqlManagerInterface
 {
     /**
      * Identifiers loaded by one lazy loading query.

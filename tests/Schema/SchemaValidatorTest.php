@@ -103,7 +103,7 @@ final class SchemaValidatorTest extends TestCase
             ],
         );
 
-        $factory = new FakeMetadataFactory($metadata);
+        $factory = FakeMetadataFactory::with($metadata);
 
         $validator = new SchemaValidator($factory);
         $violations = $validator->validate(
@@ -131,7 +131,7 @@ final class SchemaValidatorTest extends TestCase
             ],
         );
 
-        $factory = new FakeMetadataFactory($metadata);
+        $factory = FakeMetadataFactory::with($metadata);
 
         $validator = new SchemaValidator($factory);
         $violations = $validator->validate(

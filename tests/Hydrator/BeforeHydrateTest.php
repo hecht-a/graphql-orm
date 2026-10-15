@@ -25,7 +25,7 @@ final class BeforeHydrateTest extends TestCase
 
     private function makeHydrator(GraphqlEntityMetadata $metadata): EntityHydrator
     {
-        $factory = new FakeMetadataFactory($metadata);
+        $factory = FakeMetadataFactory::with($metadata);
 
         return new EntityHydrator($factory);
     }

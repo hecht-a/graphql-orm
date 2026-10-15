@@ -72,7 +72,7 @@ final class EntityHydratorTest extends TestCase
             ]
         );
 
-        $this->hydrator = new EntityHydrator(new FakeMetadataFactory($this->taskMetadata, $this->userMetadata));
+        $this->hydrator = new EntityHydrator(FakeMetadataFactory::with($this->taskMetadata, $this->userMetadata));
 
         $this->context = new GraphqlExecutionContext();
     }

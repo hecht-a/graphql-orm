@@ -23,7 +23,7 @@ use Symfony\Contracts\Cache\CacheInterface;
 /**
  * @internal
  */
-class GraphqlEntityMetadataFactory
+final class GraphqlEntityMetadataFactory
 {
     private const CACHE_KEY_PREFIX = 'graphql_orm.metadata.';
 

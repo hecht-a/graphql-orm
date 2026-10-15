@@ -7,21 +7,18 @@ namespace GraphqlOrm\Tests\Query;
 use GraphqlOrm\Dialect\DefaultDialect;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
-use GraphqlOrm\Metadata\GraphqlEntityMetadata;
+use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Query\GraphqlQuery;
 use GraphqlOrm\Query\QueryOptions;
-use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntity;
-use GraphqlOrm\Tests\Fixtures\FakeEntityHydrator;
+use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
-use GraphqlOrm\Tests\Fixtures\FakeMetadataFactory;
-use GraphqlOrm\Tests\Fixtures\FakeRepository\FakeRepository;
 use PHPUnit\Framework\TestCase;
 
 final class GraphqlQueryTest extends TestCase
 {
     public function testGetGraphQL(): void
     {
-        $query = new GraphqlQuery('query { tasks { id } }', FakeEntity::class, $this->createManager([]), new QueryOptions());
+        $query = new GraphqlQuery('query { tasks { id } }', FakeTask::class, $this->createManager([]), new QueryOptions());
 
         self::assertSame('query { tasks { id } }', $query->getGraphQL());
     }
@@ -32,7 +29,7 @@ final class GraphqlQueryTest extends TestCase
             'data' => [],
         ]);
 
-        $query = new GraphqlQuery('query', FakeEntity::class, $manager, new QueryOptions());
+        $query = new GraphqlQuery('query', FakeTask::class, $manager, new QueryOptions());
 
         self::assertSame([], $query->getResult());
     }
@@ -47,34 +44,26 @@ final class GraphqlQueryTest extends TestCase
             ],
         ]);
 
-        (new GraphqlQuery('query', FakeEntity::class, $manager, new QueryOptions()))->getResult();
+        (new GraphqlQuery('query', FakeTask::class, $manager, new QueryOptions()))->getResult();
     }
 
     public function testHydratesSingleObject(): void
     {
-        $stdClass = new \stdClass();
-        $hydrator = new FakeEntityHydrator($stdClass);
-
         $manager = $this->createManager([
             'data' => [
                 'tasks' => [
                     'id' => 1,
                 ],
             ],
-        ], $hydrator);
+        ]);
 
-        $query = new GraphqlQuery('query', FakeEntity::class, $manager, new QueryOptions());
+        $query = new GraphqlQuery('query', FakeTask::class, $manager, new QueryOptions());
 
-        self::assertSame([$stdClass], $query->getResult());
-        self::assertSame(1, $hydrator->callCount);
+        self::assertSame([1], self::ids($query->getResult()));
     }
 
     public function testHydratesList(): void
     {
-        $stdClass1 = new \stdClass();
-        $stdClass2 = new \stdClass();
-        $hydrator = new FakeEntityHydrator($stdClass1, $stdClass2);
-
         $manager = $this->createManager([
             'data' => [
                 'tasks' => [
@@ -82,28 +71,26 @@ final class GraphqlQueryTest extends TestCase
                     ['id' => 2],
                 ],
             ],
-        ], $hydrator);
+        ]);
 
-        $query = new GraphqlQuery('query', FakeEntity::class, $manager, new QueryOptions());
+        $query = new GraphqlQuery('query', FakeTask::class, $manager, new QueryOptions());
 
-        self::assertSame([$stdClass1, $stdClass2], $query->getResult());
-        self::assertSame(2, $hydrator->callCount);
+        self::assertSame([1, 2], self::ids($query->getResult()));
     }
 
     public function testGetOneOrNullResult(): void
     {
-        $stdClass = new \stdClass();
-        $hydrator = new FakeEntityHydrator($stdClass);
-
         $manager = $this->createManager([
             'data' => [
                 'tasks' => [['id' => 1]],
             ],
-        ], $hydrator);
+        ]);
 
-        $query = new GraphqlQuery('query', FakeEntity::class, $manager, new QueryOptions());
+        $query = new GraphqlQuery('query', FakeTask::class, $manager, new QueryOptions());
 
-        self::assertSame($stdClass, $query->getOneOrNullResult());
+        $task = $query->getOneOrNullResult();
+        self::assertInstanceOf(FakeTask::class, $task);
+        self::assertSame(1, $task->id);
     }
 
     public function testGetOneOrNullResultReturnsNull(): void
@@ -112,7 +99,7 @@ final class GraphqlQueryTest extends TestCase
             'data' => [],
         ]);
 
-        $query = new GraphqlQuery('query', FakeEntity::class, $manager, new QueryOptions());
+        $query = new GraphqlQuery('query', FakeTask::class, $manager, new QueryOptions());
 
         self::assertNull($query->getOneOrNullResult());
     }
@@ -120,12 +107,23 @@ final class GraphqlQueryTest extends TestCase
     /**
      * @param array<string, mixed> $response
      */
-    private function createManager(array $response, ?EntityHydrator $hydrator = null): GraphqlManager
+    private function createManager(array $response): GraphqlManager
     {
-        $metadataFactory = new FakeMetadataFactory(new GraphqlEntityMetadata(FakeEntity::class, 'tasks', FakeRepository::class, [], null));
+        $metadataFactory = new GraphqlEntityMetadataFactory();
 
-        $hydrator ??= new FakeEntityHydrator();
+        return new GraphqlManager($metadataFactory, new FakeGraphqlClient($response), new EntityHydrator($metadataFactory), null, 2, new DefaultDialect());
+    }
 
-        return new GraphqlManager($metadataFactory, new FakeGraphqlClient($response), $hydrator, null, 2, new DefaultDialect());
+    /**
+     * @param mixed $tasks the result of a query
+     *
+     * @return list<int>
+     */
+    private static function ids(mixed $tasks): array
+    {
+        self::assertIsArray($tasks);
+        self::assertContainsOnlyInstancesOf(FakeTask::class, $tasks);
+
+        return array_values(array_map(fn (FakeTask $task) => $task->id, $tasks));
     }
 }

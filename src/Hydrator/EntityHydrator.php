@@ -18,7 +18,7 @@ use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 /**
  * @internal
  */
-class EntityHydrator
+final class EntityHydrator
 {
     private const DATE_CLASSES = [\DateTimeImmutable::class, \DateTimeInterface::class, \DateTime::class];
     private const MILLISECONDS_PER_SECOND = 1000;

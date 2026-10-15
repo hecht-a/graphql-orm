@@ -4,37 +4,26 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Fixtures;
 
-use GraphqlOrm\Exception\NotAGraphqlEntityException;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 
 /**
- * Serves hand-written metadata instead of reading attributes. A single metadata is served for any class.
+ * A metadata factory serving hand-written metadata instead of reading the attributes of their classes.
  */
-final class FakeMetadataFactory extends GraphqlEntityMetadataFactory
+final class FakeMetadataFactory
 {
-    /** @var array<string, GraphqlEntityMetadata> */
-    private array $metadata = [];
-
-    public function __construct(GraphqlEntityMetadata ...$metadata)
+    public static function with(GraphqlEntityMetadata ...$metadata): GraphqlEntityMetadataFactory
     {
-        parent::__construct();
+        $factory = new GraphqlEntityMetadataFactory();
+        $loaded = [];
 
         foreach ($metadata as $entityMetadata) {
-            $this->metadata[$entityMetadata->class] = $entityMetadata;
-        }
-    }
-
-    public function getMetadata(string $class): GraphqlEntityMetadata
-    {
-        if (isset($this->metadata[$class])) {
-            return $this->metadata[$class];
+            $loaded[$entityMetadata->class] = $entityMetadata;
         }
 
-        if (\count($this->metadata) === 1) {
-            return reset($this->metadata);
-        }
+        // The metadata already loaded are served as is.
+        (new \ReflectionProperty(GraphqlEntityMetadataFactory::class, 'loaded'))->setValue($factory, $loaded);
 
-        throw NotAGraphqlEntityException::forClass($class);
+        return $factory;
     }
 }

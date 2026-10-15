@@ -7,6 +7,7 @@ namespace GraphqlOrm\Tests\Query;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\GraphqlManager;
+use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
@@ -14,7 +15,6 @@ use GraphqlOrm\Query\GraphqlQueryStringBuilder;
 use GraphqlOrm\Query\QueryOptions;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\Task;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\User;
-use GraphqlOrm\Tests\Fixtures\FakeEntityHydrator;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
 use GraphqlOrm\Tests\Fixtures\FakeMetadataFactory;
 use GraphqlOrm\Tests\Fixtures\FakeRepository\TaskRepository;
@@ -136,7 +136,7 @@ GRAPHQL,
         $manager = new GraphqlManager(
             $metadataFactory,
             new FakeGraphqlClient(),
-            new FakeEntityHydrator(),
+            new EntityHydrator($metadataFactory),
             new GraphqlOrmDataCollector(),
             3
         );
@@ -166,7 +166,7 @@ GRAPHQL,
         $manager = new GraphqlManager(
             $metadataFactory,
             new FakeGraphqlClient(),
-            new FakeEntityHydrator(),
+            new EntityHydrator($metadataFactory),
             new GraphqlOrmDataCollector(),
             3
         );
@@ -245,10 +245,12 @@ GRAPHQL,
             $this->field('id', 'id')
         );
 
+        $metadataFactory = FakeMetadataFactory::with($taskMetadata, $userMetadata);
+
         return new GraphqlManager(
-            new FakeMetadataFactory($taskMetadata, $userMetadata),
+            $metadataFactory,
             new FakeGraphqlClient(),
-            new FakeEntityHydrator(),
+            new EntityHydrator($metadataFactory),
             new GraphqlOrmDataCollector(),
             3
         );
@@ -267,7 +269,7 @@ GRAPHQL,
             $this->field('id', 'id')
         );
 
-        return new FakeMetadataFactory($userMetadata);
+        return FakeMetadataFactory::with($userMetadata);
     }
 
     /**
