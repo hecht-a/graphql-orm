@@ -82,6 +82,16 @@ Fix the deprecations reported by 4.9 first: each of them is a change of 5.0. The
 ---
 
 
+## [4.10.3] — 2026-10-15
+
+### Fixed
+
+- The schema validation checked no entity with the default `mapping.entity.dir`,
+  `%kernel.project_dir%/src/GraphQL/Entity`: the directory was read before `%kernel.project_dir%` was resolved, so that
+  no entity was found. The metadata cache warmer, given the same list, warmed nothing either.
+
+---
+
 ## [4.10.2] — 2026-10-15
 
 4.10.1 is withdrawn: its tag pointed by mistake at the code of 5.0. 4.10.2 holds the fix meant for it, on top of 4.10.0.
