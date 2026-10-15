@@ -14,6 +14,9 @@ For each request, the panel shows:
   error is shown open.
 - **The identity map**: the entities that `find()` served from the shared identity map, known in full from an earlier
   query, each one a query not sent (see [shared identity map](configuration.md#shared-identity-map)).
+- **The configuration** of the bundle (dialect, endpoint, options; the names of the headers only, never their values
+  nor the credentials of the endpoint), and the outcome of the [schema validation](schema-validation.md): its mode, and
+  the violations found on the first request.
 - **A timeline** of the queries during the request: overlapping bars are queries sent together, e.g. by
   `GraphqlQuery::concurrently()`.
 
@@ -28,6 +31,7 @@ Click a query to see its detail:
 
 - **GraphQL**: the query sent, values masked by default (see [logging.md](logging.md#masked-values))
 - **Variables**
+- **Response**: the first 2 KB of the response, indented, values masked unless `redact_query_values` is false
 - **AST**: an interactive viewer of the query built by the ORM
 - **Hydration**: entities, relations, collections, root result count and depth used
 - The "Copy" and "Copy as cURL" buttons (see [below](#copy-as-curl)), the caller (file and line that triggered the

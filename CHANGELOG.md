@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in a metric and an "Identity map" tab.
 - Profiler: the introspection queries of the bundle (typed variables, schema validation, countable fields of Data API
   Builder), sent without the manager, are listed with the origin `introspection`.
+- Profiler: the first 2 KB of each response, values masked unless `redact_query_values` is false, and a
+  "Configuration" tab with the options of the bundle (header names only, no credentials) and the outcome of the schema
+  validation. `GraphqlQueryTrace::$responsePreview` holds the response when the profiler is enabled.
 - `GraphqlEntityRepository::getClassName()`, as Doctrine, and `GraphqlQuery::getEntityClass()`.
 - `GraphqlQueryTrace::$startedAt`, `$origin` and `$entityClass`, the two last ones filled when the profiler is enabled.
 
