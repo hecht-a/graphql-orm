@@ -39,6 +39,13 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class GraphqlOrmExtensionTest extends TestCase
 {
+    private const SET_DEFAULTS = [
+        'identity_map' => false,
+        'max_depth' => 2,
+        'variables' => ['enabled' => false],
+        'schema_validation' => ['mode' => 'disabled'],
+    ];
+
     #[Test]
     public function itRegistersTheProfilerCollectorInDebugMode(): void
     {
@@ -163,6 +170,62 @@ final class GraphqlOrmExtensionTest extends TestCase
         self::assertInstanceOf(GraphqlManager::class, $manager);
 
         self::assertInstanceOf(FakeProjectRepository::class, $manager->getRepository(FakeProject::class));
+    }
+
+    #[Test]
+    public function itReportsTheOptionsWhoseDefaultValueChangesInVersion5(): void
+    {
+        $deprecations = self::deprecations(fn () => (new GraphqlOrmExtension())->load([['endpoint' => 'https://graphql.example.com/graphql']], self::kernelContainer()));
+
+        self::assertSame([
+            'Since hecht-a/graphql-orm 4.9: Not setting the "graphql_orm.identity_map" option is deprecated: its default value changes to true in 5.0, set it to keep false.',
+            'Since hecht-a/graphql-orm 4.9: Not setting the "graphql_orm.max_depth" option is deprecated: its default value changes to 1 in 5.0, set it to keep 2.',
+            'Since hecht-a/graphql-orm 4.9: Not setting the "graphql_orm.variables.enabled" option is deprecated: its default value changes to true in 5.0, set it to keep false.',
+            'Since hecht-a/graphql-orm 4.9: Not setting the "graphql_orm.schema_validation.mode" option is deprecated: its default value changes to "warning" in debug mode in 5.0, set it to keep "disabled".',
+        ], $deprecations);
+    }
+
+    #[Test]
+    public function itReportsNothingOnceTheOptionsAreSet(): void
+    {
+        $configs = [
+            ['endpoint' => 'https://graphql.example.com/graphql', 'identity_map' => true, 'variables' => ['enabled' => true]],
+            ['max_depth' => 1, 'schema_validation' => ['mode' => 'warning']],
+        ];
+
+        self::assertSame([], self::deprecations(fn () => (new GraphqlOrmExtension())->load($configs, self::kernelContainer())));
+    }
+
+    /**
+     * The deprecations triggered by a call, silenced as trigger_deprecation() does.
+     *
+     * @return list<string>
+     */
+    private static function deprecations(callable $call): array
+    {
+        $messages = [];
+        set_error_handler(function (int $type, string $message) use (&$messages): bool {
+            $messages[] = $message;
+
+            return true;
+        }, E_USER_DEPRECATED);
+
+        try {
+            $call();
+        } finally {
+            restore_error_handler();
+        }
+
+        return $messages;
+    }
+
+    private static function kernelContainer(): ContainerBuilder
+    {
+        $container = new ContainerBuilder();
+        $container->setParameter('kernel.debug', true);
+        $container->setParameter('kernel.project_dir', \dirname(__DIR__, 2));
+
+        return $container;
     }
 
     #[Test]
@@ -362,7 +425,8 @@ final class GraphqlOrmExtensionTest extends TestCase
         $container->register(HttpClientInterface::class, MockHttpClient::class);
         $container->register('cache.system', ArrayAdapter::class);
 
-        (new GraphqlOrmExtension())->load([['endpoint' => 'https://graphql.example.com/graphql', ...$config]], $container);
+        // The options whose default value changes in 5.0 are set, as their default is deprecated.
+        (new GraphqlOrmExtension())->load([['endpoint' => 'https://graphql.example.com/graphql', ...self::SET_DEFAULTS, ...$config]], $container);
 
         $container->addCompilerPass(new class implements CompilerPassInterface {
             public function process(ContainerBuilder $container): void

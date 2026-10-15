@@ -27,8 +27,24 @@ use Symfony\Component\Finder\Finder;
  */
 final class GraphqlOrmExtension extends Extension
 {
+    /**
+     * The options whose default value changes in 5.0: their path, current default and next default.
+     */
+    private const CHANGING_DEFAULTS = [
+        ['identity_map', 'false', 'true'],
+        ['max_depth', '2', '1'],
+        ['variables.enabled', 'false', 'true'],
+        ['schema_validation.mode', '"disabled"', '"warning" in debug mode'],
+    ];
+
     public function load(array $configs, ContainerBuilder $container): void
     {
+        foreach (self::CHANGING_DEFAULTS as [$path, $current, $next]) {
+            if (!self::isSet($configs, $path)) {
+                trigger_deprecation('hecht-a/graphql-orm', '4.9', 'Not setting the "graphql_orm.%s" option is deprecated: its default value changes to %s in 5.0, set it to keep %s.', $path, $next, $current);
+            }
+        }
+
         $configuration = new Configuration();
 
         /**
@@ -172,5 +188,27 @@ final class GraphqlOrmExtension extends Extension
         }
 
         return $classes;
+    }
+
+    /**
+     * Whether an option is set in one of the configurations, before the defaults are applied.
+     *
+     * @param array<mixed> $configs
+     */
+    private static function isSet(array $configs, string $path): bool
+    {
+        foreach ($configs as $config) {
+            $value = $config;
+
+            foreach (explode('.', $path) as $key) {
+                $value = \is_array($value) && \array_key_exists($key, $value) ? $value[$key] : null;
+            }
+
+            if ($value !== null) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
