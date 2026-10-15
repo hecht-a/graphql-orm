@@ -8,8 +8,15 @@ For each request, the panel shows:
   `slow_query_threshold` is set (see [logging.md](logging.md#slow-queries)), errors, entities hydrated and bytes
   received.
 - **An alert** when queries are repeated (see [below](#repeated-queries)).
-- **The queries**, one row each: root field, caller, duration bar, response size, entities hydrated and status (an
-  error in red, a slow query in yellow). Filter them by status, or search their text. A query in error is shown open.
+- **The queries**, one row each: origin, root field and entity, caller, duration bar, response size, entities
+  hydrated and status (an error in red, a slow query in yellow). Filter them by status, or search their text. A query in
+  error is shown open.
+- **A timeline** of the queries during the request: overlapping bars are queries sent together, e.g. by
+  `GraphqlQuery::concurrently()`.
+
+The origin is the method of the bundle the application called: `findBy`, `count`, `getResult` on a query built with
+the query builder, the method of a custom repository calling the bundle, or `lazy` for a relation loaded on first
+access (see [lazy loading](configuration.md#lazy-loading)).
 
 Click a query to see its detail:
 

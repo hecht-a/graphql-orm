@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Profiler: the origin of each query (the method of the bundle the application called, e.g. `findBy`, `getResult`, a
+  custom repository method, or `lazy` for a lazy load) and the class of its entities, and a timeline of the queries
+  during the request, showing the queries sent together.
+- `GraphqlEntityRepository::getClassName()`, as Doctrine, and `GraphqlQuery::getEntityClass()`.
+- `GraphqlQueryTrace::$startedAt`, `$origin` and `$entityClass`, the two last ones filled when the profiler is enabled.
+
 ### Changed
 
 - The profiler panel is reorganized: metrics first (queries, time, slow queries, errors, entities hydrated, bytes
