@@ -17,11 +17,13 @@ use GraphqlOrm\Query\Direction;
 use GraphqlOrm\Query\GraphqlQuery;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
+use GraphqlOrm\Schema\CountableFieldResolver;
 use GraphqlOrm\Schema\GraphqlSchema;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Schema\SchemaIntrospector;
 use GraphqlOrm\Schema\SchemaValidator;
 use GraphqlOrm\Tests\Integration\Entity\BrokenTask;
+use GraphqlOrm\Tests\Integration\Entity\Label;
 use GraphqlOrm\Tests\Integration\Entity\LazyTask;
 use GraphqlOrm\Tests\Integration\Entity\SnakeCaseTask;
 use GraphqlOrm\Tests\Integration\Entity\Task;
@@ -42,7 +44,7 @@ final class DataApiBuilderTest extends IntegrationTestCase
 
     protected function dialect(): GraphqlQueryDialect
     {
-        return new DataApiBuilderDialect();
+        return new DataApiBuilderDialect(new CountableFieldResolver($this->client, new ArrayAdapter(), 3600));
     }
 
     #[Test]
@@ -51,6 +53,19 @@ final class DataApiBuilderTest extends IntegrationTestCase
         self::assertSame(4, $this->repository(Task::class)->count());
         self::assertSame(3, $this->repository(Task::class)->count(['done' => false]));
         self::assertSame(1, $this->repository(Task::class)->count(['done' => true]));
+    }
+
+    #[Test]
+    public function itCountsAnEntityWithATextIdentifierOnAFieldNeverNull(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $labels = $this->repository(Label::class, collector: $collector);
+
+        self::assertSame(3, $labels->count());
+        self::assertSame(1, $labels->count(['code' => 'bug']));
+        $graphql = $collector->getQueries()[0]['graphql'] ?? null;
+        self::assertIsString($graphql);
+        self::assertStringContainsString('count(field: position)', $graphql);
     }
 
     #[Test]

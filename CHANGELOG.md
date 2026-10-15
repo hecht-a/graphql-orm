@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.10.0] — 2026-10-15
+
+### Added
+
+- `count()` with Data API Builder works on an entity whose identifier is not a number (e.g. a `string` code), or which
+  has no identifier: the schema is introspected once, cached in `variables.cache_pool`, and the entity is counted on
+  its first numeric field never null. Data API Builder only counts the non-null values of a numeric field, and rejected
+  `count(field: <identifier>)` with "The specified argument value does not match the argument type". An entity with no
+  such field gets a `LogicException` telling why. Nothing changes, and no introspection is sent, for an identifier
+  typed `int` or `float`.
+
+### Changed
+
+- `CountingDialect::countField()` receives `null` as `$identifierField` when the property of the identifier is typed
+  with neither `int` nor `float`. The dialects of the bundle other than `DataApiBuilderDialect` ignore it.
+
+---
+
 ## [4.9.2] — 2026-10-15
 
 ### Fixed

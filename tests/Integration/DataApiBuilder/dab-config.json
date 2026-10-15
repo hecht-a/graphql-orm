@@ -77,6 +77,28 @@
                     "target.fields": ["id"]
                 }
             }
+        },
+        "Label": {
+            "source": {
+                "object": "public.labels",
+                "type": "table"
+            },
+            "graphql": {
+                "enabled": true,
+                "type": {
+                    "singular": "Label",
+                    "plural": "labels"
+                }
+            },
+            "rest": {
+                "enabled": false
+            },
+            "permissions": [
+                {
+                    "role": "anonymous",
+                    "actions": [{ "action": "read" }]
+                }
+            ]
         }
     }
 }

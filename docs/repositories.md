@@ -93,8 +93,14 @@ than equalities.
 | `RelayDialect`          | `tasks(...) { totalCount }`: not in the Relay specification, but common     |
 | `DefaultDialect`        | none: `count()` throws a `LogicException`                                   |
 
-Data API Builder counts the values of a field: the entity needs an identifier. The values of a count query are sent
-inline, not as GraphQL variables.
+Data API Builder only counts the values of a numeric field that are not null. `count()` counts on the identifier when
+its property is typed `int` or `float`. Otherwise, as for an identifier typed `string` or an entity without identifier,
+it introspects the schema once (cached as the [variables](configuration.md), in the `variables.cache_pool` for
+`variables.ttl` seconds) and counts on the first numeric field of the entity that is never null (`Int!`, `Float!`...):
+every entity has a value there, so that the count is exact. A `LogicException` tells when the entity has no such field,
+or when the schema cannot be introspected.
+
+The values of a count query are sent inline, not as GraphQL variables.
 
 ## Aggregates
 

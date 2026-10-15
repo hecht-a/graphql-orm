@@ -19,6 +19,7 @@ use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\MetadataCacheWarmer;
 use GraphqlOrm\Metadata\Naming\SnakeCaseNamingStrategy;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
+use GraphqlOrm\Schema\CountableFieldResolver;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Test\MockGraphqlServer;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntityNamedByStrategy;
@@ -263,6 +264,26 @@ final class GraphqlOrmExtensionTest extends TestCase
     }
 
     #[Test]
+    public function itGivesTheDataApiBuilderDialectTheSchemaToCountWith(): void
+    {
+        $container = $this->createContainer(debug: false, config: ['dialect' => DataApiBuilderDialect::class]);
+
+        $container->compile();
+
+        $dialect = $container->get('graphql_orm.dialect');
+        self::assertInstanceOf(DataApiBuilderDialect::class, $dialect);
+        self::assertInstanceOf(CountableFieldResolver::class, (new \ReflectionProperty(DataApiBuilderDialect::class, 'countableFields'))->getValue($dialect));
+    }
+
+    #[Test]
+    public function itDoesNotRegisterTheCountableFieldsForTheOtherDialects(): void
+    {
+        $container = $this->createContainer(debug: false);
+
+        self::assertFalse($container->hasDefinition(CountableFieldResolver::class));
+    }
+
+    #[Test]
     public function itKeepsTheDashesOfTheHeaderNames(): void
     {
         $container = $this->createContainer(debug: false, config: ['headers' => ['X-API-Key' => 'secret', 'Authorization' => 'Bearer token']]);
@@ -441,6 +462,7 @@ final class GraphqlOrmExtensionTest extends TestCase
         $container->setParameter('kernel.project_dir', \dirname(__DIR__, 2));
         $container->register(HttpClientInterface::class, MockHttpClient::class);
         $container->register('cache.system', ArrayAdapter::class);
+        $container->register('cache.app', ArrayAdapter::class);
 
         // The options whose default value changes in 5.0 are set, as their default is deprecated.
         (new GraphqlOrmExtension())->load([['endpoint' => 'https://graphql.example.com/graphql', ...self::SET_DEFAULTS, ...$config]], $container);

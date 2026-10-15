@@ -10,6 +10,7 @@ use GraphqlOrm\Exception\GraphqlRequestException;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\GraphqlManager;
+use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Query\Aggregate;
 use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Ast\QueryNode;
@@ -133,9 +134,29 @@ class GraphqlEntityRepository
         }
 
         $metadata = $this->manager->getMetadataFactory()->getMetadata($this->entityClass);
-        $field = $dialect->countField($metadata->name, $dialect->applyCriteria($metadata->withGraphqlNames($criteria)), $metadata->identifier?->mappedFrom);
+        $field = $dialect->countField($metadata->name, $dialect->applyCriteria($metadata->withGraphqlNames($criteria)), $this->numericIdentifier($metadata));
 
         return $this->executeInline($field, fn (array $data): int => $dialect->readCount($data, $field->name), array_keys($criteria));
+    }
+
+    /**
+     * The GraphQL name of the identifier, unless its property is typed with no number: Data API Builder counts the
+     * values of a numeric field, and finds another one in the schema otherwise.
+     */
+    private function numericIdentifier(GraphqlEntityMetadata $metadata): ?string
+    {
+        if ($metadata->identifier === null) {
+            return null;
+        }
+
+        $type = (new \ReflectionProperty($this->entityClass, $metadata->identifier->property))->getType();
+        $names = match (true) {
+            $type instanceof \ReflectionNamedType => [$type->getName()],
+            $type instanceof \ReflectionUnionType => array_map(fn (\ReflectionType $type) => $type instanceof \ReflectionNamedType ? $type->getName() : '', $type->getTypes()),
+            default => ['int'],
+        };
+
+        return array_intersect($names, ['int', 'float']) !== [] ? $metadata->identifier->mappedFrom : null;
     }
 
     /**

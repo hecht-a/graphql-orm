@@ -7,11 +7,13 @@ namespace GraphqlOrm\DependencyInjection;
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Client\GraphqlClientInterface;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
+use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\Execution\IdentityMap;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\MetadataCacheWarmer;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
+use GraphqlOrm\Schema\CountableFieldResolver;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Test\MockGraphqlServer;
 use Symfony\Component\Config\FileLocator;
@@ -109,6 +111,19 @@ final class GraphqlOrmExtension extends Extension
 
             $container->getDefinition(GraphqlManager::class)
                 ->setArgument('$argumentTypeResolver', new Reference(RootArgumentTypeResolver::class));
+        }
+
+        // Data API Builder counts on a numeric field: the schema gives one when the identifier is no number.
+        if (is_a($config['dialect'], DataApiBuilderDialect::class, true)) {
+            $container->register(CountableFieldResolver::class, CountableFieldResolver::class)
+                ->setArguments([
+                    new Reference(GraphqlClientInterface::class),
+                    new Reference($config['variables']['cache_pool']),
+                    $config['variables']['ttl'],
+                    new Reference('monolog.logger.graphql_orm', ContainerInterface::NULL_ON_INVALID_REFERENCE),
+                ]);
+
+            $container->getDefinition('graphql_orm.dialect')->setArgument('$countableFields', new Reference(CountableFieldResolver::class));
         }
 
         if ($config['lazy_loading']) {
