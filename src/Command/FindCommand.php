@@ -9,7 +9,6 @@ use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Query\Direction;
-use GraphqlOrm\Repository\GraphqlEntityRepository;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Option;
@@ -65,7 +64,7 @@ final readonly class FindCommand
         }
 
         try {
-            $entities = (new GraphqlEntityRepository($this->manager, $class))->findBy(
+            $entities = $this->manager->getRepository($class)->findBy(
                 $this->pairs($criteria, $this->value(...)),
                 $this->pairs($orderBy, fn (string $direction) => Direction::from(strtoupper($direction))),
                 $limit,

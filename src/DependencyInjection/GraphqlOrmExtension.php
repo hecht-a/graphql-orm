@@ -11,6 +11,7 @@ use GraphqlOrm\Execution\IdentityMap;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\MetadataCacheWarmer;
+use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Test\MockGraphqlServer;
 use Symfony\Component\Config\FileLocator;
@@ -64,6 +65,9 @@ final class GraphqlOrmExtension extends Extension
         );
 
         $loader->load('services.php');
+
+        // The repositories of the application, given by GraphqlManager::getRepository().
+        $container->registerForAutoconfiguration(GraphqlEntityRepository::class)->addTag('graphql_orm.repository');
 
         // The mock server of the tests is fetched by them from the container.
         if ($config['http_client'] === MockGraphqlServer::class) {

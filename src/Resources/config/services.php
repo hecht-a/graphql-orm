@@ -30,6 +30,7 @@ use Symfony\Component\Stopwatch\Stopwatch;
 
 use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
+use function Symfony\Component\DependencyInjection\Loader\Configurator\tagged_locator;
 
 return static function (ContainerConfigurator $config) {
     $services = $config->services()
@@ -53,7 +54,8 @@ return static function (ContainerConfigurator $config) {
         ->arg('$dialect', service('graphql_orm.dialect'))
         ->arg('$logger', service('monolog.logger.graphql_orm')->nullOnInvalid())
         ->arg('$redactor', service(QueryRedactor::class))
-        ->arg('$eventDispatcher', service('event_dispatcher')->nullOnInvalid());
+        ->arg('$eventDispatcher', service('event_dispatcher')->nullOnInvalid())
+        ->arg('$repositories', tagged_locator('graphql_orm.repository'));
 
     $services->set(QueryRedactor::class);
 

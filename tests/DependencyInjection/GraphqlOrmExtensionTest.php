@@ -21,9 +21,11 @@ use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Test\MockGraphqlServer;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntityNamedByStrategy;
+use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeProject;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use GraphqlOrm\Tests\Fixtures\FakeEventDispatcher;
 use GraphqlOrm\Tests\Fixtures\FakeHeadersProvider;
+use GraphqlOrm\Tests\Fixtures\FakeRepository\FakeProjectRepository;
 use GraphqlOrm\ValueResolver\GraphqlEntityValueResolver;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -148,6 +150,19 @@ final class GraphqlOrmExtensionTest extends TestCase
         $container = $this->createContainer(debug: false);
 
         self::assertFalse($container->hasDefinition(IdentityMap::class));
+    }
+
+    #[Test]
+    public function itGivesTheRepositoryServicesOfTheApplication(): void
+    {
+        $container = $this->createContainer(debug: false);
+        $container->register(FakeProjectRepository::class)->setAutowired(true)->setAutoconfigured(true);
+        $container->compile();
+
+        $manager = $container->get(GraphqlManager::class);
+        self::assertInstanceOf(GraphqlManager::class, $manager);
+
+        self::assertInstanceOf(FakeProjectRepository::class, $manager->getRepository(FakeProject::class));
     }
 
     #[Test]

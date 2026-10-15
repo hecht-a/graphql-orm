@@ -9,7 +9,6 @@ use GraphqlOrm\Attribute\MapGraphqlEntity;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
-use GraphqlOrm\Repository\GraphqlEntityRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Controller\ValueResolverInterface;
 use Symfony\Component\HttpKernel\ControllerMetadata\ArgumentMetadata;
@@ -52,7 +51,7 @@ final readonly class GraphqlEntityValueResolver implements ValueResolverInterfac
             return [];
         }
 
-        $entity = \in_array(null, $criteria, true) ? null : (new GraphqlEntityRepository($this->manager, $class))->findOneBy($criteria);
+        $entity = \in_array(null, $criteria, true) ? null : $this->manager->getRepository($class)->findOneBy($criteria);
 
         if ($entity === null && !$argument->isNullable()) {
             throw new NotFoundHttpException(\sprintf('"%s" object not found by the "%s" value resolver.', $class, self::class));

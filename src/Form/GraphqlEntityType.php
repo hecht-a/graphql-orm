@@ -9,7 +9,6 @@ use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Query\GraphqlQueryBuilder;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
-use GraphqlOrm\Repository\GraphqlEntityRepository;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\ChoiceList\Loader\CallbackChoiceLoader;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
@@ -72,7 +71,7 @@ final class GraphqlEntityType extends AbstractType
      */
     private function load(string $class, mixed $queryBuilder): array
     {
-        $repository = new GraphqlEntityRepository($this->manager, $class);
+        $repository = $this->manager->getRepository($class);
 
         if (!\is_callable($queryBuilder)) {
             return array_values($repository->findAll());

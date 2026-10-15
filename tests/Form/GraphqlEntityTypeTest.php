@@ -11,10 +11,13 @@ use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
+use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeProject;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
+use GraphqlOrm\Tests\Fixtures\FakeRepository\FakeProjectRepository;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Form\ChoiceList\View\ChoiceView;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Form\Forms;
@@ -127,6 +130,25 @@ final class GraphqlEntityTypeTest extends TestCase
     }
 
     #[Test]
+    public function itGivesTheRepositoryServiceToTheQueryBuilderOption(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['projects' => ['items' => [['id' => 1, 'name' => 'P']]]]]);
+        $received = null;
+        $form = $this->factory($client, withRepositories: true)->create(GraphqlEntityType::class, null, [
+            'class' => FakeProject::class,
+            'query_builder' => function (GraphqlEntityRepository $repository) use (&$received) {
+                $received = $repository;
+
+                return $repository->createQueryBuilder();
+            },
+        ]);
+
+        $form->createView();
+
+        self::assertInstanceOf(FakeProjectRepository::class, $received);
+    }
+
+    #[Test]
     public function itNeedsTheClassOfTheEntities(): void
     {
         $factory = $this->factory(new FakeGraphqlClient());
@@ -152,10 +174,16 @@ final class GraphqlEntityTypeTest extends TestCase
         return $values;
     }
 
-    private function factory(FakeGraphqlClient $client): FormFactoryInterface
+    private function factory(FakeGraphqlClient $client, bool $withRepositories = false): FormFactoryInterface
     {
         $metadataFactory = new GraphqlEntityMetadataFactory();
-        $manager = new GraphqlManager($metadataFactory, $client, new EntityHydrator($metadataFactory), null, 2, new DataApiBuilderDialect());
+        $manager = null;
+        $repositories = new ServiceLocator([FakeProjectRepository::class => function () use (&$manager): FakeProjectRepository {
+            self::assertInstanceOf(GraphqlManager::class, $manager);
+
+            return new FakeProjectRepository($manager);
+        }]);
+        $manager = new GraphqlManager($metadataFactory, $client, new EntityHydrator($metadataFactory), null, 2, new DataApiBuilderDialect(), repositories: $withRepositories ? $repositories : null);
 
         return Forms::createFormFactoryBuilder()
             ->addType(new GraphqlEntityType($manager))

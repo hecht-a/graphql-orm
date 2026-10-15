@@ -27,6 +27,7 @@ use GraphqlOrm\Query\Pagination\PaginatedResult;
 use GraphqlOrm\Query\QueryOptions;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
+use Psr\Container\ContainerInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -40,6 +41,9 @@ class GraphqlManager
     private const LAZY_LOADING_BATCH_SIZE = 100;
 
     private bool $loadingLazily = false;
+
+    /** @var array<class-string, GraphqlEntityRepository<object>> */
+    private array $genericRepositories = [];
 
     public function __construct(
         private GraphqlEntityMetadataFactory $metadataFactory,
@@ -56,7 +60,35 @@ class GraphqlManager
         private bool $lazyLoading = false,
         private ?float $slowQueryThreshold = null,
         private ?IdentityMap $identityMap = null,
+        private ?ContainerInterface $repositories = null,
     ) {
+    }
+
+    /**
+     * The repository of an entity: the service of the repositoryClass of its #[GraphqlEntity] when the application
+     * declares one, a generic repository otherwise, as Doctrine EntityManager::getRepository().
+     *
+     * @template T of object
+     *
+     * @param class-string<T> $class
+     *
+     * @return GraphqlEntityRepository<T>
+     */
+    public function getRepository(string $class): GraphqlEntityRepository
+    {
+        $repositoryClass = $this->metadataFactory->getMetadata($class)->repositoryClass;
+
+        if ($repositoryClass !== null && $this->repositories?->has($repositoryClass) === true) {
+            $repository = $this->repositories->get($repositoryClass);
+
+            if ($repository instanceof GraphqlEntityRepository) {
+                /** @var GraphqlEntityRepository<T> $repository the repositoryClass of the entity */
+                return $repository;
+            }
+        }
+
+        /** @var GraphqlEntityRepository<T> */
+        return $this->genericRepositories[$class] ??= new GraphqlEntityRepository($this, $class);
     }
 
     /**
