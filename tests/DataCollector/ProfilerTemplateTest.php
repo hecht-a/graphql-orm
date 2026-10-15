@@ -240,6 +240,21 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itListsTheEntitiesServedByTheIdentityMap(): void
+    {
+        $collector = $this->collector(['query { tasks { id } }']);
+        $collector->addIdentityMapHit(FakeTask::class, 12, 'src/Controller/TaskController.php:51');
+
+        $html = $this->render($collector);
+        $text = self::text($html);
+
+        self::assertStringContainsString('1 Served by identity map', $text);
+        self::assertStringContainsString('data-graphql-orm-tab="identity-map"', $html);
+        self::assertStringContainsString('FakeTask', $text);
+        self::assertStringContainsString('TaskController.php:51', $text);
+    }
+
+    #[Test]
     public function itWarnsAboutRepeatedQueries(): void
     {
         $collector = $this->collector([

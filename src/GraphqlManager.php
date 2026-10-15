@@ -114,7 +114,13 @@ final class GraphqlManager implements GraphqlManagerInterface
      */
     public function findKnown(string $class, int|string $identifier): ?object
     {
-        return $this->identityMap?->find($class, $identifier);
+        $entity = $this->identityMap?->find($class, $identifier);
+
+        if ($entity !== null) {
+            $this->collector?->addIdentityMapHit($class, $identifier, self::callSite());
+        }
+
+        return $entity;
     }
 
     /**
@@ -252,6 +258,22 @@ final class GraphqlManager implements GraphqlManagerInterface
         }
 
         return [$this->loadingLazily ? self::LAZY_ORIGIN : $origin, $entityClass];
+    }
+
+    /**
+     * The file and line of the application calling the bundle, e.g. src/Controller/TaskController.php:51.
+     */
+    private static function callSite(): ?string
+    {
+        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, self::ORIGIN_STACK_DEPTH) as $frame) {
+            $file = $frame['file'] ?? null;
+
+            if (\is_string($file) && !str_starts_with($file, __DIR__ . \DIRECTORY_SEPARATOR) && !str_contains($file, \DIRECTORY_SEPARATOR . 'vendor' . \DIRECTORY_SEPARATOR)) {
+                return $file . (isset($frame['line']) ? ':' . $frame['line'] : '');
+            }
+        }
+
+        return null;
     }
 
     /**

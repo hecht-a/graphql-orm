@@ -108,6 +108,12 @@
                     <span class="value">{{ collector.hydratedEntityCount }}</span>
                     <span class="label">Entities hydrated</span>
                 </div>
+                {% if collector.identityMapHitCount > 0 %}
+                    <div class="metric">
+                        <span class="value">{{ collector.identityMapHitCount }}</span>
+                        <span class="label">Served by identity map</span>
+                    </div>
+                {% endif %}
                 <div class="metric">
                     <span class="value">{{ (collector.responseSize / 1024)|number_format(1) }} <span class="unit">KB</span></span>
                     <span class="label">Received</span>
@@ -133,6 +139,11 @@
                     Queries <span class="badge">{{ collector.queryCount }}</span>
                 </button>
                 <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="timeline">Timeline</button>
+                {% if collector.identityMapHitCount > 0 %}
+                    <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="identity-map">
+                        Identity map <span class="badge">{{ collector.identityMapHitCount }}</span>
+                    </button>
+                {% endif %}
                 {% if findingCount > 0 %}
                     <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="findings">
                         N+1 &amp; repeated <span class="badge status-warning">{{ findingCount }}</span>
@@ -236,6 +247,30 @@
                 </div>
                 <p class="graphql-orm-muted">From the start of the request. Overlapping bars are queries sent together, e.g. by <code>GraphqlQuery::concurrently()</code>.</p>
             </div>
+
+            {% if collector.identityMapHitCount > 0 %}
+                <div data-graphql-orm-view="identity-map" hidden>
+                    <p class="graphql-orm-muted">
+                        Entities that <code>find()</code> served from the shared identity map, known in full from an
+                        earlier query of the request: each one is a query not sent.
+                    </p>
+                    <table>
+                        <thead>
+                            <tr><th>Entity</th><th>Identifier</th><th class="graphql-orm-number">Served</th><th>Called from</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for hit in collector.identityMapHits %}
+                                <tr>
+                                    <td title="{{ hit.class }}">{{ hit.class|split('\\')|last }}</td>
+                                    <td><code>{{ hit.identifier }}</code></td>
+                                    <td class="graphql-orm-number">{{ hit.count }}</td>
+                                    <td>{% for caller in hit.callers %}<code title="{{ caller }}">{{ caller|split('/')|last }}</code>{{ loop.last ? '' : ', ' }}{% else %}-{% endfor %}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
 
             {% if findingCount > 0 %}
                 <div data-graphql-orm-view="findings" id="graphql-orm-findings" hidden>

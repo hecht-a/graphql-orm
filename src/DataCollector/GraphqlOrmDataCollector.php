@@ -71,6 +71,50 @@ final class GraphqlOrmDataCollector extends DataCollector
     }
 
     /**
+     * Records an entity that find() served from the shared identity map, without a query.
+     *
+     * @param string|null $caller the file and line that called find(), e.g. src/Controller/TaskController.php:51
+     */
+    public function addIdentityMapHit(string $class, int|string $identifier, ?string $caller): void
+    {
+        $hits = $this->getIdentityMapHits();
+
+        foreach ($hits as $index => $hit) {
+            if ($hit['class'] === $class && $hit['identifier'] === $identifier) {
+                ++$hits[$index]['count'];
+                $hits[$index]['callers'] = $caller !== null ? array_values(array_unique([...$hit['callers'], $caller])) : $hit['callers'];
+                $this->data['identity_map_hits'] = $hits;
+
+                return;
+            }
+        }
+
+        $hits[] = ['class' => $class, 'identifier' => $identifier, 'count' => 1, 'callers' => $caller !== null ? [$caller] : []];
+        $this->data['identity_map_hits'] = $hits;
+    }
+
+    /**
+     * The entities served from the shared identity map, each with the number of times and the lines calling find().
+     *
+     * @return list<array{class: string, identifier: int|string, count: int, callers: list<string>}>
+     */
+    public function getIdentityMapHits(): array
+    {
+        /** @var list<array{class: string, identifier: int|string, count: int, callers: list<string>}> $hits */
+        $hits = $this->data['identity_map_hits'] ?? [];
+
+        return $hits;
+    }
+
+    /**
+     * @return int the queries saved by the shared identity map
+     */
+    public function getIdentityMapHitCount(): int
+    {
+        return array_sum(array_column($this->getIdentityMapHits(), 'count'));
+    }
+
+    /**
      * The query as a cURL command, to replay it from a terminal. Headers are not recorded: authentication is to be added.
      *
      * @param array<mixed> $variables

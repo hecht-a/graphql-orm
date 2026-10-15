@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Repository;
 
+use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\Execution\IdentityMap;
 use GraphqlOrm\GraphqlManager;
@@ -49,6 +50,23 @@ final class SharedIdentityMapTest extends TestCase
         self::assertSame($loaded, $tasks->find(1));
         self::assertSame($loaded, $tasks->find('1'));
         self::assertSame(1, $client->callCount);
+    }
+
+    #[Test]
+    public function itRecordsTheEntitiesServedWithoutQueryInTheProfiler(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $tasks = $this->tasks(new FakeGraphqlClient(self::response([self::TASK_A])), new IdentityMap(), collector: $collector);
+        $tasks->findAll();
+
+        $tasks->find(1);
+        $tasks->find(1);
+
+        $hits = $collector->getIdentityMapHits();
+        self::assertSame(2, $collector->getIdentityMapHitCount());
+        self::assertSame([Task::class, 1, 2], [$hits[0]['class'], $hits[0]['identifier'], $hits[0]['count']]);
+        self::assertCount(2, $hits[0]['callers']);
+        self::assertStringContainsString('SharedIdentityMapTest.php:', $hits[0]['callers'][0]);
     }
 
     #[Test]
@@ -134,14 +152,14 @@ final class SharedIdentityMapTest extends TestCase
     /**
      * @return GraphqlEntityRepository<Task>
      */
-    private function tasks(FakeGraphqlClient $client, ?IdentityMap $identityMap = null, bool $lazyLoading = false, int $maxDepth = 2): GraphqlEntityRepository
+    private function tasks(FakeGraphqlClient $client, ?IdentityMap $identityMap = null, bool $lazyLoading = false, int $maxDepth = 2, ?GraphqlOrmDataCollector $collector = null): GraphqlEntityRepository
     {
         $metadataFactory = new GraphqlEntityMetadataFactory();
         $manager = new GraphqlManager(
             $metadataFactory,
             $client,
             new EntityHydrator($metadataFactory),
-            null,
+            $collector,
             $maxDepth,
             new DataApiBuilderDialect(),
             lazyLoading: $lazyLoading,

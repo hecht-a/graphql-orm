@@ -235,6 +235,20 @@ final class GraphqlOrmDataCollectorTest extends TestCase
         self::assertSame([], $this->collector->getRepeatedQueries());
     }
 
+    #[Test]
+    public function itGroupsTheEntitiesServedByTheIdentityMap(): void
+    {
+        $this->collector->addIdentityMapHit('App\\Entity\\Task', 12, 'src/Controller/TaskController.php:51');
+        $this->collector->addIdentityMapHit('App\\Entity\\User', 3, null);
+        $this->collector->addIdentityMapHit('App\\Entity\\Task', 12, 'src/Controller/TaskController.php:51');
+
+        self::assertSame(3, $this->collector->getIdentityMapHitCount());
+        self::assertSame([
+            ['class' => 'App\\Entity\\Task', 'identifier' => 12, 'count' => 2, 'callers' => ['src/Controller/TaskController.php:51']],
+            ['class' => 'App\\Entity\\User', 'identifier' => 3, 'count' => 1, 'callers' => []],
+        ], $this->collector->getIdentityMapHits());
+    }
+
     private static function lazyLoad(string $relation, float $duration, int $line): GraphqlQueryTrace
     {
         $trace = self::traceOf('query { users(id: 3) { id name } }');
