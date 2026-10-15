@@ -5,15 +5,14 @@ declare(strict_types=1);
 namespace GraphqlOrm\Tests\Query;
 
 use GraphqlOrm\Dialect\DefaultDialect;
-use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
-use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\GraphqlQuery;
 use GraphqlOrm\Query\QueryOptions;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntity;
 use GraphqlOrm\Tests\Fixtures\FakeEntityHydrator;
+use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
 use GraphqlOrm\Tests\Fixtures\FakeMetadataFactory;
 use GraphqlOrm\Tests\Fixtures\FakeRepository\FakeRepository;
 use PHPUnit\Framework\TestCase;
@@ -127,23 +126,6 @@ final class GraphqlQueryTest extends TestCase
 
         $hydrator ??= new FakeEntityHydrator();
 
-        $manager = $this->createStub(GraphqlManager::class);
-
-        $manager->method('getMetadataFactory')->willReturn($metadataFactory);
-        $manager->method('getHydrator')->willReturn($hydrator);
-
-        $manager
-            ->method('execute')
-            ->willReturnCallback(fn (QueryNode|string $_, callable $hydration) => $hydration($response, new GraphqlExecutionContext(), []));
-
-        $manager
-            ->method('send')
-            ->willReturnCallback(fn (QueryNode|string $_, callable $hydration) => fn () => $hydration($response, new GraphqlExecutionContext(), []));
-
-        $manager
-            ->method('getDialect')
-            ->willReturn(new DefaultDialect());
-
-        return $manager;
+        return new GraphqlManager($metadataFactory, new FakeGraphqlClient($response), $hydrator, null, 2, new DefaultDialect());
     }
 }
