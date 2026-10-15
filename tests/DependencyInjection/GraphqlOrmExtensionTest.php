@@ -263,6 +263,14 @@ final class GraphqlOrmExtensionTest extends TestCase
     }
 
     #[Test]
+    public function itKeepsTheDashesOfTheHeaderNames(): void
+    {
+        $container = $this->createContainer(debug: false, config: ['headers' => ['X-API-Key' => 'secret', 'Authorization' => 'Bearer token']]);
+
+        self::assertSame(['X-API-Key' => 'secret', 'Authorization' => 'Bearer token'], $container->getParameter('graphql_orm.headers'));
+    }
+
+    #[Test]
     public function itUsesTheConfiguredHeadersProvider(): void
     {
         $container = $this->createContainer(debug: false, config: ['headers_provider' => 'graphql.headers_provider']);

@@ -94,6 +94,27 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itRendersTheArgumentsOfTheAstAsJson(): void
+    {
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { tasks(where: {status: {_eq: "done"}}, limit: 10, distinct: false) { id } }';
+        $trace->ast = ['operation' => 'query', 'fields' => [[
+            'name' => 'tasks',
+            'arguments' => ['where' => ['status' => ['_eq' => 'done']], 'limit' => 10, 'distinct' => false],
+            'selectionSet' => ['fields' => [['name' => 'id', 'arguments' => [], 'selectionSet' => null, 'isCollection' => false]]],
+            'isCollection' => false,
+        ]]];
+        $collector = new GraphqlOrmDataCollector();
+        $collector->addQuery($trace);
+
+        $text = html_entity_decode(strip_tags($this->render($collector)));
+
+        self::assertStringContainsString('where={"status":{"_eq":"done"}}', $text);
+        self::assertStringContainsString('limit=10', $text);
+        self::assertStringContainsString('distinct=false', $text);
+    }
+
+    #[Test]
     public function itWarnsAboutRepeatedQueries(): void
     {
         $collector = $this->collector([

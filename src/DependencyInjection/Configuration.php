@@ -64,6 +64,7 @@ final class Configuration implements ConfigurationInterface
             ->end()
 
             ->arrayNode('headers')
+            ->normalizeKeys(false)
             ->scalarPrototype()->end()
             ->defaultValue([])
             ->end()
