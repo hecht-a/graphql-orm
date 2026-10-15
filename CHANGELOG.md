@@ -37,7 +37,7 @@ Fix the deprecations reported by 4.9 first: each of them is a change of 5.0. The
 ---
 
 
-## [Unreleased]
+## [4.10.1] — 2026-10-15
 
 ### Fixed
 
