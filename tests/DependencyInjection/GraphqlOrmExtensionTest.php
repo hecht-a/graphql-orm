@@ -13,6 +13,7 @@ use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\Execution\IdentityMap;
 use GraphqlOrm\Form\GraphqlEntityType;
 use GraphqlOrm\GraphqlManager;
+use GraphqlOrm\GraphqlManagerInterface;
 use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\MetadataCacheWarmer;
@@ -226,6 +227,14 @@ final class GraphqlOrmExtensionTest extends TestCase
         $container->setParameter('kernel.project_dir', \dirname(__DIR__, 2));
 
         return $container;
+    }
+
+    #[Test]
+    public function itAutowiresTheManagerByItsInterface(): void
+    {
+        $container = $this->createContainer(debug: false);
+
+        self::assertSame(GraphqlManager::class, (string) $container->getAlias(GraphqlManagerInterface::class));
     }
 
     #[Test]

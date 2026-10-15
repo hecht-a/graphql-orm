@@ -14,6 +14,7 @@ use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\EventListener\SchemaValidationListener;
 use GraphqlOrm\Form\GraphqlEntityType;
 use GraphqlOrm\GraphqlManager;
+use GraphqlOrm\GraphqlManagerInterface;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
@@ -56,6 +57,8 @@ return static function (ContainerConfigurator $config) {
         ->arg('$redactor', service(QueryRedactor::class))
         ->arg('$eventDispatcher', service('event_dispatcher')->nullOnInvalid())
         ->arg('$repositories', tagged_locator('graphql_orm.repository'));
+
+    $services->alias(GraphqlManagerInterface::class, GraphqlManager::class);
 
     $services->set(QueryRedactor::class);
 
