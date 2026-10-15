@@ -18,7 +18,8 @@ interface CountingDialect
      *
      * @param string               $root            the root query field of the entity
      * @param array<string, mixed> $arguments       the arguments built by applyCriteria()
-     * @param string|null          $identifierField the GraphQL name of the identifier, when the entity has one
+     * @param string|null          $identifierField the GraphQL name of the identifier; null when the entity has none, or
+     *                                              since 4.10 when its property is typed with neither int nor float
      */
     public function countField(string $root, array $arguments, ?string $identifierField): FieldNode;
 

@@ -14,9 +14,18 @@ use GraphqlOrm\Query\Expr\FilterExpressionInterface;
 use GraphqlOrm\Query\QueryOptions;
 use GraphqlOrm\Query\Walker\DABGraphqlWalker;
 use GraphqlOrm\Query\Walker\GraphqlWalkerInterface;
+use GraphqlOrm\Schema\CountableFieldResolver;
 
 final class DataApiBuilderDialect implements GraphqlQueryDialect, CursorPaginationDialect, BatchLoadingDialect, CountingDialect, AggregatingDialect
 {
+    /**
+     * @param CountableFieldResolver|null $countableFields finds the field to count on when the identifier is no number
+     */
+    public function __construct(
+        private readonly ?CountableFieldResolver $countableFields = null,
+    ) {
+    }
+
     public function extractCollection(array $data): array
     {
         $items = $data['items'] ?? [];
@@ -92,23 +101,33 @@ final class DataApiBuilderDialect implements GraphqlQueryDialect, CursorPaginati
 
     /**
      * `tasks(filter) { groupBy { aggregations { count(field: id) } } }`: the count of an aggregation without grouping.
+     * Data API Builder only counts the non-null values of a numeric field: the numeric identifier, or else a numeric
+     * field never null, found in the schema.
      *
-     * @throws LogicException when the entity has no identifier, the field Data API Builder counts
+     * @throws LogicException when no field of the entity can be counted
      */
     public function countField(string $root, array $arguments, ?string $identifierField): FieldNode
     {
-        if ($identifierField === null) {
-            throw new LogicException('Data API Builder counts the values of a field: count() needs an entity identifier.');
-        }
-
         $aggregations = new SelectionSetNode();
-        $aggregations->add(new FieldNode('count', ['field' => new EnumLiteral($identifierField)]));
+        $aggregations->add(new FieldNode('count', ['field' => new EnumLiteral($identifierField ?? $this->countableField($root))]));
         $groupBy = new SelectionSetNode();
         $groupBy->add(new FieldNode('aggregations', [], $aggregations));
         $selection = new SelectionSetNode();
         $selection->add(new FieldNode('groupBy', [], $groupBy));
 
         return new FieldNode($root, $arguments, $selection);
+    }
+
+    /**
+     * @throws LogicException when the schema is unknown or the entity has no numeric field never null
+     */
+    private function countableField(string $root): string
+    {
+        $countable = $this->countableFields?->countableFields($root)
+            ?? throw new LogicException(\sprintf('Data API Builder counts the values of a numeric field: count() needs a numeric identifier, or the introspection of the schema to find a numeric field of "%s" that is never null.', $root));
+
+        return $countable[0]
+            ?? throw new LogicException(\sprintf('Data API Builder counts the non-null values of a numeric field, and "%s" has no numeric field that is never null: count() cannot count it.', $root));
     }
 
     public function readCount(array $data, string $countRoot): int
