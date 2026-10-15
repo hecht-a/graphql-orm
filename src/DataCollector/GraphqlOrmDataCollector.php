@@ -57,6 +57,7 @@ final class GraphqlOrmDataCollector extends DataCollector
             'hydrated_entities' => $trace->hydratedEntities,
             'hydrated_relations' => $trace->hydratedRelations,
             'duration' => $trace->duration,
+            'hydration_duration' => $trace->hydrationDuration,
             'started_at' => $trace->startedAt,
             'origin' => $trace->origin,
             'entity_class' => $trace->entityClass,
@@ -304,6 +305,14 @@ final class GraphqlOrmDataCollector extends DataCollector
         }
 
         return $span;
+    }
+
+    /**
+     * @return float the milliseconds spent hydrating the responses, apart from the network
+     */
+    public function getHydrationDuration(): float
+    {
+        return array_sum(array_map(fn (array $query): float => \is_float($query['hydration_duration'] ?? null) ? $query['hydration_duration'] : 0.0, $this->getQueries()));
     }
 
     public function getHydratedEntityCount(): int

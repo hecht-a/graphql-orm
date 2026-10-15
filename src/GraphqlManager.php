@@ -215,7 +215,9 @@ final class GraphqlManager implements GraphqlManagerInterface
                     $context->trace->responsePreview = $this->preview($result);
                 }
 
+                $hydrationStartedAt = hrtime(true);
                 $entities = $hydration($result, $context);
+                $context->trace->hydrationDuration = (hrtime(true) - $hydrationStartedAt) / 1e6;
                 $context->trace->hydratedCount = \count($entities instanceof PaginatedResult ? $entities->items : $entities);
 
                 if ($shared) {

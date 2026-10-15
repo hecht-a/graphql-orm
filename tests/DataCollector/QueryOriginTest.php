@@ -92,6 +92,18 @@ final class QueryOriginTest extends TestCase
     }
 
     #[Test]
+    public function itMeasuresTheHydrationApartFromTheNetwork(): void
+    {
+        $tasks = array_map(fn (int $id) => ['id' => $id, 'title' => 'Task ' . $id], range(1, 50));
+
+        $this->repository(new FakeGraphqlClient(['data' => ['tasks' => $tasks]]), FakeTask::class)->findAll();
+
+        $hydration = $this->collector->getQueries()[0]['hydration_duration'] ?? null;
+        self::assertIsFloat($hydration);
+        self::assertGreaterThan(0.0, $hydration);
+    }
+
+    #[Test]
     public function itKeepsAPreviewOfTheResponseWithItsValuesMasked(): void
     {
         $this->repository(new FakeGraphqlClient(['data' => ['tasks' => [['id' => 1, 'title' => 'Secret']]]]), FakeTask::class)->findAll();

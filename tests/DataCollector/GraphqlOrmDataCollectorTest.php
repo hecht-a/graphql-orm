@@ -273,6 +273,18 @@ final class GraphqlOrmDataCollectorTest extends TestCase
         self::assertSame(1, $restored->getSlowQueryCount());
     }
 
+    #[Test]
+    public function itSumsTheHydrationDurations(): void
+    {
+        foreach ([1.5, 2.25] as $hydration) {
+            $trace = self::trace(duration: 10.0, errors: null);
+            $trace->hydrationDuration = $hydration;
+            $this->collector->addQuery($trace);
+        }
+
+        self::assertEqualsWithDelta(3.75, $this->collector->getHydrationDuration(), 0.001);
+    }
+
     private static function lazyLoad(string $relation, float $duration, int $line): GraphqlQueryTrace
     {
         $trace = self::traceOf('query { users(id: 3) { id name } }');

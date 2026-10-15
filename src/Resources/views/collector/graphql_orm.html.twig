@@ -78,7 +78,7 @@
             <p>No GraphQL queries were executed.</p>
         </div>
     {% else %}
-        {% set durations = collector.queries|map(query => query.duration) %}
+        {% set durations = collector.queries|map(query => query.duration + (query.hydration_duration ?? 0)) %}
         {% set maxDuration = max(durations|merge([0.001])) %}
         {% set offsets = collector.queryOffsets %}
         {% set span = max(collector.timelineSpan, 0.001) %}
@@ -93,6 +93,10 @@
                 <div class="metric">
                     <span class="value">{{ collector.totalDuration|number_format(1) }} <span class="unit">ms</span></span>
                     <span class="label">Time in GraphQL</span>
+                </div>
+                <div class="metric">
+                    <span class="value">{{ collector.hydrationDuration|number_format(1) }} <span class="unit">ms</span></span>
+                    <span class="label">Hydration</span>
                 </div>
                 {% if collector.slowQueryThreshold is not null %}
                     <div class="metric">
@@ -200,9 +204,13 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <div class="graphql-orm-bar">
-                                        <span class="graphql-orm-track"><span class="graphql-orm-fill graphql-orm-fill-{{ status }}" style="width: {{ max(2, query.duration / maxDuration * 100)|round(1) }}%"></span></span>
-                                        <span class="graphql-orm-number">{{ query.duration|number_format(1) }} ms</span>
+                                    {% set hydration = query.hydration_duration ?? 0 %}
+                                    <div class="graphql-orm-bar" title="Network{{ hydration > 0 ? ' + hydration' }}">
+                                        <span class="graphql-orm-track">
+                                            <span class="graphql-orm-fill graphql-orm-fill-{{ status }}" style="width: {{ max(2, query.duration / maxDuration * 100)|round(1) }}%"></span>
+                                            {% if hydration > 0 %}<span class="graphql-orm-fill graphql-orm-fill-hydration" style="width: {{ (hydration / maxDuration * 100)|round(1) }}%"></span>{% endif %}
+                                        </span>
+                                        <span class="graphql-orm-number">{{ query.duration|number_format(1) }} ms{% if hydration > 0 %} + {{ hydration|number_format(1) }} ms{% endif %}</span>
                                     </div>
                                 </td>
                                 <td class="graphql-orm-number">{{ (query.response_size / 1024)|number_format(1) }} KB</td>
@@ -375,10 +383,11 @@
         .graphql-orm-queries .graphql-orm-row:hover td, .graphql-orm-queries .graphql-orm-row[aria-expanded="true"] td { background: var(--table-header, #f5f5f5); }
         .graphql-orm-queries .graphql-orm-row:focus-visible { outline: 2px solid var(--color-link, #1d4ed8); outline-offset: -2px; }
         .graphql-orm-bar { display: flex; align-items: center; gap: 8px; min-width: 160px; }
-        .graphql-orm-track { flex: 1; height: 6px; border-radius: 3px; background: var(--table-header, #f5f5f5); box-shadow: inset 0 0 0 1px var(--table-border-color, #d4d4d4); overflow: hidden; }
+        .graphql-orm-track { display: flex; flex: 1; height: 6px; border-radius: 3px; background: var(--table-header, #f5f5f5); box-shadow: inset 0 0 0 1px var(--table-border-color, #d4d4d4); overflow: hidden; }
         .graphql-orm-fill { display: block; height: 100%; border-radius: 3px; background: var(--color-link, #1d4ed8); }
         .graphql-orm-fill-slow { background: var(--color-warning, #785b02); }
         .graphql-orm-fill-error { background: var(--color-error, #b41939); }
+        .graphql-orm-fill.graphql-orm-fill-hydration { border-radius: 0 3px 3px 0; background: var(--color-muted, #737373); }
         .graphql-orm-origin { display: inline-block; font-size: 12px; font-weight: bold; border-radius: 4px; padding: 1px 6px; white-space: nowrap; background: var(--badge-light-background, #f5f5f5); color: var(--color-link, #1d4ed8); }
         .graphql-orm-origin-lazy { color: var(--highlight-variable, #e36209); }
         .graphql-orm-origin-count { color: var(--color-success, #4f805d); }
@@ -652,6 +661,7 @@
         <div data-graphql-orm-pane="hydration" hidden>
             <table>
                 <tbody>
+                    <tr><th>Time</th><td>{{ (query.hydration_duration ?? 0)|number_format(1) }} ms, apart from the {{ query.duration|number_format(1) }} ms of the network</td></tr>
                     <tr><th>Entities</th><td>{{ query.hydrated_entities }}</td></tr>
                     <tr><th>Relations</th><td>{{ query.hydrated_relations }}</td></tr>
                     <tr><th>Collections</th><td>{{ query.hydrated_collections }}</td></tr>

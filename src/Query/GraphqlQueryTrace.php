@@ -28,7 +28,10 @@ final class GraphqlQueryTrace
     public int $hydratedRelations = 0;
     public int $hydratedCollections = 0;
     public int $hydrationMaxDepth = 0;
+    /** The milliseconds spent sending the query and receiving its response. */
     public float|int $duration = 0;
+    /** The milliseconds spent hydrating the response into entities, apart from $duration. */
+    public float $hydrationDuration = 0.0;
     /** The Unix time the query was sent at, in seconds with microseconds. */
     public ?float $startedAt = null;
     /** The method of the bundle the application called (e.g. findBy, getResult), "lazy" for a lazy load; profiler only. */

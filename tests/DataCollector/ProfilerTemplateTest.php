@@ -294,6 +294,24 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itTellsTheNetworkFromTheHydration(): void
+    {
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { tasks { id } }';
+        $trace->duration = 30.0;
+        $trace->hydrationDuration = 10.0;
+        $collector = new GraphqlOrmDataCollector();
+        $collector->addQuery($trace);
+
+        $html = $this->render($collector);
+        $text = self::text($html);
+
+        self::assertStringContainsString('10.0 ms Hydration', $text);
+        self::assertStringContainsString('30.0 ms + 10.0 ms', $text);
+        self::assertStringContainsString('graphql-orm-fill-hydration', $html);
+    }
+
+    #[Test]
     public function itWarnsAboutRepeatedQueries(): void
     {
         $collector = $this->collector([
