@@ -157,57 +157,8 @@ untyped property is hydrated with the raw value.
 
 ## Upgrading from the mapping of 4.8
 
-Until 4.8, the attributes were `#[GraphqlEntity]` and `#[GraphqlField]` of `GraphqlOrm\Attribute`, and
-`#[GraphqlField]` also marked the identifier and mapped the relations. This still works in 4.x, with deprecations
-reported in the logs and the tests (`Since hecht-a/graphql-orm 4.9: ...`), and is removed in 5.0:
-
-```php
-// 4.8
-use GraphqlOrm\Attribute\Fetch;
-use GraphqlOrm\Attribute\GraphqlEntity;
-use GraphqlOrm\Attribute\GraphqlField;
-
-#[GraphqlEntity(name: 'tasks')]
-class Task
-{
-    #[GraphqlField(mappedFrom: 'id', identifier: true)]
-    public int $id;
-
-    #[GraphqlField(mappedFrom: 'user', fetch: Fetch::Lazy)]
-    public ?User $user = null;
-}
-
-// 4.9
-use GraphqlOrm\Mapping\Entity;
-use GraphqlOrm\Mapping\Fetch;
-use GraphqlOrm\Mapping\Field;
-use GraphqlOrm\Mapping\Identifier;
-use GraphqlOrm\Mapping\Relation;
-
-#[Entity(name: 'tasks')]
-class Task
-{
-    #[Field(mappedFrom: 'id')]
-    #[Identifier]
-    public int $id;
-
-    #[Relation(mappedFrom: 'user', fetch: Fetch::Lazy)]
-    public ?User $user = null;
-}
-```
-
-| 4.8                                         | 4.9                                     |
-|---------------------------------------------|-----------------------------------------|
-| `GraphqlOrm\Attribute\GraphqlEntity`        | `GraphqlOrm\Mapping\Entity`             |
-| `GraphqlOrm\Attribute\GraphqlField`         | `GraphqlOrm\Mapping\Field`              |
-| `#[GraphqlField(identifier: true)]`         | `#[Field]` and `#[Identifier]`          |
-| `#[GraphqlField]` on a relation             | `#[Relation]`, with the same arguments  |
-| `GraphqlOrm\Attribute\Fetch`                | `GraphqlOrm\Mapping\Fetch`              |
-
-`graphqlorm:make:entity` generates the new attributes. The metadata being cached outside debug mode, a deprecation is
-reported when the cache is built: after `cache:clear`, or in the test environment. A class mapped with Doctrine too
-would have two `Entity` attributes: import one namespace with an alias, as `use GraphqlOrm\Mapping as GraphqlOrm;`
-then `#[GraphqlOrm\Entity]`.
+The attributes `#[GraphqlEntity]` and `#[GraphqlField]` of 4.8 are removed in 5.0: see
+[upgrading from 4.x](upgrading.md#mapping-attributes) for their equivalents.
 
 ## Supported PHP types
 

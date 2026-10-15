@@ -57,7 +57,10 @@ export default defineConfig({
             },
             {
                 text: 'Project',
-                items: [{ text: 'Changelog', link: '/changelog' }],
+                items: [
+                    { text: 'Upgrading from 4.x', link: '/upgrading' },
+                    { text: 'Changelog', link: '/changelog' },
+                ],
             },
         ],
         search: { provider: 'local' },

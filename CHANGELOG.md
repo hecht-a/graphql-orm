@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrading from 4.x
 
-Fix the deprecations reported by 4.9 first: each of them is a change of 5.0.
+Fix the deprecations reported by 4.9 first: each of them is a change of 5.0. The
+[upgrade guide](https://hecht-a.github.io/graphql-orm/upgrading) details every step.
 
 - The mapping attributes of `GraphqlOrm\Attribute` are removed: `#[GraphqlEntity]` and `#[GraphqlField]` become
   `#[Entity]` and `#[Field]` of `GraphqlOrm\Mapping`, the `identifier` argument becomes `#[Identifier]`, a relation is
