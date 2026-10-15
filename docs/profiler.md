@@ -25,6 +25,10 @@ For each request, the panel shows:
 The introspection queries of the bundle (typed variables, schema validation, the countable fields of Data API Builder)
 are listed too, with the origin `introspection`: they count in the time of the request, once per cache lifetime.
 
+The caller is the first line of the application on the way to the query. The methods of the entities are skipped, so
+that a relation loaded on first access from `__toString()` or a getter points to the code reading it; a line of a
+compiled Twig template is given as the line of the template itself, e.g. `task/index.html.twig:25`.
+
 The origin is the method of the bundle the application called: `findBy`, `count`, `getResult` on a query built with
 the query builder, the method of a custom repository calling the bundle, or `lazy` for a relation loaded on first
 access (see [lazy loading](configuration.md#lazy-loading)).

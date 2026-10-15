@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Profiler: the time spent hydrating each response, apart from the network: a "Hydration" metric, a grey part in the
   duration bar of each query, and the time in its "Hydration" tab. `GraphqlQueryTrace::$hydrationDuration` holds it.
 
+### Changed
+
+- The caller of a query skips the methods of the entities, and gives a line of a compiled Twig template as the line of
+  the template: a relation loaded on first access from `{{ task.assignee }}` points to `task/index.html.twig:25`, not
+  to the `__toString()` of the entity nor to a file of the Twig cache.
+
 ---
 
 ## [5.1.1] — 2026-10-15
