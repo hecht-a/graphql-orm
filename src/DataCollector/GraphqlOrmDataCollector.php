@@ -654,7 +654,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
      */
     public function getDistinctQueryCount(): int
     {
-        return \count(array_unique(array_map(static fn (array $query) => (string) ($query['shape'] ?? ''), $this->getQueries())));
+        return \count(array_unique(array_map(static fn (array $query) => \is_string($query['shape'] ?? null) ? $query['shape'] : '', $this->getQueries())));
     }
 
     /**
