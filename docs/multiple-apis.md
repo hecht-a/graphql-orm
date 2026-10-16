@@ -129,4 +129,5 @@ php bin/console graphqlorm:schema:validate                                   # e
 php bin/console graphqlorm:schema:validate --manager=crm                     # the CRM only
 ```
 
-The [profiler](profiler.md) lists the APIs in the toolbar and tells the API of each query.
+The [profiler](profiler.md) lists the APIs in the toolbar, tells the API of each query (slow by the
+`slow_query_threshold` of its API), and shows the options of each API in its "Configuration" tab.

@@ -24,7 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `graphqlorm:find` use the manager of their entity; `graphqlorm:make:entity` and `graphqlorm:schema:validate` take
   `--manager`, and `graphqlorm:debug:entity` tells the manager of an entity.
 - Each API keeps its own introspection, schema validation, identity map and caches, the results of two APIs sharing a
-  pool kept apart; the profiler lists the APIs and tells the API of each query.
+  pool kept apart; the profiler lists the APIs, tells the API of each query, judges it slow by the threshold of its API,
+  and shows the options of each API in its "Configuration" tab.
 - `GraphqlManager::getName()` and `getClient()`.
 
 ### Fixed
