@@ -151,6 +151,20 @@ final class ResultCacheTest extends TestCase
     }
 
     #[Test]
+    public function itKeepsTheResultsOfTwoApisApartInASharedPool(): void
+    {
+        $mainClient = new FakeGraphqlClient(self::TASKS);
+        $crmClient = new FakeGraphqlClient(self::TASKS);
+        $metadataFactory = new GraphqlEntityMetadataFactory();
+        $manager = fn (FakeGraphqlClient $client, string $name) => new GraphqlManager($metadataFactory, $client, new EntityHydrator($metadataFactory), null, 1, new DefaultDialect(), cache: new GraphqlCache($this->pool, namespace: $name));
+
+        (new GraphqlEntityRepository($manager($mainClient, 'main'), FakeTask::class))->createQueryBuilder()->getQuery()->enableResultCache()->getResult();
+        (new GraphqlEntityRepository($manager($crmClient, 'crm'), FakeTask::class))->createQueryBuilder()->getQuery()->enableResultCache()->getResult();
+
+        self::assertSame([1, 1], [$mainClient->callCount, $crmClient->callCount]);
+    }
+
+    #[Test]
     public function itNeedsAPoolToCacheAResult(): void
     {
         $manager = new GraphqlManager(new GraphqlEntityMetadataFactory(), new FakeGraphqlClient(self::TASKS), new EntityHydrator(new GraphqlEntityMetadataFactory()), null, 1);

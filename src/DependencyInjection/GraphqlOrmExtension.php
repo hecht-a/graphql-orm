@@ -104,6 +104,13 @@ final class GraphqlOrmExtension extends Extension
             $cachePools = [...$cachePools, ...$this->cachePools($config, \count($managers->managers) > 1 ? $name . ': ' : '')];
         }
 
+        // Two APIs may share a pool and receive the same query: their results are kept apart.
+        if (\count($managers->managers) > 1) {
+            foreach (array_keys($managers->managers) as $name) {
+                $container->getDefinition('graphql_orm.' . $name . '.cache')->setArgument('$namespace', $name);
+            }
+        }
+
         $this->aliasDefaultManager($container, $managers->defaultManager);
         $this->registerRegistry($container, $managers);
 

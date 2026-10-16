@@ -42,6 +42,8 @@ final class GraphqlCache implements ResetInterface
      * @param int|null                                                                $defaultLifetime seconds an entity is kept, null for the
      *                                                                                                 default lifetime of the pool
      * @param array<string, array{pool: CacheItemPoolInterface, lifetime?: int|null}> $regions         by name
+     * @param string                                                                  $namespace       the manager of the results, when several
+     *                                                                                                 APIs may share a pool
      */
     public function __construct(
         private readonly ?CacheItemPoolInterface $results = null,
@@ -49,6 +51,7 @@ final class GraphqlCache implements ResetInterface
         private readonly ?int $defaultLifetime = null,
         private readonly array $regions = [],
         private readonly ?GraphqlOrmDataCollector $collector = null,
+        private readonly string $namespace = '',
     ) {
     }
 
@@ -60,7 +63,8 @@ final class GraphqlCache implements ResetInterface
     {
         if ($this->results !== null) {
             $results = $this->results;
-            $this->measured(self::RESULT_CACHE, 'delete', static fn () => $results->deleteItem(self::resultKey($key)));
+            $resultKey = self::resultKey($key, $this->namespace);
+            $this->measured(self::RESULT_CACHE, 'delete', static fn () => $results->deleteItem($resultKey));
         }
 
         $this->collector?->cacheEvicted(__FUNCTION__, $key, self::caller());
@@ -129,9 +133,9 @@ final class GraphqlCache implements ResetInterface
      *
      * @internal
      */
-    public static function resultKey(string $key): string
+    public static function resultKey(string $key, string $namespace = ''): string
     {
-        return self::RESULT_KEY_PREFIX . hash('xxh128', $key);
+        return self::RESULT_KEY_PREFIX . hash('xxh128', $namespace === '' ? $key : $namespace . "\0" . $key);
     }
 
     /**
@@ -155,7 +159,7 @@ final class GraphqlCache implements ResetInterface
             : $graphql . "\0" . json_encode($variables, \JSON_THROW_ON_ERROR);
 
         $results = $this->results;
-        $key = self::resultKey($key);
+        $key = self::resultKey($key, $this->namespace);
 
         return $this->measured(self::RESULT_CACHE, 'read', static fn () => $results->getItem($key));
     }

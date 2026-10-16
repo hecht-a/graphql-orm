@@ -631,6 +631,23 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itTellsTheApiOfEachQueryWhenThereAreSeveral(): void
+    {
+        $collector = new GraphqlOrmDataCollector(configuration: ['managers' => ['main', 'crm']]);
+        foreach (['main' => 'query { tasks { id } }', 'crm' => 'query { contacts { id } }'] as $manager => $graphql) {
+            $trace = new GraphqlQueryTrace();
+            $trace->graphql = $graphql;
+            $trace->manager = $manager;
+            $collector->addQuery($trace);
+        }
+
+        $text = self::text($this->render($collector));
+
+        self::assertStringContainsString('APIs main, crm', $text);
+        self::assertStringContainsString('crm contacts', $text);
+    }
+
+    #[Test]
     public function itWarnsAboutRepeatedQueries(): void
     {
         $collector = $this->collector([

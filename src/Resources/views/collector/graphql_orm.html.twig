@@ -20,6 +20,12 @@
             <b>Queries</b>
             <span class="sf-toolbar-status">{{ collector.queryCount }}</span>
         </div>
+        {% if (collector.configuration.managers ?? [])|length > 1 %}
+            <div class="sf-toolbar-info-piece">
+                <b>APIs</b>
+                <span>{{ collector.configuration.managers|join(', ') }}</span>
+            </div>
+        {% endif %}
         <div class="sf-toolbar-info-piece">
             <b>Sent to the API</b>
             <span>{{ collector.queryCount - collector.resultCacheHitCount }}</span>
@@ -235,7 +241,7 @@
                     </button>
                 {% endif %}
                 {% set resultCacheQueries = collector.queries|filter(query => (query.result_cache ?? null) is not null) %}
-                {% set cachedEntityQueries = collector.queries|filter(query => query.from_cached_entity ?? false) %}
+                {% set cachedEntityQueries = collector.queries|filter(query => (query.from_cached_entity ?? false)) %}
                 {% set showCache = resultCacheQueries is not empty or collector.secondLevelCache is not empty or collector.cacheEvictions is not empty or collector.cacheOperations is not empty or collector.cacheWarnings is not empty %}
                 {% if showCache %}
                     {% set cacheHits = resultCacheQueries|filter(query => query.result_cache == 'hit')|length + collector.secondLevelCache|reduce((total, entry) => total + entry.hits, 0) %}
@@ -297,6 +303,7 @@
                                 <td class="graphql-orm-number">{{ loop.index }}</td>
                                 <td>{{ _self.renderOrigin(query) }}</td>
                                 <td>
+                                    {% if (collector.configuration.managers ?? [])|length > 1 and (query.manager ?? null) %}<span class="badge" title="The manager of the API">{{ query.manager }}</span>{% endif %}
                                     <code>{{ query.root_field ?? '-' }}</code>
                                     {% if query.entity_class ?? null %}
                                         <span class="graphql-orm-muted" title="{{ query.entity_class }}">{{ query.entity_class|split('\\')|last }}</span>

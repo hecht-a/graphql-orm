@@ -158,6 +158,17 @@ final class QueryOriginTest extends TestCase
     }
 
     #[Test]
+    public function itRecordsTheManagerSendingTheQuery(): void
+    {
+        $metadataFactory = new GraphqlEntityMetadataFactory();
+        $manager = new GraphqlManager($metadataFactory, new FakeGraphqlClient(['data' => ['tasks' => []]]), new EntityHydrator($metadataFactory), $this->collector, 1, new DefaultDialect(), name: 'crm');
+
+        (new GraphqlEntityRepository($manager, FakeTask::class))->findAll();
+
+        self::assertSame('crm', $this->collector->getQueries()[0]['manager'] ?? null);
+    }
+
+    #[Test]
     public function itRecordsWhenTheQueryStarted(): void
     {
         $before = microtime(true);

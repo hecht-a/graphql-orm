@@ -42,6 +42,8 @@ final class GraphqlQueryTrace
     public ?string $identifierProperty = null;
     /** The relation whose first access sent this lazy load, e.g. App\Entity\Task::$assignee. */
     public ?string $lazyRelation = null;
+    /** The manager sending the query, e.g. crm; profiler only. */
+    public ?string $manager = null;
     /** "hit" for a response read from the result cache, "miss" for one sent and kept; null without result cache. */
     public ?string $resultCache = null;
     /** The key given to enableResultCache(), null when derived from the query and its variables. */

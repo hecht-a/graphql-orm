@@ -396,6 +396,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         $context->trace->startedAt = microtime(true);
 
         if ($this->collector !== null) {
+            $context->trace->manager = $this->name;
             [$context->trace->origin, $context->trace->entityClass] = $this->origin();
 
             // Lets the profiler suggest one findBy() for the entities found one by one in a loop.
