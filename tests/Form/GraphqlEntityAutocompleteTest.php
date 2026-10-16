@@ -10,6 +10,7 @@ use GraphqlOrm\Form\GraphqlEntityType;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
@@ -79,7 +80,7 @@ final class GraphqlEntityAutocompleteTest extends TestCase
     public function itSignsTheNumberOfResultsOfTheMaxResultsOption(): void
     {
         $factory = Forms::createFormFactoryBuilder()
-            ->addType(new GraphqlEntityType($this->manager(new FakeGraphqlClient()), new UriSigner('secret')))
+            ->addType(new GraphqlEntityType(GraphqlManagerRegistry::forManager($this->manager(new FakeGraphqlClient())), new UriSigner('secret')))
             ->addTypeExtension(new class extends \Symfony\Component\Form\AbstractTypeExtension {
                 public static function getExtendedTypes(): iterable
                 {
@@ -112,7 +113,7 @@ final class GraphqlEntityAutocompleteTest extends TestCase
     private function factory(FakeGraphqlClient $client): FormFactoryInterface
     {
         return Forms::createFormFactoryBuilder()
-            ->addType(new GraphqlEntityType($this->manager($client), new UriSigner('secret')))
+            ->addType(new GraphqlEntityType(GraphqlManagerRegistry::forManager($this->manager($client)), new UriSigner('secret')))
             ->getFormFactory();
     }
 

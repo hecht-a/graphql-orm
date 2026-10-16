@@ -14,12 +14,22 @@ use Symfony\Component\Finder\Finder;
  */
 final readonly class EntityClassLocator
 {
+    /** @var list<array{dir: string, namespace: string}> */
+    private array $mappings;
+
+    /**
+     * @param list<array{dir: string, namespace: string}> $mappings the entity mappings of every manager; the given
+     *                                                              directory and namespace when empty
+     */
     public function __construct(
         #[Autowire('%graphql_orm.mapping.entity.dir%')]
-        private string $entityDir,
+        string $entityDir,
         #[Autowire('%graphql_orm.mapping.entity.namespace%')]
-        private string $entityNamespace,
+        string $entityNamespace,
+        #[Autowire('%graphql_orm.entity_mappings%')]
+        array $mappings = [],
     ) {
+        $this->mappings = $mappings !== [] ? $mappings : [['dir' => $entityDir, 'namespace' => $entityNamespace]];
     }
 
     /**
@@ -31,26 +41,35 @@ final readonly class EntityClassLocator
             return $entity;
         }
 
-        $fqcn = rtrim($this->entityNamespace, '\\') . '\\' . ltrim($entity, '\\');
+        foreach ($this->mappings as $mapping) {
+            $fqcn = rtrim($mapping['namespace'], '\\') . '\\' . ltrim($entity, '\\');
 
-        return class_exists($fqcn) ? $fqcn : null;
+            if ($mapping['namespace'] !== '' && class_exists($fqcn)) {
+                return $fqcn;
+            }
+        }
+
+        return null;
     }
 
     /**
-     * @return list<string> the short names of the entities of the entity directory
+     * @return list<string> the short names of the entities of the entity directories
      */
     public function available(): array
     {
-        if (!is_dir($this->entityDir)) {
-            return [];
-        }
-
         $entities = [];
 
-        foreach ((new Finder())->files()->in($this->entityDir)->name('*.php')->depth(0) as $file) {
-            $entities[] = pathinfo($file->getFilename(), PATHINFO_FILENAME);
+        foreach ($this->mappings as $mapping) {
+            if (!is_dir($mapping['dir'])) {
+                continue;
+            }
+
+            foreach ((new Finder())->files()->in($mapping['dir'])->name('*.php')->depth(0) as $file) {
+                $entities[] = pathinfo($file->getFilename(), PATHINFO_FILENAME);
+            }
         }
 
+        $entities = array_values(array_unique($entities));
         sort($entities);
 
         return $entities;

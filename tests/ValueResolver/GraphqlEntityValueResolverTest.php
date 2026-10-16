@@ -10,6 +10,7 @@ use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
 use GraphqlOrm\Tests\Integration\Entity\Task;
@@ -224,13 +225,13 @@ final class GraphqlEntityValueResolverTest extends TestCase
     {
         $metadataFactory = new GraphqlEntityMetadataFactory();
 
-        return new GraphqlEntityValueResolver(new GraphqlManager(
+        return new GraphqlEntityValueResolver(GraphqlManagerRegistry::forManager(new GraphqlManager(
             $metadataFactory,
             $client,
             new EntityHydrator($metadataFactory),
             null,
             2,
             new DataApiBuilderDialect(),
-        ));
+        )));
     }
 }

@@ -7,8 +7,7 @@ namespace GraphqlOrm\Doctrine;
 use Doctrine\Persistence\Event\LifecycleEventArgs;
 use Doctrine\Persistence\ObjectManager;
 use GraphqlOrm\Exception\InvalidArgumentException;
-use GraphqlOrm\GraphqlManager;
-use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Registry\GraphqlManagerRegistry;
 
 /**
  * Sets the #[GraphqlReference] properties of the Doctrine entities: on load, with a reference to the GraphQL entity
@@ -25,8 +24,7 @@ final class GraphqlReferenceListener
     private array $references = [];
 
     public function __construct(
-        private readonly GraphqlManager $manager,
-        private readonly GraphqlEntityMetadataFactory $metadataFactory,
+        private readonly GraphqlManagerRegistry $managers,
     ) {
     }
 
@@ -41,7 +39,7 @@ final class GraphqlReferenceListener
             $value = $identifier->getValue($entity);
 
             if (\is_int($value) || \is_string($value)) {
-                $reference->setValue($entity, $this->manager->reference($target, $value, $reference->class . '::$' . $reference->getName()));
+                $reference->setValue($entity, $this->managers->getManagerForClass($target)->reference($target, $value, $reference->class . '::$' . $reference->getName()));
             }
         }
     }
@@ -109,7 +107,7 @@ final class GraphqlReferenceListener
      */
     private function identifierProperty(string $target): string
     {
-        return $this->metadataFactory->getMetadata($target)->identifier->property
+        return $this->managers->getManagerForClass($target)->getMetadataFactory()->getMetadata($target)->identifier->property
             ?? throw new InvalidArgumentException(\sprintf('"%s" has no identifier: it cannot be referenced from a Doctrine entity.', $target));
     }
 }

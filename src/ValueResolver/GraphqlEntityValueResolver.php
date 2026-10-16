@@ -6,8 +6,8 @@ namespace GraphqlOrm\ValueResolver;
 
 use GraphqlOrm\Attribute\MapGraphqlEntity;
 use GraphqlOrm\Exception\InvalidArgumentException;
-use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
+use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Controller\ValueResolverInterface;
 use Symfony\Component\HttpKernel\ControllerMetadata\ArgumentMetadata;
@@ -23,7 +23,7 @@ final readonly class GraphqlEntityValueResolver implements ValueResolverInterfac
     private const ID_ATTRIBUTE = 'id';
 
     public function __construct(
-        private GraphqlManager $manager,
+        private GraphqlManagerRegistry $managers,
     ) {
     }
 
@@ -50,7 +50,7 @@ final readonly class GraphqlEntityValueResolver implements ValueResolverInterfac
             return [];
         }
 
-        $entity = \in_array(null, $criteria, true) ? null : $this->manager->getRepository($class)->findOneBy($criteria);
+        $entity = \in_array(null, $criteria, true) ? null : $this->managers->getManagerForClass($class)->getRepository($class)->findOneBy($criteria);
 
         if ($entity === null && !$argument->isNullable()) {
             throw new NotFoundHttpException(\sprintf('"%s" object not found by the "%s" value resolver.', $class, self::class));
@@ -64,7 +64,7 @@ final readonly class GraphqlEntityValueResolver implements ValueResolverInterfac
      */
     private function isEntity(?string $class): bool
     {
-        return $class !== null && $this->manager->getMetadataFactory()->isEntityClass($class);
+        return $class !== null && class_exists($class) && $this->managers->getManagerForClass($class)->getMetadataFactory()->isEntityClass($class);
     }
 
     /**
@@ -74,7 +74,7 @@ final readonly class GraphqlEntityValueResolver implements ValueResolverInterfac
      */
     private function identifierCriteria(string $class, Request $request, string $parameter): array
     {
-        $identifier = $this->manager->getMetadataFactory()->getMetadata($class)->identifier;
+        $identifier = $this->managers->getManagerForClass($class)->getMetadataFactory()->getMetadata($class)->identifier;
         $id = $request->attributes->get($parameter) ?? $request->attributes->get(self::ID_ATTRIBUTE);
 
         if ($identifier === null || !\is_scalar($id)) {
@@ -92,7 +92,7 @@ final readonly class GraphqlEntityValueResolver implements ValueResolverInterfac
      */
     private function mappedCriteria(string $class, Request $request, array $mapping): array
     {
-        $metadata = $this->manager->getMetadataFactory()->getMetadata($class);
+        $metadata = $this->managers->getManagerForClass($class)->getMetadataFactory()->getMetadata($class);
         $criteria = [];
 
         foreach ($mapping as $parameter => $fieldName) {

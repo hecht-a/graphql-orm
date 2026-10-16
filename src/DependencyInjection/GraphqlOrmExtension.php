@@ -109,6 +109,10 @@ final class GraphqlOrmExtension extends Extension
 
         $container->setParameter('graphql_orm.default_manager', $managers->defaultManager);
         $container->setParameter('graphql_orm.managers', array_keys($managers->managers));
+        $container->setParameter('graphql_orm.entity_mappings', array_values(array_map(
+            static fn (array $config): array => $config['mapping']['entity'],
+            $managers->managers,
+        )));
         $container->setParameter('graphql_orm.schema_validation.entity_classes', array_values(array_unique(array_merge(...array_values($entityClasses)))));
 
         $default = $managers->managers[$managers->defaultManager];

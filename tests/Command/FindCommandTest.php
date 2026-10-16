@@ -11,6 +11,7 @@ use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use GraphqlOrm\Test\MockGraphqlServer;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -101,7 +102,7 @@ final class FindCommandTest extends TestCase
             2,
             new DataApiBuilderDialect(),
         );
-        $command = new FindCommand($manager, new EntityClassLocator(\dirname(__DIR__) . '/Integration/Entity', 'GraphqlOrm\\Tests\\Integration\\Entity'));
+        $command = new FindCommand(GraphqlManagerRegistry::forManager($manager), new EntityClassLocator(\dirname(__DIR__) . '/Integration/Entity', 'GraphqlOrm\\Tests\\Integration\\Entity'));
 
         return new CommandTester((new Command('graphqlorm:find'))->setCode($command));
     }

@@ -7,7 +7,7 @@ namespace GraphqlOrm\Form;
 use GraphqlOrm\Controller\EntityAutocompleteController;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Exception\LogicException;
-use GraphqlOrm\GraphqlManager;
+use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\HttpFoundation\UriSigner;
@@ -27,7 +27,7 @@ final class GraphqlEntityType extends AbstractType
      * @param UriSigner|null $uriSigner signs the search of the autocomplete fields, so that the endpoint queries nothing else
      */
     public function __construct(
-        private readonly GraphqlManager $manager,
+        private readonly GraphqlManagerRegistry $managers,
         private readonly ?UriSigner $uriSigner = null,
     ) {
     }
@@ -39,7 +39,7 @@ final class GraphqlEntityType extends AbstractType
         $resolver->setDefault('query_builder', null);
         $resolver->setAllowedTypes('query_builder', ['null', 'callable']);
 
-        $resolver->setDefault('choice_loader', fn (Options $options) => new GraphqlEntityChoiceLoader($this->manager, self::entityClass($options), $options['query_builder']));
+        $resolver->setDefault('choice_loader', fn (Options $options) => new GraphqlEntityChoiceLoader($this->managers->getManagerForClass(self::entityClass($options)), self::entityClass($options), $options['query_builder']));
 
         // Symfony UX Autocomplete: the field searches the endpoint of the bundle, and loads only the entity submitted.
         $resolver->setDefault('autocomplete', false);
@@ -115,7 +115,7 @@ final class GraphqlEntityType extends AbstractType
             return null;
         }
 
-        $identifier = $this->manager->getMetadataFactory()->getMetadata($class)->identifier
+        $identifier = $this->managers->getManagerForClass($class)->getMetadataFactory()->getMetadata($class)->identifier
             ?? throw new LogicException(\sprintf('"%s" has no identifier to tell its choices apart: mark its identifier field with #[Identifier].', $class));
         $property = new \ReflectionProperty($entity, $identifier->property);
         $value = $property->isInitialized($entity) ? $property->getValue($entity) : null;

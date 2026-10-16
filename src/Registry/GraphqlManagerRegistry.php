@@ -8,6 +8,7 @@ use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use Psr\Container\ContainerInterface;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 
 /**
  * The managers of the GraphQL APIs of the application, as the ManagerRegistry of Doctrine: by name, or the manager of an
@@ -22,6 +23,17 @@ final readonly class GraphqlManagerRegistry
         private ContainerInterface $managers,
         private ManagerRouter $router,
     ) {
+    }
+
+    /**
+     * The registry of a single manager, every entity being its own: for a script or a test building the services by hand.
+     */
+    public static function forManager(GraphqlManager $manager): self
+    {
+        return new self(
+            new ServiceLocator([$manager->getName() => static fn (): GraphqlManager => $manager]),
+            new ManagerRouter([$manager->getName() => ''], $manager->getName()),
+        );
     }
 
     public function getDefaultManagerName(): string

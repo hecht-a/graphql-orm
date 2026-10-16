@@ -7,6 +7,7 @@ namespace GraphqlOrm\Serializer;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use Symfony\Component\Serializer\Normalizer\NormalizerAwareInterface;
 use Symfony\Component\Serializer\Normalizer\NormalizerAwareTrait;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
@@ -29,6 +30,7 @@ final class GraphqlEntityNormalizer implements NormalizerInterface, NormalizerAw
         private readonly GraphqlEntityMetadataFactory $metadataFactory,
         private readonly ?EntityHydrator $hydrator = null,
         private readonly ?GraphqlOrmDataCollector $collector = null,
+        private readonly ?GraphqlManagerRegistry $managers = null,
     ) {
     }
 
@@ -41,7 +43,7 @@ final class GraphqlEntityNormalizer implements NormalizerInterface, NormalizerAw
     {
         \assert(\is_object($data));
         $values = [];
-        $unselected = $this->hydrator?->unselectedProperties($data) ?? [];
+        $unselected = $this->unselectedProperties($data);
         $this->collector?->entityNormalized($data::class, $unselected !== [] ? 'partial' : 'identifier');
 
         foreach ($this->metadataFactory->getMetadata($data::class)->fields as $field) {
@@ -66,7 +68,19 @@ final class GraphqlEntityNormalizer implements NormalizerInterface, NormalizerAw
     {
         return \is_object($data)
             && $this->metadataFactory->isEntityClass($data::class)
-            && ((new \ReflectionClass($data))->isUninitializedLazyObject($data) || ($this->hydrator?->unselectedProperties($data) ?? []) !== []);
+            && ((new \ReflectionClass($data))->isUninitializedLazyObject($data) || $this->unselectedProperties($data) !== []);
+    }
+
+    /**
+     * The mapped properties the query hydrating the entity did not select, told by the hydrator of the manager of its API.
+     *
+     * @return list<string>
+     */
+    private function unselectedProperties(object $entity): array
+    {
+        $hydrator = $this->managers?->getManagerForClass($entity::class)->getHydrator() ?? $this->hydrator;
+
+        return $hydrator?->unselectedProperties($entity) ?? [];
     }
 
     public function getSupportedTypes(?string $format): array

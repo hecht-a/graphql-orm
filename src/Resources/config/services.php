@@ -16,6 +16,7 @@ use GraphqlOrm\Form\GraphqlEntityType;
 use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\Naming\DefaultNamingStrategy;
 use GraphqlOrm\Metadata\Naming\SnakeCaseNamingStrategy;
+use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use GraphqlOrm\Serializer\GraphqlEntityNormalizer;
 use GraphqlOrm\Twig\GraphqlOrmTwigExtension;
 use GraphqlOrm\ValueResolver\GraphqlEntityValueResolver;
@@ -57,6 +58,7 @@ return static function (ContainerConfigurator $config) {
         $services->set(GraphqlEntityNormalizer::class)
             ->autoconfigure(false)
             ->arg('$collector', service(GraphqlOrmDataCollector::class)->nullOnInvalid())
+            ->arg('$managers', service(GraphqlManagerRegistry::class))
             ->tag('serializer.normalizer', ['priority' => 100]);
     }
 

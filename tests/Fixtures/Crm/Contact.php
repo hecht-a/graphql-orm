@@ -20,4 +20,7 @@ class Contact
 
     #[Field]
     public string $name;
+
+    #[Field]
+    public ?string $email = null;
 }

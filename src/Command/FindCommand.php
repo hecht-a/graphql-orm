@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace GraphqlOrm\Command;
 
 use GraphqlOrm\Exception\GraphqlOrmException;
-use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Query\Direction;
+use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Option;
@@ -31,7 +31,7 @@ final readonly class FindCommand
     private const DEFAULT_LIMIT = 20;
 
     public function __construct(
-        private GraphqlManager $manager,
+        private GraphqlManagerRegistry $managers,
         private EntityClassLocator $entityClassLocator,
     ) {
     }
@@ -64,7 +64,7 @@ final readonly class FindCommand
         }
 
         try {
-            $entities = $this->manager->getRepository($class)->findBy(
+            $entities = $this->managers->getManagerForClass($class)->getRepository($class)->findBy(
                 $this->pairs($criteria, $this->value(...)),
                 $this->pairs($orderBy, fn (string $direction) => Direction::from(strtoupper($direction))),
                 $limit,
@@ -75,7 +75,7 @@ final readonly class FindCommand
             return Command::FAILURE;
         }
 
-        $metadata = $this->manager->getMetadataFactory()->getMetadata($class);
+        $metadata = $this->managers->getManagerForClass($class)->getMetadataFactory()->getMetadata($class);
         $rows = array_map(fn (object $entity) => $this->row($metadata, $entity, $format === 'json'), array_values($entities));
 
         if ($format === 'json') {
@@ -173,7 +173,7 @@ final readonly class FindCommand
 
     private function identifier(object $entity): mixed
     {
-        $identifier = $this->manager->getMetadataFactory()->getMetadata($entity::class)->identifier;
+        $identifier = $this->managers->getManagerForClass($entity::class)->getMetadataFactory()->getMetadata($entity::class)->identifier;
 
         if ($identifier === null) {
             return null;

@@ -12,6 +12,7 @@ use GraphqlOrm\Doctrine\GraphqlReferenceListener;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use GraphqlOrm\Tests\Fixtures\Doctrine\FakeInvoice;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeLabel;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
@@ -94,7 +95,7 @@ final class GraphqlReferenceListenerTest extends TestCase
     {
         $metadataFactory = new GraphqlEntityMetadataFactory();
 
-        return new GraphqlReferenceListener(new GraphqlManager($metadataFactory, $this->client, new EntityHydrator($metadataFactory), $collector, 1, new DataApiBuilderDialect()), $metadataFactory);
+        return new GraphqlReferenceListener(GraphqlManagerRegistry::forManager(new GraphqlManager($metadataFactory, $this->client, new EntityHydrator($metadataFactory), $collector, 1, new DataApiBuilderDialect())));
     }
 
     /**

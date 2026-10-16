@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace GraphqlOrm\Controller;
 
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
-use GraphqlOrm\GraphqlManager;
+use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\UriSigner;
@@ -32,7 +32,7 @@ final class EntityAutocompleteController
     private const SIGNED_PARAMETERS = ['_hash', 'class', 'fields', 'label', 'max'];
 
     public function __construct(
-        private readonly GraphqlManager $manager,
+        private readonly GraphqlManagerRegistry $managers,
         private readonly ?UriSigner $uriSigner,
         private readonly ?GraphqlOrmDataCollector $collector = null,
     ) {
@@ -54,14 +54,15 @@ final class EntityAutocompleteController
         $fields = \is_string($signed['fields'] ?? null) ? explode(',', $signed['fields']) : [];
         $label = \is_string($signed['label'] ?? null) ? $signed['label'] : null;
 
-        if (!\is_string($class) || !class_exists($class) || !$this->manager->getMetadataFactory()->isEntityClass($class) || $fields === []) {
+        if (!\is_string($class) || !class_exists($class) || $fields === [] || !$this->managers->getManagerForClass($class)->getMetadataFactory()->isEntityClass($class)) {
             throw new BadRequestHttpException('The search names no entity or no field.');
         }
 
-        $metadata = $this->manager->getMetadataFactory()->getMetadata($class);
+        $manager = $this->managers->getManagerForClass($class);
+        $metadata = $manager->getMetadataFactory()->getMetadata($class);
         $identifier = $metadata->identifier ?? throw new BadRequestHttpException(\sprintf('"%s" has no identifier.', $class));
         $query = $request->query->getString('query');
-        $qb = $this->manager->getRepository($class)->createQueryBuilder();
+        $qb = $manager->getRepository($class)->createQueryBuilder();
 
         if ($query !== '') {
             $qb->where($qb->expr()->orX(...array_map(fn (string $field) => $qb->expr()->contains($field, $query), $fields)));

@@ -11,6 +11,7 @@ use GraphqlOrm\Form\GraphqlEntityType;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
 use PHPUnit\Framework\Attributes\Test;
@@ -92,7 +93,7 @@ final class EntityAutocompleteControllerTest extends TestCase
         $metadataFactory = new GraphqlEntityMetadataFactory();
         $manager = new GraphqlManager($metadataFactory, $this->client, new EntityHydrator($metadataFactory), $collector, 2, new DataApiBuilderDialect());
 
-        return new EntityAutocompleteController($manager, $this->signer(), $collector);
+        return new EntityAutocompleteController(GraphqlManagerRegistry::forManager($manager), $this->signer(), $collector);
     }
 
     private function signer(): UriSigner

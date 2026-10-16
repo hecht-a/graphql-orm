@@ -10,6 +10,7 @@ use GraphqlOrm\Form\GraphqlEntityType;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeProject;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
@@ -186,7 +187,7 @@ final class GraphqlEntityTypeTest extends TestCase
         $manager = new GraphqlManager($metadataFactory, $client, new EntityHydrator($metadataFactory), null, 2, new DataApiBuilderDialect(), repositories: $withRepositories ? $repositories : null);
 
         return Forms::createFormFactoryBuilder()
-            ->addType(new GraphqlEntityType($manager))
+            ->addType(new GraphqlEntityType(GraphqlManagerRegistry::forManager($manager)))
             ->getFormFactory();
     }
 }
