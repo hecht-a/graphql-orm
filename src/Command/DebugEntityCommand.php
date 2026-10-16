@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GraphqlOrm\Command;
 
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Option;
@@ -25,6 +26,7 @@ final readonly class DebugEntityCommand
     public function __construct(
         private GraphqlEntityMetadataFactory $metadataFactory,
         private EntityClassLocator $entityClassLocator,
+        private ?GraphqlManagerRegistry $managers = null,
     ) {
     }
 
@@ -51,7 +53,7 @@ final readonly class DebugEntityCommand
         }
 
         try {
-            $metadata = $this->metadataFactory->getMetadata($fqcn);
+            $metadata = ($this->managers?->getManagerForClass($fqcn)->getMetadataFactory() ?? $this->metadataFactory)->getMetadata($fqcn);
         } catch (\Throwable $e) {
             $io->error(\sprintf('Could not load metadata for "%s": %s', $fqcn, $e->getMessage()));
 
@@ -99,6 +101,7 @@ final readonly class DebugEntityCommand
         $io->section('General');
         $io->definitionList(
             ['FQCN' => $metadata->class],
+            ['Manager' => $this->managers?->getManagerForClass($fqcn)->getName() ?? '(default)'],
             ['GraphQL root' => $metadata->name],
             ['Repository' => $metadata->repositoryClass ?? '(none)'],
             ['Identifier' => $metadata->identifier

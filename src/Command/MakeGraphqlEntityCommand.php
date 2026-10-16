@@ -9,6 +9,7 @@ use GraphqlOrm\Codegen\SchemaPropertyMapper;
 use GraphqlOrm\Codegen\StubRenderer;
 use GraphqlOrm\Exception\GraphqlOrmException;
 use GraphqlOrm\Query\GraphqlName;
+use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use GraphqlOrm\Schema\GraphqlSchema;
 use GraphqlOrm\Schema\SchemaIntrospector;
 use Symfony\Component\Console\Attribute\Argument;
@@ -46,6 +47,10 @@ final readonly class MakeGraphqlEntityCommand
         private StubRenderer $stubRenderer,
         private SchemaIntrospector $introspector,
         private SchemaPropertyMapper $schemaPropertyMapper = new SchemaPropertyMapper(),
+        private ?GraphqlManagerRegistry $managers = null,
+        /** @var array<string, array{entity: array{dir: string, namespace: string}, repository: array{dir: string, namespace: string}}> */
+        #[Autowire('%graphql_orm.manager_mappings%')]
+        private array $mappings = [],
     ) {
     }
 
@@ -56,7 +61,31 @@ final readonly class MakeGraphqlEntityCommand
         #[Option('GraphQL root')] ?string $root = null,
         #[Option('Overwrite files if exist', shortcut: 'f')] bool $force = false,
         #[Option('Generate the properties from the GraphQL schema instead of asking them', name: 'from-schema')] bool $fromSchema = false,
+        #[Option('The manager whose mapping and API are used; the default one when unset')] ?string $manager = null,
     ): int {
+        if ($manager !== null) {
+            $mapping = $this->mappings[$manager] ?? null;
+
+            if ($mapping === null || $this->managers === null) {
+                (new SymfonyStyle($input, $output))->error(\sprintf('The GraphQL ORM manager "%s" does not exist: %s.', $manager, implode(', ', array_keys($this->mappings))));
+
+                return Command::FAILURE;
+            }
+
+            $command = new self(
+                $mapping['entity']['dir'],
+                $mapping['entity']['namespace'],
+                $mapping['repository']['dir'],
+                $mapping['repository']['namespace'],
+                $this->fs,
+                $this->stubRenderer,
+                new SchemaIntrospector($this->managers->getManager($manager)->getClient()),
+                $this->schemaPropertyMapper,
+            );
+
+            return $command($input, $output, $name, $root, $force, $fromSchema);
+        }
+
         $io = new SymfonyStyle($input, $output);
 
         $className = $this->normalizeClassName($name);

@@ -647,6 +647,14 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         }
     }
 
+    /**
+     * The client of the API of this manager, as Doctrine EntityManager::getConnection().
+     */
+    public function getClient(): GraphqlClientInterface
+    {
+        return $this->client;
+    }
+
     public function getDialect(): GraphqlQueryDialect
     {
         return $this->dialect;
