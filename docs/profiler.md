@@ -2,6 +2,11 @@
 
 GraphQL ORM integrates with the **Symfony Web Debug Toolbar** and Profiler.
 
+The toolbar sums up the request as Doctrine does: queries, queries sent to the API (those not answered by the result
+cache), different statements (their values aside), query time, hydration time, errors, invalid entities (the violations
+of the [schema validation](schema-validation.md)), entities hydrated, and the hits of the result cache and of the
+second-level cache with the adapter of their pools (`Redis`, `Filesystem`...), or `disabled`.
+
 For each request, the panel shows:
 
 - **Metrics**: number of queries, time spent in GraphQL (measured via Symfony Stopwatch), time spent hydrating the
@@ -23,8 +28,22 @@ For each request, the panel shows:
 - **The partial entities**: the entities hydrated from a [selection of their fields](query-builder.md#field-selection),
   by class and fields not selected: how many, by which queries, and how many `PartialEntityException` were thrown, for
   which properties (in warning on the tab).
-- **The caches** (see [caching](caching.md)): the queries answered by the result cache, marked `result cache` and
-  counted on top of the panel, and the second-level cache by entity: region, hits, misses and entities kept.
+- **The caches** (see [caching](caching.md)), in the "Cache" tab:
+  - the pools: for the result cache, the default region and each region, the id of the pool, its adapter (the
+    `TraceableAdapter` of the debug mode aside) and its lifetime;
+  - the operations on each of them: values read, written and deleted, their time, and the size written (as serialized
+    by PHP);
+  - the queries answered by the result cache (marked `result cache` in the list, with their key and lifetime in a
+    "Cache" tab of their detail);
+  - the second-level cache by entity (region, hits, misses, entities kept), then entity by entity with what looked it
+    up: `find()`, the lazy load of a relation, or the query that kept it;
+  - the queries sent by the relations of entities read from the second-level cache (marked `from cached entity`):
+    the queries the cache adds;
+  - the evictions, with the line calling them, and a link to the Cache panel of Symfony.
+
+  A warning tops the panel when `#[Cache]` is ignored (second-level cache disabled) or when a pool is an `ArrayAdapter`,
+  whose values do not outlive the process. The panel is shown for a request reading only the second-level cache, or
+  only evicting, without a query.
 - **The autocomplete searches** answered by the bundle (see [forms](forms.md)): entity, fields searched, text typed
   (masked unless `redact_query_values` is false), results and limit. Their queries have the origin `autocomplete`.
 - **The serializer**: the relations written as identifiers and the partial entities written by

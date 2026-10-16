@@ -18,8 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and lifetime, and regions with a pool and a lifetime of their own.
 - `GraphqlCache` (also `GraphqlManager::getCache()`): `evictEntity()`, `evictEntityRegion()` (with any pool),
   `evictQueryResult()` and `containsEntity()`.
-- Profiler: the queries answered by the result cache are marked and counted, and a "Second-level cache" tab gives, by
-  entity, its region, the hits, the misses and the entities kept.
+- Profiler: a "Cache" tab giving the pools of the caches with their adapter (Redis, APCu, Filesystem...) and lifetime,
+  the values read, written and deleted with their time and size, the results by query (outcome, key, lifetime), the
+  entities of the second-level cache with what looked them up (`find()`, a lazy load, a query), the queries added by
+  the relations of entities read from the cache, and the evictions with the line calling them. It warns when
+  `#[Cache]` is ignored or a pool is an `ArrayAdapter`, and shows a request reading the caches without a query.
+- Toolbar: summed up as Doctrine does, with the queries sent to the API, the different statements, the hydration time,
+  the invalid entities, the entities hydrated, and the hits of each cache with the adapter of its pools.
 
 ---
 

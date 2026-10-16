@@ -109,5 +109,8 @@ process sees it from its next request. A result kept by the result cache is not 
 
 ## Profiler
 
-The [profiler](profiler.md) marks the queries answered by the result cache (`result cache`), counts them, and sums up
-the second-level cache by entity: region, hits, misses and entities kept.
+The toolbar gives the hits of each cache and the adapter of its pools, e.g. `Result cache 3/4 hits (Redis)`, and the
+queries sent to the API. The "Cache" tab of the [profiler](profiler.md) tells where each cache lives (pool,
+adapter, lifetime), what it cost (values read and written, time, size), which entities it served and why, the queries
+it added (relations of entities read from it, loaded on first access), and the evictions with the line calling them.
+It warns when `#[Cache]` is ignored, or when a pool is an `ArrayAdapter`.
