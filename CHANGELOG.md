@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [5.3.0] — 2026-10-16
 
 ### Added
 
@@ -34,6 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   page) by a field of its entities, a GraphQL name or a PHP property. An unmapped field throws an
   `InvalidArgumentException` suggesting the closest one.
 
+
+### Changed
+
+- The outcome of the schema validation is cached in `variables.cache_pool` for `variables.ttl`: the schema is no longer
+  introspected on every request when each one runs a container of its own (PHP without a worker, in dev). Editing an
+  entity checks the mapping again at once.
 ---
 
 ## [5.2.0] — 2026-10-15
@@ -51,9 +57,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The outcome of the schema validation is cached in `variables.cache_pool` for `variables.ttl`: the schema is no longer
-  introspected on every request when each one runs a container of its own (PHP without a worker, in dev). Editing an
-  entity checks the mapping again at once.
 - The caller of a query skips the methods of the entities, and gives a line of a compiled Twig template as the line of
   the template: a relation loaded on first access from `{{ task.assignee }}` points to `task/index.html.twig:25`, not
   to the `__toString()` of the entity nor to a file of the Twig cache.
