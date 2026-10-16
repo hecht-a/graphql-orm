@@ -30,7 +30,9 @@ For each request, the panel shows:
   query, each one a query not sent (see [shared identity map](configuration.md#shared-identity-map)).
 - **The configuration** of the bundle (dialect, endpoint, options; the names of the headers only, never their values
   nor the credentials of the endpoint), and the outcome of the [schema validation](schema-validation.md): its mode, and
-  the violations found on the first request.
+  the violations found on the first request. The caches of the introspection results (the types of the variables, the
+  countable fields of `count()`, the schema validation) tell whether they served the request or introspected the
+  schema, with the time spent.
 - **A timeline** of the queries during the request: overlapping bars are queries sent together, e.g. by
   `GraphqlQuery::concurrently()`.
 

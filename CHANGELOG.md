@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a response), with a warning on top of the panel and a `serializer` mark on those queries.
 - Profiler: a "Partial entities" tab listing the entities hydrated from a selection of their fields, by class and fields
   not selected, with the queries hydrating them and the `PartialEntityException` thrown.
+- Profiler: the "Configuration" tab tells, for each cache of introspection results (types of the variables, countable
+  fields, schema validation), whether it served the request or introspected the schema, and the time spent.
 
 ---
 
