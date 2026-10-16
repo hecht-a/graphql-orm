@@ -14,6 +14,9 @@ Launches an interactive wizard that generates:
 Supports scalar fields, nullable fields, object relations, and collection relations. Existing entities are suggested
 with autocomplete when defining relations.
 
+With [several APIs](multiple-apis.md), `--manager=crm` writes the entity and its repository in the mapping of the manager
+`crm`, and `--from-schema` reads the schema of its API.
+
 ### From the GraphQL schema
 
 ```bash
@@ -117,4 +120,5 @@ php bin/console graphqlorm:schema:validate
 ```
 
 Checks every entity of `mapping.entity.dir` against the live GraphQL schema and exits with a non-zero code on any
-violation. See [schema-validation.md](schema-validation.md).
+violation. See [schema-validation.md](schema-validation.md). With [several APIs](multiple-apis.md), each one is checked
+against its own schema; `--manager=crm` checks one.

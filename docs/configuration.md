@@ -47,7 +47,9 @@ graphql_orm:
 
 | Option                            | Default                  | Description                             |
 |-----------------------------------|--------------------------|-----------------------------------------|
-| `endpoint`                        | *(required)*             | GraphQL API endpoint                    |
+| `endpoint`                        | *(required)*             | GraphQL API endpoint, at the root or for each manager |
+| `managers`                        | `[]`                     | One manager per GraphQL API, each with any option of this table (see [several APIs](multiple-apis.md)) |
+| `default_manager`                 | the first manager        | The manager autowired without a name, and of the entities no mapping claims |
 | `max_depth`                       | `1`                      | Relation levels loaded by the automatic selection; deeper relations only get their identifier (an explicit `select()` is not limited) |
 | `lazy_loading`                    | `false`                  | Load the relations reduced to their identifier on first access (see [lazy loading](#lazy-loading)) |
 | `variables.enabled`               | `true`                   | Send root arguments as typed GraphQL variables |

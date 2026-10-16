@@ -2,7 +2,7 @@
 
 GraphQL ORM integrates with the **Symfony Web Debug Toolbar** and Profiler.
 
-The toolbar sums up the request as Doctrine does: queries, queries sent to the API (those not answered by the result
+The toolbar sums up the request as Doctrine does: the APIs when there are [several](multiple-apis.md), queries, queries sent to the API (those not answered by the result
 cache), different statements (their values aside), query time, hydration time, errors, invalid entities (the violations
 of the [schema validation](schema-validation.md)), entities hydrated, and the hits of the result cache and of the
 second-level cache with the adapter of their pools (`Redis`, `Filesystem`...), or `disabled`.

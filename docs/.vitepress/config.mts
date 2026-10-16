@@ -53,6 +53,7 @@ export default defineConfig({
                     { text: 'Serializer', link: '/serializer' },
                     { text: 'Doctrine', link: '/doctrine' },
                     { text: 'Caching', link: '/caching' },
+                    { text: 'Several APIs', link: '/multiple-apis' },
                     { text: 'Events', link: '/events' },
                     { text: 'Schema validation', link: '/schema-validation' },
                     { text: 'Console commands', link: '/commands' },

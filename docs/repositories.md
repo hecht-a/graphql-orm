@@ -3,17 +3,24 @@
 ## Define a repository
 
 ```php
+use GraphqlOrm\Registry\GraphqlManagerRegistry;
+use GraphqlOrm\Repository\ServiceGraphqlEntityRepository;
+
 /**
- * @extends GraphqlEntityRepository<Task>
+ * @extends ServiceGraphqlEntityRepository<Task>
  */
-class TaskRepository extends GraphqlEntityRepository
+class TaskRepository extends ServiceGraphqlEntityRepository
 {
-    public function __construct(GraphqlManager $manager)
+    public function __construct(GraphqlManagerRegistry $registry)
     {
-        parent::__construct($manager, Task::class);
+        parent::__construct($registry, Task::class);
     }
 }
 ```
+
+`ServiceGraphqlEntityRepository` takes the manager of the API of its entity from the registry, as the
+`ServiceEntityRepository` of Doctrine (see [several APIs](multiple-apis.md)). A repository extending
+`GraphqlEntityRepository` and taking `GraphqlManager $manager` keeps working, with the default manager.
 
 Declared as a service (autowired, as with the default Symfony configuration) and named in the `repositoryClass` of
 `#[Entity]`, the repository is the one `GraphqlManager::getRepository()` gives, as Doctrine
