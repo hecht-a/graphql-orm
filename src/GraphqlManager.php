@@ -141,9 +141,21 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
             return $entity;
         }
 
-        $rows = $this->cache->findEntityRows($class, [$identifier]);
+        $rows = $this->cache->findEntityRows($class, [$identifier], $this->cacheTrigger());
 
         return $rows !== [] ? $this->hydrateCached($class, $rows)[0] : null;
+    }
+
+    /**
+     * What looks an entity up in the second-level cache, told to the profiler: find(), or the lazy load of a relation.
+     */
+    private function cacheTrigger(): string
+    {
+        if (!$this->loadingLazily) {
+            return self::FIND_ORIGIN;
+        }
+
+        return $this->lazyRelation !== null ? 'lazy load of ' . $this->lazyRelation : 'lazy load';
     }
 
     /**
@@ -379,6 +391,8 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
     private function sendThroughResultCache(string $compiled, GraphqlExecutionContext $context, array $variables, QueryOptions $options): \Closure
     {
         $item = $this->cache->resultItem($compiled, $variables, $options->resultCacheKey, $options->cursor);
+        $context->trace->resultCacheKey = $options->resultCacheKey;
+        $context->trace->resultCacheLifetime = $options->resultCacheLifetime;
         $cached = $item->isHit() ? $item->get() : null;
 
         if (\is_array($cached)) {
@@ -529,7 +543,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         try {
             $repository = new GraphqlEntityRepository($this, $class);
             $identifier = $this->metadataFactory->getMetadata($class)->identifier;
-            $cached = $this->cache->findEntityRows($class, $identifiers);
+            $cached = $this->cache->findEntityRows($class, $identifiers, $this->cacheTrigger());
             $entities = $cached !== [] ? $this->hydrateCached($class, $cached) : [];
             $identifiers = array_values(array_filter($identifiers, static fn (int|string $id) => !\array_key_exists($id, $cached)));
 

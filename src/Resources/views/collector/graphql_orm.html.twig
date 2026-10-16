@@ -215,10 +215,13 @@
                         {% if serialization.lazy_loads is not empty %}<span class="badge status-warning">{{ serialization.lazy_loads|length }}</span>{% endif %}
                     </button>
                 {% endif %}
-                {% if collector.secondLevelCache is not empty %}
-                    <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="second-level-cache">
-                        {% set secondLevelHits = collector.secondLevelCache|reduce((total, entry) => total + entry.hits, 0) %}
-                        Second-level cache <span class="badge" title="Entities read from the cache / looked up">{{ secondLevelHits }}/{{ secondLevelHits + collector.secondLevelCache|reduce((total, entry) => total + entry.misses, 0) }}</span>
+                {% set resultCacheQueries = collector.queries|filter(query => (query.result_cache ?? null) is not null) %}
+                {% set showCache = resultCacheQueries is not empty or collector.secondLevelCache is not empty or collector.cacheEvictions is not empty %}
+                {% if showCache %}
+                    {% set cacheHits = resultCacheQueries|filter(query => query.result_cache == 'hit')|length + collector.secondLevelCache|reduce((total, entry) => total + entry.hits, 0) %}
+                    {% set cacheLookups = resultCacheQueries|length + collector.secondLevelCache|reduce((total, entry) => total + entry.hits + entry.misses, 0) %}
+                    <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="cache">
+                        Cache <span class="badge" title="Results and entities read from the caches / looked up">{{ cacheHits }}/{{ cacheLookups }}</span>
                     </button>
                 {% endif %}
                 {% if collector.autocompleteSearches is not empty %}
@@ -306,7 +309,7 @@
                             </tr>
                             <tr class="graphql-orm-detail" data-graphql-orm-detail="{{ loop.index }}" hidden>
                                 <td colspan="7">
-                                    {{ _self.renderDetail(query, loop.index) }}
+                                    {{ _self.renderDetail(query, loop.index, collector.configuration.result_cache.pool ?? null) }}
                                 </td>
                             </tr>
                         {% endfor %}
@@ -531,8 +534,31 @@
                 </div>
             {% endif %}
 
-            {% if collector.secondLevelCache is not empty %}
-                <div data-graphql-orm-view="second-level-cache" hidden>
+            {% if showCache %}
+                <div data-graphql-orm-view="cache" hidden>
+                    {% if resultCacheQueries is not empty %}
+                        <h3>Result cache</h3>
+                        <table>
+                            <thead>
+                                <tr><th>Query</th><th>Outcome</th><th>Key</th><th class="graphql-orm-number">Lifetime</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for number, query in collector.queries %}
+                                    {% if (query.result_cache ?? null) is not null %}
+                                        <tr>
+                                            <td><a href="#graphql-orm-query-{{ number + 1 }}" data-graphql-orm-open="{{ number + 1 }}">#{{ number + 1 }}</a> {{ query.root_field ?? '' }}</td>
+                                            <td>{{ query.result_cache }}</td>
+                                            <td>{% if query.result_cache_key %}<code>{{ query.result_cache_key }}</code>{% else %}<span class="graphql-orm-muted">derived from the query</span>{% endif %}</td>
+                                            <td class="graphql-orm-number">{{ query.result_cache_lifetime is not null ? query.result_cache_lifetime ~ ' s' : 'pool default' }}</td>
+                                        </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% endif %}
+
+                    {% if collector.secondLevelCache is not empty %}
+                    <h3>Second-level cache</h3>
                     <p class="graphql-orm-muted">
                         The entities marked <code>#[Cache]</code>: read from the second-level cache by <code>find()</code>, the
                         references and the lazy loads (hits) or not found there (misses), and kept once hydrated in full.
@@ -553,6 +579,41 @@
                             {% endfor %}
                         </tbody>
                     </table>
+                    <table>
+                        <thead>
+                            <tr><th>Entity</th><th>Identifier</th><th>Outcome</th><th>By</th><th class="graphql-orm-number">Times</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in collector.secondLevelCacheEntries %}
+                                <tr>
+                                    <td title="{{ entry.class }}">{{ entry.class|split('\\')|last }}</td>
+                                    <td><code>{{ entry.identifier }}</code></td>
+                                    <td>{{ entry.outcome }}</td>
+                                    <td title="{{ entry.trigger }}">{{ _self.shortTrigger(entry.trigger) }}</td>
+                                    <td class="graphql-orm-number">{{ entry.count }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% endif %}
+
+                    {% if collector.cacheEvictions is not empty %}
+                        <h3>Evictions</h3>
+                        <table>
+                            <thead>
+                                <tr><th>Call</th><th>Evicted</th><th>Called from</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for eviction in collector.cacheEvictions %}
+                                    <tr>
+                                        <td><code>{{ eviction.call }}</code></td>
+                                        <td title="{{ eviction.target }}">{{ eviction.target|split('\\')|last }}</td>
+                                        <td>{% if eviction.caller %}<code title="{{ eviction.caller }}">{{ eviction.caller|split('/')|last }}</code>{% else %}-{% endif %}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% endif %}
                 </div>
             {% endif %}
 
@@ -917,7 +978,13 @@
     {% endif %}
 {% endmacro %}
 
-{% macro renderDetail(query, number) %}
+{# A trigger of the second-level cache with a short class name: lazy load of Task::$label #}
+{% macro shortTrigger(trigger) %}
+    {%- set lazyLoadOf = 'lazy load of ' -%}
+    {{- trigger starts with lazyLoadOf ? lazyLoadOf ~ (trigger|slice(lazyLoadOf|length)|split('\\')|last) : trigger -}}
+{% endmacro %}
+
+{% macro renderDetail(query, number, resultCachePool) %}
     <div class="graphql-orm-detail-box">
         {% for error in query.errors ?? [] %}
             <div class="graphql-orm-error">
@@ -944,6 +1011,9 @@
                 <button type="button" class="graphql-orm-subtab" role="tab" aria-selected="false" data-graphql-orm-subtab="ast">AST</button>
             {% endif %}
             <button type="button" class="graphql-orm-subtab" role="tab" aria-selected="false" data-graphql-orm-subtab="hydration">Hydration</button>
+            {% if query.result_cache ?? null %}
+                <button type="button" class="graphql-orm-subtab" role="tab" aria-selected="false" data-graphql-orm-subtab="cache">Cache</button>
+            {% endif %}
         </div>
 
         <div data-graphql-orm-pane="graphql">
@@ -967,6 +1037,30 @@
                 <div class="graphql-ast-tree">
                     {{ _self.renderAst(query.ast, 0) }}
                 </div>
+            </div>
+        {% endif %}
+        {% if query.result_cache ?? null %}
+            <div data-graphql-orm-pane="cache" hidden>
+                <table>
+                    <tbody>
+                        <tr>
+                            <th>Outcome</th>
+                            <td>{{ query.result_cache == 'hit' ? 'hit: answered without being sent' : 'miss: sent, its response kept' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Key</th>
+                            <td>{% if query.result_cache_key ?? null %}<code>{{ query.result_cache_key }}</code>{% else %}derived from the query and its variables{% endif %}</td>
+                        </tr>
+                        <tr>
+                            <th>Lifetime</th>
+                            <td>{{ (query.result_cache_lifetime ?? null) is not null ? query.result_cache_lifetime ~ ' s' : 'the default lifetime of the pool' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Pool</th>
+                            <td>{% if resultCachePool %}<code>{{ resultCachePool }}</code>{% else %}-{% endif %}</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         {% endif %}
         <div data-graphql-orm-pane="hydration" hidden>

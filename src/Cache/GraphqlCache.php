@@ -55,6 +55,7 @@ final class GraphqlCache implements ResetInterface
     public function evictQueryResult(string $key): void
     {
         $this->results?->deleteItem(self::resultKey($key));
+        $this->collector?->cacheEvicted(__FUNCTION__, $key, self::caller());
     }
 
     /**
@@ -81,6 +82,8 @@ final class GraphqlCache implements ResetInterface
         if ($region !== null) {
             $region[0]->deleteItem($this->entityKey($class, $identifier, $region[0]));
         }
+
+        $this->collector?->cacheEvicted(__FUNCTION__, $class . ' #' . $identifier, self::caller());
     }
 
     /**
@@ -91,6 +94,7 @@ final class GraphqlCache implements ResetInterface
     public function evictEntityRegion(string $class): void
     {
         $region = $this->region($class);
+        $this->collector?->cacheEvicted(__FUNCTION__, $class, self::caller());
 
         if ($region === null) {
             return;
@@ -178,12 +182,13 @@ final class GraphqlCache implements ResetInterface
      *
      * @param class-string     $class
      * @param list<int|string> $identifiers
+     * @param string|null      $trigger     what looks them up, told to the profiler (find, a lazy load)
      *
      * @return array<int|string, array<string, mixed>>
      *
      * @internal
      */
-    public function findEntityRows(string $class, array $identifiers): array
+    public function findEntityRows(string $class, array $identifiers, ?string $trigger = null): array
     {
         $region = $this->region($class);
 
@@ -207,7 +212,9 @@ final class GraphqlCache implements ResetInterface
             }
         }
 
-        $this->collector?->secondLevelCacheLookup($class, $this->attribute($class)?->region, \count($rows), \count($identifiers) - \count($rows));
+        foreach ($identifiers as $identifier) {
+            $this->collector?->secondLevelCacheEntry($class, $this->attribute($class)?->region, $identifier, \array_key_exists($identifier, $rows) ? 'hit' : 'miss', $trigger);
+        }
 
         /** @var array<int|string, array<string, mixed>> $rows the rows kept by the bundle, keyed by GraphQL field */
         return $rows;
@@ -231,7 +238,8 @@ final class GraphqlCache implements ResetInterface
 
         $item = $region[0]->getItem($this->entityKey($class, $identifier, $region[0]));
         $region[0]->save($item->set($row)->expiresAfter($region[1]));
-        $this->collector?->secondLevelCachePut($class, $this->attribute($class)?->region);
+        // The query being hydrated, named by the profiler
+        $this->collector?->secondLevelCacheEntry($class, $this->attribute($class)?->region, $identifier, 'kept', null);
     }
 
     /**
@@ -276,6 +284,16 @@ final class GraphqlCache implements ResetInterface
         }
 
         return $this->attributes[$class];
+    }
+
+    /**
+     * The file and line of the application calling an eviction.
+     */
+    private static function caller(): ?string
+    {
+        $frame = debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1] ?? [];
+
+        return isset($frame['file']) ? $frame['file'] . (isset($frame['line']) ? ':' . $frame['line'] : '') : null;
     }
 
     /**

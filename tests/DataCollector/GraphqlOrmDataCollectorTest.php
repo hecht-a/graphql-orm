@@ -278,6 +278,19 @@ final class GraphqlOrmDataCollectorTest extends TestCase
     }
 
     #[Test]
+    public function itKnowsTheDisabledCachesInTheStoredProfile(): void
+    {
+        $collector = new GraphqlOrmDataCollector(configuration: ['result_cache' => ['pool' => null], 'second_level_cache' => ['enabled' => false]]);
+        $collector->collect(new Request(), new Response());
+
+        $restored = unserialize(serialize($collector));
+
+        self::assertInstanceOf(GraphqlOrmDataCollector::class, $restored);
+        self::assertNull($restored->getResultCacheUsage());
+        self::assertNull($restored->getSecondLevelCacheUsage());
+    }
+
+    #[Test]
     public function itSumsTheHydrationDurations(): void
     {
         foreach ([1.5, 2.25] as $hydration) {

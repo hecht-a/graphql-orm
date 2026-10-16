@@ -461,14 +461,18 @@ final class ProfilerTemplateTest extends TestCase
     public function itSumsUpTheSecondLevelCacheInATab(): void
     {
         $collector = $this->collector(['query { tasks { id } }']);
-        $collector->secondLevelCacheLookup('App\\Entity\\Label', 'reference_data', hits: 3, misses: 1);
-        $collector->secondLevelCachePut('App\\Entity\\Label', 'reference_data');
+        foreach (['bug' => 'kept', 'docs' => 'miss'] as $code => $outcome) {
+            $collector->secondLevelCacheEntry('App\\Entity\\Label', 'reference_data', $code, $outcome, null);
+        }
+        foreach (['bug', 'bug', 'feature'] as $code) {
+            $collector->secondLevelCacheEntry('App\\Entity\\Label', 'reference_data', $code, 'hit', 'find');
+        }
 
         $html = $this->render($collector);
         $text = self::text($html);
 
-        self::assertStringContainsString('data-graphql-orm-tab="second-level-cache"', $html);
-        self::assertStringContainsString('Second-level cache 3/4', $text);
+        self::assertStringContainsString('data-graphql-orm-tab="cache"', $html);
+        self::assertStringContainsString('Cache 3/4', $text);
         self::assertStringContainsString('Label reference_data 3 1 1', $text);
     }
 
@@ -517,12 +521,45 @@ final class ProfilerTemplateTest extends TestCase
         $trace = new GraphqlQueryTrace();
         $trace->graphql = 'query { tasks { id } }';
         $collector->addQuery($trace);
-        $collector->secondLevelCacheLookup('App\\Entity\\Label', null, hits: 3, misses: 1);
+        foreach (['hit', 'hit', 'hit', 'miss'] as $index => $outcome) {
+            $collector->secondLevelCacheEntry('App\\Entity\\Label', null, $index, $outcome, 'find');
+        }
 
         $text = self::text($this->render($collector));
 
         self::assertStringContainsString('Result cache disabled', $text);
         self::assertStringContainsString('Second-level cache 3/4 hits', $text);
+    }
+
+    #[Test]
+    public function itDetailsTheResultCacheOfAQuery(): void
+    {
+        $collector = new GraphqlOrmDataCollector(configuration: ['result_cache' => ['pool' => 'cache.graphql']]);
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { tasks { id } }';
+        $trace->resultCache = 'hit';
+        $trace->resultCacheKey = 'tasks.open';
+        $trace->resultCacheLifetime = 300;
+        $collector->addQuery($trace);
+
+        $html = $this->render($collector);
+        $text = self::text($html);
+
+        self::assertStringContainsString('data-graphql-orm-subtab="cache"', $html);
+        self::assertStringContainsString('Outcome hit: answered without being sent Key tasks.open Lifetime 300 s Pool cache.graphql', $text);
+    }
+
+    #[Test]
+    public function itListsTheEntitiesOfTheSecondLevelCacheAndTheEvictions(): void
+    {
+        $collector = $this->collector(['query { labels { code } }']);
+        $collector->secondLevelCacheEntry('App\\Entity\\Label', 'reference_data', 'bug', 'hit', 'lazy load of App\\Entity\\Task::$label');
+        $collector->cacheEvicted('evictEntity', 'App\\Entity\\Label #bug', '/app/src/Controller/LabelController.php:42');
+
+        $text = self::text($this->render($collector));
+
+        self::assertStringContainsString('Label bug hit lazy load of Task::$label 1', $text);
+        self::assertStringContainsString('evictEntity Label #bug LabelController.php:42', $text);
     }
 
     #[Test]

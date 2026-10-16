@@ -25,6 +25,9 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
 
     private const LAZY_ORIGIN = 'lazy';
 
+    /** The entities of the second-level cache detailed by a profile, which a page reading thousands would bloat. */
+    private const MAX_CACHE_ENTRIES = 500;
+
     /**
      * @param float|null           $slowQueryThreshold duration in milliseconds from which a query is reported as slow
      * @param array<string, mixed> $configuration      the options of the bundle shown by the profiler, without secrets
@@ -68,6 +71,8 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
             'lazy_relation' => $trace->lazyRelation,
             'index_by' => $trace->indexBy,
             'result_cache' => $trace->resultCache,
+            'result_cache_key' => $trace->resultCacheKey,
+            'result_cache_lifetime' => $trace->resultCacheLifetime,
             'collections' => array_map(
                 static fn (string $relation, array $collection) => ['relation' => $relation, ...$collection],
                 array_keys($trace->collections),
@@ -346,21 +351,72 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     }
 
     /**
-     * Records a lookup of entities in the second-level cache.
+     * Records an entity read from the second-level cache (hit), not found there (miss), or kept in it.
      *
-     * @param string|null $region null for the default region
+     * @param string|null         $region  null for the default region
+     * @param 'hit'|'miss'|'kept' $outcome
+     * @param string|null         $trigger what looked it up (find, a lazy load); the query being hydrated when null
      */
-    public function secondLevelCacheLookup(string $class, ?string $region, int $hits, int $misses): void
+    public function secondLevelCacheEntry(string $class, ?string $region, int|string $identifier, string $outcome, ?string $trigger): void
     {
-        $this->countSecondLevelCache($class, $region, ['hits' => $hits, 'misses' => $misses]);
+        $this->countSecondLevelCache($class, $region, [match ($outcome) {
+            'hit' => 'hits',
+            'miss' => 'misses',
+            'kept' => 'puts',
+        } => 1]);
+
+        /** @var array<string, array{class: string, region: string|null, identifier: string, outcome: string, trigger: string, count: int}> $entries */
+        $entries = $this->data['second_level_cache_entries'] ?? [];
+        $trigger ??= 'query #' . ($this->getQueryCount() + 1);
+        $key = $class . "\0" . $identifier . "\0" . $outcome . "\0" . $trigger;
+
+        if (isset($entries[$key])) {
+            ++$entries[$key]['count'];
+        } elseif (\count($entries) < self::MAX_CACHE_ENTRIES) {
+            $entries[$key] = ['class' => $class, 'region' => $region, 'identifier' => (string) $identifier, 'outcome' => $outcome, 'trigger' => $trigger, 'count' => 1];
+        }
+
+        $this->data['second_level_cache_entries'] = $entries;
     }
 
     /**
-     * Records an entity kept in the second-level cache.
+     * The entities read from the second-level cache, not found there or kept, with what looked them up, in order; the
+     * first MAX_CACHE_ENTRIES only.
+     *
+     * @return list<array{class: string, region: string|null, identifier: string, outcome: string, trigger: string, count: int}>
      */
-    public function secondLevelCachePut(string $class, ?string $region): void
+    public function getSecondLevelCacheEntries(): array
     {
-        $this->countSecondLevelCache($class, $region, ['puts' => 1]);
+        /** @var array<string, array{class: string, region: string|null, identifier: string, outcome: string, trigger: string, count: int}> $entries */
+        $entries = $this->data['second_level_cache_entries'] ?? [];
+
+        return array_values($entries);
+    }
+
+    /**
+     * Records an eviction from the caches of the bundle.
+     *
+     * @param string      $call   the method of GraphqlCache, e.g. evictEntity
+     * @param string      $target the entity, the class or the key evicted
+     * @param string|null $caller the file and line calling it
+     */
+    public function cacheEvicted(string $call, string $target, ?string $caller): void
+    {
+        /** @var list<array{call: string, target: string, caller: string|null}> $evictions */
+        $evictions = $this->data['cache_evictions'] ?? [];
+        $evictions[] = ['call' => $call, 'target' => $target, 'caller' => $caller];
+        $this->data['cache_evictions'] = $evictions;
+    }
+
+    /**
+     * @return list<array{call: string, target: string, caller: string|null}>
+     */
+    public function getCacheEvictions(): array
+    {
+        /** @var list<array{call: string, target: string, caller: string|null}> $evictions */
+        $evictions = $this->data['cache_evictions'] ?? [];
+
+        return $evictions;
     }
 
     /**
@@ -447,8 +503,9 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
      */
     public function getConfiguration(): array
     {
+        // Before collect(), e.g. while the request runs: the options given to the collector
         /** @var array<string, mixed> $configuration */
-        $configuration = $this->data['configuration'] ?? [];
+        $configuration = $this->data['configuration'] ?? $this->configuration;
 
         return $configuration;
     }
@@ -664,7 +721,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
      */
     public function getResultCacheUsage(): ?array
     {
-        $resultCache = $this->configuration['result_cache'] ?? null;
+        $resultCache = $this->getConfiguration()['result_cache'] ?? null;
 
         if (\is_array($resultCache) && ($resultCache['pool'] ?? null) === null) {
             return null;
@@ -682,7 +739,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
      */
     public function getSecondLevelCacheUsage(): ?array
     {
-        $secondLevel = $this->configuration['second_level_cache'] ?? null;
+        $secondLevel = $this->getConfiguration()['second_level_cache'] ?? null;
 
         if (\is_array($secondLevel) && ($secondLevel['enabled'] ?? false) !== true) {
             return null;
