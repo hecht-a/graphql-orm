@@ -23,6 +23,8 @@ another query.
 | `class`         | required                                    | class of the entities                                               |
 | `query_builder` | `null`: `findAll()`                         | callable receiving the repository and returning a query builder     |
 | `choice_label`  | `__toString()`, otherwise the identifier    | property path or callable, as with `ChoiceType`                     |
+| `autocomplete`  | `false`                                     | search the entities as the user types (see [below](#autocomplete))  |
+| `search_fields` | `null`                                      | fields searched by an autocomplete field                           |
 
 The other options are those of `ChoiceType` (`multiple`, `expanded`, `placeholder`...).
 
@@ -39,5 +41,39 @@ $builder->add('task', GraphqlEntityType::class, [
 The callable receives the repository of the class, as `GraphqlManager::getRepository()` gives it: your own repository
 service when the entity names one in its `repositoryClass`, a generic `GraphqlEntityRepository` otherwise.
 
-The choices are loaded once the form needs them (rendering or submission), with one query. Mind the page size of your
+The choices are loaded once the form needs them (rendering or submission), with one query. On submission, only the
+submitted entities are loaded, by their identifier, within the restriction of `query_builder`. With `choice_lazy` (a
+`ChoiceType` option), the list itself is never loaded: only the selected entities are rendered. Mind the page size of your
 API: Data API Builder returns 100 rows by default (`runtime.pagination.default-page-size`), so limit the choices with `query_builder` or raise the page size.
+
+## Autocomplete
+
+For a choice among many entities, such as thousands of clients, `autocomplete` searches them as the user types, with
+[Symfony UX Autocomplete](https://symfony.com/bundles/ux-autocomplete/current/index.html):
+
+```bash
+composer require symfony/ux-autocomplete
+```
+
+```yaml
+# config/routes/graphql_orm.yaml
+graphql_orm:
+    resource: '@GraphqlOrmBundle/Resources/config/routes.php'
+```
+
+```php
+$builder->add('client', GraphqlEntityType::class, [
+    'class' => Client::class,
+    'autocomplete' => true,
+    'search_fields' => ['name', 'siren'],
+    'choice_label' => 'name',
+]);
+```
+
+The field sends what the user types to the endpoint of the bundle (`/_graphql_orm/autocomplete`), which answers with
+the first 20 entities whose `search_fields` contain it; typing more narrows the results, which are not paginated. Only
+the selected entity is loaded to render or submit the form (`choice_lazy` is on).
+
+The URL of the search is signed with the `UriSigner` of FrameworkBundle: the endpoint only queries the entity, the
+fields and the label a form of the application asked for. Restrict the endpoint as the pages using it are, e.g. with an
+`access_control` on `^/_graphql_orm/autocomplete`.
