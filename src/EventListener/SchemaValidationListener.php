@@ -13,6 +13,8 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
 
 /**
  * @internal
@@ -20,6 +22,10 @@ use Symfony\Component\HttpKernel\KernelEvents;
 #[AsEventListener(event: KernelEvents::REQUEST, priority: 255)]
 final class SchemaValidationListener
 {
+    private const CACHE_KEY_PREFIX = 'graphql_orm.schema_validation.';
+
+    private const DEFAULT_TTL = 3600;
+
     /**
      * The listener is a shared service: the schema is validated once per container, i.e. once per worker in worker mode.
      */
@@ -40,6 +46,8 @@ final class SchemaValidationListener
         private readonly array $entityClasses,
         private readonly ?LoggerInterface $logger = null,
         private readonly ?GraphqlOrmDataCollector $collector = null,
+        private readonly ?CacheInterface $cache = null,
+        private readonly int $ttl = self::DEFAULT_TTL,
     ) {
     }
 
@@ -72,23 +80,19 @@ final class SchemaValidationListener
             return;
         }
 
-        try {
-            $schema = $this->introspector->introspectSchema();
-        } catch (\Throwable $e) {
-            $message = 'GraphQL schema introspection failed: ' . $e->getMessage();
-            $this->failure = $message;
+        [$violations, $this->failure] = $this->outcome();
 
+        if ($this->failure !== null) {
             if ($this->mode === SchemaValidationMode::Exception) {
-                throw new SchemaValidationException([$message]);
+                throw new SchemaValidationException([$this->failure]);
             }
 
-            $this->logger?->warning($message);
+            $this->logger?->warning($this->failure);
 
             return;
         }
 
-        $violations = $this->validator->validate($this->entityClasses, $schema['types'], $schema['queryType']);
-        $this->violations = array_values($violations);
+        $this->violations = $violations;
 
         if ($violations === []) {
             return;
@@ -101,5 +105,59 @@ final class SchemaValidationListener
         foreach ($violations as $violation) {
             $this->logger?->warning('[GraphQL ORM] Schema violation: ' . $violation);
         }
+    }
+
+    /**
+     * The violations, or why the schema could not be introspected. Cached when a cache is given: in a dev environment
+     * running a container per request, the schema is not introspected on every request. Editing an entity changes the
+     * key, so that a fixed mapping is checked again at once.
+     *
+     * @return array{list<string>, string|null}
+     */
+    private function outcome(): array
+    {
+        if ($this->cache === null) {
+            return $this->introspectAndValidate();
+        }
+
+        /** @var array{list<string>, string|null} $outcome */
+        $outcome = $this->cache->get(self::CACHE_KEY_PREFIX . $this->fingerprint(), function (ItemInterface $item): array {
+            $item->expiresAfter($this->ttl);
+
+            return $this->introspectAndValidate();
+        });
+
+        return $outcome;
+    }
+
+    /**
+     * @return array{list<string>, string|null}
+     */
+    private function introspectAndValidate(): array
+    {
+        try {
+            $schema = $this->introspector->introspectSchema();
+        } catch (\Throwable $e) {
+            return [[], 'GraphQL schema introspection failed: ' . $e->getMessage()];
+        }
+
+        return [array_values($this->validator->validate($this->entityClasses, $schema['types'], $schema['queryType'])), null];
+    }
+
+    /**
+     * The entity classes and the last change of their files.
+     */
+    private function fingerprint(): string
+    {
+        $files = array_map(
+            static function (string $class): string {
+                $file = class_exists($class) ? (new \ReflectionClass($class))->getFileName() : false;
+
+                return $class . '@' . ($file !== false ? (string) filemtime($file) : '');
+            },
+            $this->entityClasses,
+        );
+
+        return hash('xxh128', implode('|', $files));
     }
 }

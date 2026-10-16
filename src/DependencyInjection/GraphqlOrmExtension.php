@@ -8,6 +8,7 @@ use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Client\GraphqlClientInterface;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
+use GraphqlOrm\EventListener\SchemaValidationListener;
 use GraphqlOrm\Execution\IdentityMap;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
@@ -111,6 +112,11 @@ final class GraphqlOrmExtension extends Extension
 
             $container->getDefinition('graphql_orm.dialect')->setArgument('$countableFields', new Reference(CountableFieldResolver::class));
         }
+
+        // Kept with the other introspections: a container per request does not introspect the schema on every request.
+        $container->getDefinition(SchemaValidationListener::class)
+            ->setArgument('$cache', new Reference($config['variables']['cache_pool']))
+            ->setArgument('$ttl', $config['variables']['ttl']);
 
         if ($config['lazy_loading']) {
             $container->getDefinition(GraphqlManager::class)->setArgument('$lazyLoading', true);

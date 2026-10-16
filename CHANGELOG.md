@@ -51,6 +51,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The outcome of the schema validation is cached in `variables.cache_pool` for `variables.ttl`: the schema is no longer
+  introspected on every request when each one runs a container of its own (PHP without a worker, in dev). Editing an
+  entity checks the mapping again at once.
 - The caller of a query skips the methods of the entities, and gives a line of a compiled Twig template as the line of
   the template: a relation loaded on first access from `{{ task.assignee }}` points to `task/index.html.twig:25`, not
   to the `__toString()` of the entity nor to a file of the Twig cache.

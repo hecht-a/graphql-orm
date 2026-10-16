@@ -16,6 +16,7 @@ use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
 use GraphqlOrm\Tests\Fixtures\FakeLogger;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
@@ -54,6 +55,21 @@ final class SchemaValidationListenerTest extends TestCase
         $this->listener(new FakeGraphqlClient(), SchemaValidationMode::Disabled, collector: $collector)($this->event());
 
         self::assertSame(['mode' => 'disabled', 'violations' => null, 'failure' => null], $collector->getSchemaValidation());
+    }
+
+    #[Test]
+    public function itIntrospectsTheSchemaOnceForTheContainersSharingTheCache(): void
+    {
+        $client = new FakeGraphqlClient(self::schema(withPrice: false));
+        $cache = new ArrayAdapter();
+        $collector = new GraphqlOrmDataCollector();
+
+        // As in a request after another, each with a container of its own
+        $this->listener($client, SchemaValidationMode::Warning, cache: $cache)($this->event());
+        $this->listener($client, SchemaValidationMode::Warning, collector: $collector, cache: $cache)($this->event());
+
+        self::assertSame(1, $client->callCount);
+        self::assertCount(1, $collector->getSchemaValidation()['violations'] ?? []);
     }
 
     #[Test]
@@ -155,7 +171,7 @@ final class SchemaValidationListenerTest extends TestCase
     /**
      * @param class-string[] $entityClasses
      */
-    private function listener(FakeGraphqlClient $client, SchemaValidationMode $mode, array $entityClasses = [FakeValidEntity::class], ?GraphqlOrmDataCollector $collector = null): SchemaValidationListener
+    private function listener(FakeGraphqlClient $client, SchemaValidationMode $mode, array $entityClasses = [FakeValidEntity::class], ?GraphqlOrmDataCollector $collector = null, ?ArrayAdapter $cache = null): SchemaValidationListener
     {
         return new SchemaValidationListener(
             new SchemaIntrospector($client),
@@ -164,6 +180,7 @@ final class SchemaValidationListenerTest extends TestCase
             $entityClasses,
             $this->logger,
             $collector,
+            $cache,
         );
     }
 

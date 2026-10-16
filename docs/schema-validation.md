@@ -59,5 +59,11 @@ graphql_orm:
 
 Entity classes are discovered automatically from `mapping.entity.dir` — no manual list needed.
 
+The outcome is cached with the other introspections, in `variables.cache_pool` for `variables.ttl` seconds: when each
+request runs a container of its own, as PHP does without a worker, the schema is not introspected on every request.
+Editing an entity checks the mapping again at once; a change of the schema of the API is seen once the cache expires
+(`cache:pool:clear cache.app` to see it sooner). The outcome is reported on every request, in the logs and in the
+"Configuration" tab of the profiler.
+
 > Schema validation requires the GraphQL API to be reachable at boot time. Use `disabled` in environments where the API
 > may not be available (CI, offline dev, etc.).

@@ -12,6 +12,7 @@ use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\DependencyInjection\GraphqlOrmExtension;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\Doctrine\GraphqlReferenceListener;
+use GraphqlOrm\EventListener\SchemaValidationListener;
 use GraphqlOrm\Execution\IdentityMap;
 use GraphqlOrm\Form\GraphqlEntityType;
 use GraphqlOrm\GraphqlManager;
@@ -340,6 +341,17 @@ final class GraphqlOrmExtensionTest extends TestCase
 
         self::assertTrue($definition->isPublic());
         self::assertTrue($definition->hasTag('controller.service_arguments'));
+    }
+
+    #[Test]
+    public function itCachesTheSchemaValidationWithTheOtherIntrospections(): void
+    {
+        $container = $this->createContainer(debug: true, config: ['variables' => ['cache_pool' => 'cache.app', 'ttl' => 120]]);
+
+        $definition = $container->getDefinition(SchemaValidationListener::class);
+
+        self::assertEquals(new Reference('cache.app'), $definition->getArgument('$cache'));
+        self::assertSame(120, $definition->getArgument('$ttl'));
     }
 
     #[Test]
