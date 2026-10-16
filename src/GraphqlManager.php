@@ -129,6 +129,34 @@ final class GraphqlManager implements GraphqlManagerInterface
     }
 
     /**
+     * The entity of this identifier, loaded on first access: see GraphqlEntityRepository::getReference().
+     *
+     * @internal
+     *
+     * @template T of object
+     *
+     * @param class-string<T> $class
+     *
+     * @return T
+     */
+    public function reference(string $class, int|string $identifier): object
+    {
+        $known = $this->identityMap?->entities()[$class][$identifier] ?? null;
+
+        if ($known instanceof $class) {
+            return $known;
+        }
+
+        $context = new GraphqlExecutionContext(dialect: $this->dialect);
+        $context->lazyLoader = $this->loadLazily(...);
+        $entity = $this->hydrator->reference($this->metadataFactory->getMetadata($class), $identifier, $context);
+        $this->identityMap?->merge($context->identityMap, []);
+        \assert($entity instanceof $class);
+
+        return $entity;
+    }
+
+    /**
      * Forgets the entities of the shared identity map, as between two requests: for a long-running script.
      */
     public function clear(): void

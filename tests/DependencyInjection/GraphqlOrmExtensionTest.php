@@ -10,6 +10,7 @@ use GraphqlOrm\Command\MakeGraphqlEntityCommand;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\DependencyInjection\GraphqlOrmExtension;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
+use GraphqlOrm\Doctrine\GraphqlReferenceListener;
 use GraphqlOrm\Execution\IdentityMap;
 use GraphqlOrm\Form\GraphqlEntityType;
 use GraphqlOrm\GraphqlManager;
@@ -316,6 +317,17 @@ final class GraphqlOrmExtensionTest extends TestCase
         $container = $this->createContainer(debug: false);
 
         self::assertSame([['priority' => 100]], $container->getDefinition(GraphqlEntityNormalizer::class)->getTag('serializer.normalizer'));
+    }
+
+    #[Test]
+    public function itListensToTheDoctrineEntitiesReferencingGraphqlEntities(): void
+    {
+        $container = $this->createContainer(debug: false);
+
+        self::assertSame(
+            [['event' => 'postLoad'], ['event' => 'prePersist']],
+            $container->getDefinition(GraphqlReferenceListener::class)->getTag('doctrine.event_listener'),
+        );
     }
 
     #[Test]

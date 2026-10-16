@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Doctrine\Persistence\Event\LifecycleEventArgs;
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Client\GraphqlClientInterface;
 use GraphqlOrm\Codegen\StubRenderer;
@@ -11,6 +12,7 @@ use GraphqlOrm\Command\FindCommand;
 use GraphqlOrm\Command\MakeGraphqlEntityCommand;
 use GraphqlOrm\Command\SchemaValidateCommand;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
+use GraphqlOrm\Doctrine\GraphqlReferenceListener;
 use GraphqlOrm\EventListener\SchemaValidationListener;
 use GraphqlOrm\Form\GraphqlEntityType;
 use GraphqlOrm\GraphqlManager;
@@ -82,6 +84,13 @@ return static function (ContainerConfigurator $config) {
         $services->set(GraphqlEntityNormalizer::class)
             ->autoconfigure(false)
             ->tag('serializer.normalizer', ['priority' => 100]);
+    }
+
+    // doctrine/persistence is optional: the Doctrine entities referencing GraphQL entities (#[GraphqlReference]).
+    if (class_exists(LifecycleEventArgs::class)) {
+        $services->set(GraphqlReferenceListener::class)
+            ->tag('doctrine.event_listener', ['event' => 'postLoad'])
+            ->tag('doctrine.event_listener', ['event' => 'prePersist']);
     }
 
     // symfony/form is optional.

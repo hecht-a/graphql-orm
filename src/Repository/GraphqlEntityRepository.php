@@ -75,6 +75,20 @@ class GraphqlEntityRepository
     }
 
     /**
+     * The entity of this identifier without a query, as Doctrine getReference(): only its identifier is set, the rest
+     * is loaded on first access (an EntityNotFoundException then if it does not exist). The entity the shared identity
+     * map knows is given as is.
+     *
+     * @return T
+     *
+     * @throws LogicException when the entity has no identifier
+     */
+    public function getReference(int|string $id): object
+    {
+        return $this->manager->reference($this->entityClass, $id);
+    }
+
+    /**
      * @param array<string, mixed>          $criteria GraphQL field name or PHP property => expected value
      * @param array<string, Direction>|null $orderBy  GraphQL field name or PHP property => direction
      *

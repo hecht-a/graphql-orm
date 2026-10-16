@@ -10,6 +10,7 @@ use GraphqlOrm\Attribute\BeforeHydrate;
 use GraphqlOrm\Exception\CastException;
 use GraphqlOrm\Exception\EntityNotFoundException;
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
+use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\Exception\PartialEntityException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\Mapping\Fetch;
@@ -68,6 +69,17 @@ final class EntityHydrator
     public function unselectedProperties(object $entity): array
     {
         return $this->partial[$entity] ?? [];
+    }
+
+    /**
+     * An entity of which only the identifier is set, loaded on first access with the lazy loader of the context: the
+     * entity the context already knows, if any.
+     */
+    public function reference(GraphqlEntityMetadata $metadata, int|string $identifier, GraphqlExecutionContext $context): object
+    {
+        $field = $metadata->identifier ?? throw new LogicException(\sprintf('"%s" has no identifier to be referenced: mark its identifier field with #[Identifier].', $metadata->class));
+
+        return $this->hydrateEntity($metadata, [$field->mappedFrom => $identifier], $context, 0, lazy: true);
     }
 
     /**
