@@ -10,6 +10,7 @@ use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Serializer\GraphqlEntityNormalizer;
+use GraphqlOrm\Tests\Fixtures\Depth\ChainA;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeLabel;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
 use GraphqlOrm\Tests\Integration\Entity\LazyTask;
@@ -44,6 +45,20 @@ final class GraphqlEntityNormalizerTest extends TestCase
         $label = $this->repository($client, FakeLabel::class)->createQueryBuilder()->select('code')->getQuery()->getOneOrNullResult();
 
         self::assertSame('{"code":"bug"}', $this->serializer()->serialize($label, 'json'));
+    }
+
+    #[Test]
+    public function itWritesOnlyTheSelectedFieldsWhenTheOthersHaveADefaultValue(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['chainAs' => ['items' => [['id' => 1]]]]]);
+        $metadataFactory = new GraphqlEntityMetadataFactory();
+        $hydrator = new EntityHydrator($metadataFactory);
+        $manager = new GraphqlManager($metadataFactory, $client, $hydrator, null, 1, new DataApiBuilderDialect());
+        $chain = (new GraphqlEntityRepository($manager, ChainA::class))->createQueryBuilder()->select('id')->getQuery()->getOneOrNullResult();
+
+        $serializer = new Serializer([new GraphqlEntityNormalizer($metadataFactory, $hydrator), new ObjectNormalizer()], [new JsonEncoder()]);
+
+        self::assertSame('{"id":1}', $serializer->serialize($chain, 'json'));
     }
 
     #[Test]

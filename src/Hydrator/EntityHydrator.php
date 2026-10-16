@@ -48,7 +48,8 @@ final class EntityHydrator
     private array $hookMethods = [];
 
     /**
-     * @var \WeakMap<object, true> the entities hydrated from a selection of their fields, kept out of the lazy loads
+     * @var \WeakMap<object, list<string>> the entities hydrated from a selection of their fields, with the properties
+     *                                     the query did not select; they are kept out of the lazy loads
      */
     private \WeakMap $partial;
 
@@ -56,6 +57,17 @@ final class EntityHydrator
         private readonly GraphqlEntityMetadataFactory $metadataFactory,
     ) {
         $this->partial = new \WeakMap();
+    }
+
+    /**
+     * The mapped properties the query hydrating the entity did not select, whatever their default value: empty for an
+     * entity hydrated in full, or completed since.
+     *
+     * @return list<string>
+     */
+    public function unselectedProperties(object $entity): array
+    {
+        return $this->partial[$entity] ?? [];
     }
 
     /**
@@ -106,6 +118,10 @@ final class EntityHydrator
             $wasComplete = $this->areMappedFieldsInitialized($known, $metadata);
             $this->hydrateFields($known, $metadata, $data, $context, $depth);
 
+            if ($this->holdsEveryField($metadata, $data)) {
+                unset($this->partial[$known]);
+            }
+
             if (!$wasComplete) {
                 $this->callAfterHydrateMethods($known, $metadata);
             }
@@ -131,7 +147,7 @@ final class EntityHydrator
 
         $this->callBeforeHydrateMethods($entity, $data);
         $this->hydrateFields($entity, $metadata, $data, $context, $depth);
-        $this->guardUnselectedProperties($entity, $metadata);
+        $this->guardUnselectedProperties($entity, $metadata, $data);
         $this->callAfterHydrateMethods($entity, $metadata);
 
         return $this->markComplete($entity, $metadata, $data, $context);
@@ -214,25 +230,37 @@ final class EntityHydrator
     }
 
     /**
-     * Makes the mapped properties the row did not fill, and that have no value of their own, throw a
+     * Remembers the mapped properties the row did not hold, and makes those of them left without a value throw a
      * PartialEntityException when read: the entity becomes a lazy ghost whose initializer throws, everything already set
      * (by the row, the constructor or a default value) being set again as is.
+     *
+     * @param array<string|int, mixed> $data
      */
-    private function guardUnselectedProperties(object $entity, GraphqlEntityMetadata $metadata): void
+    private function guardUnselectedProperties(object $entity, GraphqlEntityMetadata $metadata, array $data): void
     {
+        $unselected = [];
         $missing = [];
 
         foreach ($metadata->fields as $field) {
-            try {
-                $property = $this->property($entity::class, $field->property);
-            } catch (\ReflectionException) {
+            if (\array_key_exists($field->mappedFrom, $data)) {
                 continue;
             }
 
-            if (!$property->isInitialized($entity)) {
-                $missing[] = $field->property;
+            $unselected[] = $field->property;
+
+            try {
+                if (!$this->property($entity::class, $field->property)->isInitialized($entity)) {
+                    $missing[] = $field->property;
+                }
+            } catch (\ReflectionException) {
             }
         }
+
+        if ($unselected === []) {
+            return;
+        }
+
+        $this->partial[$entity] = $unselected;
 
         if ($missing === []) {
             return;
@@ -256,8 +284,20 @@ final class EntityHydrator
         foreach ($values as [$property, $value]) {
             $property->setRawValueWithoutLazyInitialization($entity, $value);
         }
+    }
 
-        $this->partial[$entity] = true;
+    /**
+     * @param array<string|int, mixed> $data
+     */
+    private function holdsEveryField(GraphqlEntityMetadata $metadata, array $data): bool
+    {
+        foreach ($metadata->fields as $field) {
+            if (!\array_key_exists($field->mappedFrom, $data)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

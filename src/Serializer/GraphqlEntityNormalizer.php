@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Serializer;
 
+use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use Symfony\Component\Serializer\Normalizer\NormalizerAwareInterface;
 use Symfony\Component\Serializer\Normalizer\NormalizerAwareTrait;
@@ -19,8 +20,13 @@ final class GraphqlEntityNormalizer implements NormalizerInterface, NormalizerAw
 {
     use NormalizerAwareTrait;
 
+    /**
+     * @param EntityHydrator|null $hydrator tells the fields a partial entity was hydrated without, even those keeping a
+     *                                      default value
+     */
     public function __construct(
         private readonly GraphqlEntityMetadataFactory $metadataFactory,
+        private readonly ?EntityHydrator $hydrator = null,
     ) {
     }
 
@@ -33,11 +39,12 @@ final class GraphqlEntityNormalizer implements NormalizerInterface, NormalizerAw
     {
         \assert(\is_object($data));
         $values = [];
+        $unselected = $this->hydrator?->unselectedProperties($data) ?? [];
 
         foreach ($this->metadataFactory->getMetadata($data::class)->fields as $field) {
             $property = new \ReflectionProperty($data, $field->property);
 
-            if ($property->isLazy($data)) {
+            if ($property->isLazy($data) || \in_array($field->property, $unselected, true)) {
                 continue;
             }
 
@@ -56,7 +63,7 @@ final class GraphqlEntityNormalizer implements NormalizerInterface, NormalizerAw
     {
         return \is_object($data)
             && $this->metadataFactory->isEntityClass($data::class)
-            && (new \ReflectionClass($data))->isUninitializedLazyObject($data);
+            && ((new \ReflectionClass($data))->isUninitializedLazyObject($data) || ($this->hydrator?->unselectedProperties($data) ?? []) !== []);
     }
 
     public function getSupportedTypes(?string $format): array

@@ -64,6 +64,24 @@ final class PartialEntityTest extends TestCase
     }
 
     #[Test]
+    public function itRemembersTheFieldsNotSelectedEvenWithADefaultValue(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['chainAs' => ['items' => [['id' => 1]]]]], ['data' => ['chainAs' => ['items' => [['id' => 1, 'label' => 'A', 'next' => null]]]]]);
+        $metadataFactory = new GraphqlEntityMetadataFactory();
+        $hydrator = new EntityHydrator($metadataFactory);
+        $manager = new GraphqlManager($metadataFactory, $client, $hydrator, null, 1, new DataApiBuilderDialect(), identityMap: new IdentityMap());
+        $chains = new GraphqlEntityRepository($manager, ChainA::class);
+        $chain = $chains->createQueryBuilder()->select('id')->getQuery()->getOneOrNullResult();
+        self::assertInstanceOf(ChainA::class, $chain);
+        $unselected = $hydrator->unselectedProperties($chain);
+
+        $chains->findAll();
+
+        self::assertSame(['label', 'next'], $unselected);
+        self::assertSame([], $hydrator->unselectedProperties($chain));
+    }
+
+    #[Test]
     public function itCompletesThePartialEntityMetAgainInFull(): void
     {
         $client = new FakeGraphqlClient(self::LABEL_CODE_ONLY, ['data' => ['labels' => ['items' => [['code' => 'bug', 'position' => 1]]]]]);

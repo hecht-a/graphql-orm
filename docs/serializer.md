@@ -5,7 +5,8 @@ are not all loaded **without loading them**:
 
 - a relation loaded on first access (`Fetch::Lazy`, or `lazy_loading`) and not read yet is written as its identifier;
 - a partial entity, hydrated from a [selection of its fields](query-builder.md#field-selection), is written with its
-  selected fields only.
+  selected fields only, the others left out even when they have a default value: `"done": false` would contradict the
+  API for a task that is done.
 
 ```php
 $tasks = $taskRepository->findAll(); // Task::$assignee mapped with Fetch::Lazy
