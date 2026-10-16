@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A relation typed `Collection` of `doctrine/collections` (suggested) is hydrated as an `ArrayCollection`, its item
+  type read from the generic type (`/** @var Collection<int, Task> */`). The `array` properties stay arrays.
 - `GraphqlEntityNormalizer`, registered with `symfony/serializer`: a relation loaded on first access and not read yet is
   written as its identifier, a partial entity with its selected fields, without any query. The `ObjectNormalizer` would
   load each lazy relation (an N+1 hidden in a JSON response) or fail on the fields not selected. `symfony/serializer`

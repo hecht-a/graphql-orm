@@ -152,6 +152,26 @@ public array $tasks = [];
 public array $tasks = [];
 ```
 
+### Collections of doctrine/collections
+
+With `doctrine/collections` installed, a collection can be typed `Collection` (or `ReadableCollection`,
+`ArrayCollection`): it is hydrated as an `ArrayCollection`, its item type read from the generic type of the docblock.
+The `array` properties stay arrays.
+
+```php
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+
+/** @var Collection<int, Task> */
+#[Relation]
+public Collection $tasks;
+
+$project->tasks->filter(fn (Task $task) => !$task->done)->count();
+```
+
+It works with `Fetch::Lazy` as an array does, and the [serializer](serializer.md) writes it as a list. The results of
+`findBy()` and of the query builder stay arrays, as with Doctrine.
+
 An `array` mapped with `#[Field]` is a plain array (e.g. a list of scalars such as `/** @var string[] */`). An
 untyped property is hydrated with the raw value.
 
