@@ -68,6 +68,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
             'origin' => $trace->origin,
             'entity_class' => $trace->entityClass,
             'lazy_relation' => $trace->lazyRelation,
+            'during_serialization' => $trace->duringSerialization,
             'identifier_property' => $trace->identifierProperty,
             'response_preview' => $trace->responsePreview,
             'slow' => $this->slowQueryThreshold !== null && $trace->duration >= $this->slowQueryThreshold,
@@ -144,6 +145,39 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
             ], array_values($metadata->fields)),
             'error' => null,
         ];
+    }
+
+    /**
+     * Records an entity the normalizer of the bundle wrote without a query.
+     *
+     * @param 'identifier'|'partial' $kind a relation not loaded written as its identifier, or a partial entity
+     */
+    public function entityNormalized(string $class, string $kind): void
+    {
+        /** @var array{identifier: int, partial: int} $normalized */
+        $normalized = $this->data['normalized'] ?? ['identifier' => 0, 'partial' => 0];
+        ++$normalized[$kind];
+        $this->data['normalized'] = $normalized;
+    }
+
+    /**
+     * What the serializer wrote without a query, and the lazy loads it sent (an N+1 hidden in a response).
+     *
+     * @return array{identifiers: int, partial: int, lazy_loads: list<int>} the numbers of the lazy loads, from 1
+     */
+    public function getSerialization(): array
+    {
+        /** @var array{identifier: int, partial: int} $normalized */
+        $normalized = $this->data['normalized'] ?? ['identifier' => 0, 'partial' => 0];
+        $lazyLoads = [];
+
+        foreach ($this->getQueries() as $index => $query) {
+            if (($query['during_serialization'] ?? false) === true) {
+                $lazyLoads[] = $index + 1;
+            }
+        }
+
+        return ['identifiers' => $normalized['identifier'], 'partial' => $normalized['partial'], 'lazy_loads' => $lazyLoads];
     }
 
     public function ghostCreated(string $class, int|string $identifier, ?string $relation): void

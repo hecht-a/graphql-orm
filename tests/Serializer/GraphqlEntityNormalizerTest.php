@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Serializer;
 
+use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
@@ -59,6 +60,37 @@ final class GraphqlEntityNormalizerTest extends TestCase
         $serializer = new Serializer([new GraphqlEntityNormalizer($metadataFactory, $hydrator), new ObjectNormalizer()], [new JsonEncoder()]);
 
         self::assertSame('{"id":1}', $serializer->serialize($chain, 'json'));
+    }
+
+    #[Test]
+    public function itTellsTheProfilerWhatItWroteWithoutQuery(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $client = new FakeGraphqlClient(['data' => ['tasks' => ['items' => [['id' => 1, 'title' => 'A', 'user' => ['id' => 7]]]]]]);
+        [$task] = $this->repository($client, LazyTask::class)->findAll();
+        $serializer = new Serializer([new GraphqlEntityNormalizer(new GraphqlEntityMetadataFactory(), collector: $collector), new ObjectNormalizer()], [new JsonEncoder()]);
+
+        $serializer->serialize($task, 'json');
+
+        self::assertSame(['identifiers' => 1, 'partial' => 0, 'lazy_loads' => []], $collector->getSerialization());
+    }
+
+    #[Test]
+    public function itTellsTheProfilerTheRelationsLoadedWhileSerializing(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $client = new FakeGraphqlClient(
+            ['data' => ['tasks' => ['items' => [['id' => 1, 'title' => 'A', 'user' => ['id' => 7]]]]]],
+            ['data' => ['users' => ['items' => [['id' => 7, 'name' => 'User A', 'tasks' => ['items' => []]]]]]],
+        );
+        $metadataFactory = new GraphqlEntityMetadataFactory();
+        $manager = new GraphqlManager($metadataFactory, $client, new EntityHydrator($metadataFactory), $collector, 1, new DataApiBuilderDialect());
+        [$task] = (new GraphqlEntityRepository($manager, LazyTask::class))->findAll();
+
+        // Without the normalizer of the bundle, the ObjectNormalizer reads the lazy user, which loads it
+        (new Serializer([new ObjectNormalizer()], [new JsonEncoder()]))->serialize($task, 'json', ['circular_reference_handler' => fn (object $object) => null]);
+
+        self::assertSame([2], $collector->getSerialization()['lazy_loads']);
     }
 
     #[Test]

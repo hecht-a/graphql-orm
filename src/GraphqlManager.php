@@ -50,6 +50,11 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
 
     private const LAZY_ORIGIN = 'lazy';
 
+    /** Frames read to find the serializer behind a lazy load: a normalizer reading a property is deep in the stack. */
+    private const SERIALIZER_STACK_DEPTH = 80;
+
+    private const SERIALIZER_NAMESPACE = 'Symfony\\Component\\Serializer\\';
+
     private const FIND_ORIGIN = 'find';
 
     /** The bytes of a response kept for the profiler. */
@@ -258,6 +263,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
 
         if ($this->loadingLazily) {
             $context->trace->lazyRelation = $this->lazyRelation;
+            $context->trace->duringSerialization = $this->collector !== null && self::whileSerializing();
         }
 
         $this->eventDispatcher?->dispatch(new QueryStartedEvent($this->redact(clone $context->trace)));
@@ -336,6 +342,20 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         }
 
         return [$this->loadingLazily ? self::LAZY_ORIGIN : $origin, $entityClass];
+    }
+
+    /**
+     * Whether the serializer is on the way to the query, e.g. the ObjectNormalizer reading a relation not loaded yet.
+     */
+    private static function whileSerializing(): bool
+    {
+        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, self::SERIALIZER_STACK_DEPTH) as $frame) {
+            if (str_starts_with($frame['class'] ?? '', self::SERIALIZER_NAMESPACE)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

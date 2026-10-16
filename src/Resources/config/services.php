@@ -84,6 +84,7 @@ return static function (ContainerConfigurator $config) {
     if (interface_exists(NormalizerInterface::class)) {
         $services->set(GraphqlEntityNormalizer::class)
             ->autoconfigure(false)
+            ->arg('$collector', service(GraphqlOrmDataCollector::class)->nullOnInvalid())
             ->tag('serializer.normalizer', ['priority' => 100]);
     }
 

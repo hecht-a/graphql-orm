@@ -131,6 +131,14 @@
                     <a href="#graphql-orm-findings" data-graphql-orm-goto="findings">See how to avoid it</a>
                 </div>
             {% endfor %}
+            {% set serialization = collector.serialization %}
+            {% if serialization.lazy_loads is not empty %}
+                <div class="graphql-orm-alert">
+                    <strong>{{ serialization.lazy_loads|length }} {{ serialization.lazy_loads|length > 1 ? 'relations' : 'relation' }} loaded while serializing</strong>
+                    <span>a normalizer read a relation not loaded: an N+1 hidden in the response</span>
+                    <a href="#graphql-orm-serializer" data-graphql-orm-goto="serializer">See which ones</a>
+                </div>
+            {% endif %}
             {% if collector.repeatedQueries is not empty %}
                 <div class="graphql-orm-alert">
                     <strong>{{ collector.repeatedQueries|length }} {{ collector.repeatedQueries|length > 1 ? 'queries are' : 'query is' }} repeated with other values</strong>
@@ -155,6 +163,12 @@
                 {% if collector.lazyLoading is not empty %}
                     <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="lazy-loading">
                         Lazy loading <span class="badge">{{ collector.lazyLoading|reduce((total, group) => total + group.created, 0) }}</span>
+                    </button>
+                {% endif %}
+                {% if serialization.identifiers + serialization.partial > 0 or serialization.lazy_loads is not empty %}
+                    <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="serializer">
+                        Serializer
+                        {% if serialization.lazy_loads is not empty %}<span class="badge status-warning">{{ serialization.lazy_loads|length }}</span>{% endif %}
                     </button>
                 {% endif %}
                 {% if collector.identityMapHitCount > 0 %}
@@ -371,6 +385,49 @@
                             {% endfor %}
                         </tbody>
                     </table>
+                </div>
+            {% endif %}
+
+            {% if serialization.identifiers + serialization.partial > 0 or serialization.lazy_loads is not empty %}
+                <div data-graphql-orm-view="serializer" id="graphql-orm-serializer" hidden>
+                    <div class="metrics">
+                        <div class="metric">
+                            <span class="value">{{ serialization.identifiers }}</span>
+                            <span class="label">Relations written as identifiers</span>
+                        </div>
+                        <div class="metric">
+                            <span class="value">{{ serialization.partial }}</span>
+                            <span class="label">Partial entities written</span>
+                        </div>
+                        <div class="metric">
+                            <span class="value">{{ serialization.lazy_loads|length }}</span>
+                            <span class="label">Queries sent while serializing</span>
+                        </div>
+                    </div>
+                    {% if serialization.lazy_loads is not empty %}
+                        <p class="graphql-orm-muted">
+                            These lazy loads were sent by the serializer reading a relation not loaded. Select the relation in
+                            the query, or register <code>GraphqlEntityNormalizer</code> (it writes such a relation as its
+                            identifier, without a query).
+                        </p>
+                        <table>
+                            <thead>
+                                <tr><th>Query</th><th>Relation</th><th class="graphql-orm-number">Time</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for number in serialization.lazy_loads %}
+                                    {% set query = collector.queries[number - 1] %}
+                                    <tr>
+                                        <td><a href="#graphql-orm-query-{{ number }}" data-graphql-orm-open="{{ number }}">#{{ number }}</a></td>
+                                        <td>{% if query.lazy_relation ?? null %}<code title="{{ query.lazy_relation }}">{{ query.lazy_relation|split('\\')|last }}</code>{% else %}<span class="graphql-orm-muted">-</span>{% endif %}</td>
+                                        <td class="graphql-orm-number">{{ (query.duration ?? 0)|number_format(1) }} ms</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p class="graphql-orm-muted">The serializer sent no query: every relation it wrote was loaded or written as its identifier.</p>
+                    {% endif %}
                 </div>
             {% endif %}
 
@@ -702,6 +759,7 @@
 {% macro renderOrigin(query) %}
     {% if query.origin ?? null %}
         <span class="graphql-orm-origin graphql-orm-origin-{{ _self.originKind(query.origin)|trim }}">{{ query.origin }}</span>
+        {% if query.during_serialization ?? false %}<span class="graphql-orm-origin graphql-orm-origin-lazy" title="Sent while the serializer was writing an entity">serializer</span>{% endif %}
     {% else %}
         <span class="graphql-orm-muted">-</span>
     {% endif %}

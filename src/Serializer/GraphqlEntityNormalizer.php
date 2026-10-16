@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Serializer;
 
+use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use Symfony\Component\Serializer\Normalizer\NormalizerAwareInterface;
@@ -27,6 +28,7 @@ final class GraphqlEntityNormalizer implements NormalizerInterface, NormalizerAw
     public function __construct(
         private readonly GraphqlEntityMetadataFactory $metadataFactory,
         private readonly ?EntityHydrator $hydrator = null,
+        private readonly ?GraphqlOrmDataCollector $collector = null,
     ) {
     }
 
@@ -40,6 +42,7 @@ final class GraphqlEntityNormalizer implements NormalizerInterface, NormalizerAw
         \assert(\is_object($data));
         $values = [];
         $unselected = $this->hydrator?->unselectedProperties($data) ?? [];
+        $this->collector?->entityNormalized($data::class, $unselected !== [] ? 'partial' : 'identifier');
 
         foreach ($this->metadataFactory->getMetadata($data::class)->fields as $field) {
             $property = new \ReflectionProperty($data, $field->property);

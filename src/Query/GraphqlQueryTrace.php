@@ -42,6 +42,8 @@ final class GraphqlQueryTrace
     public ?string $identifierProperty = null;
     /** The relation whose first access sent this lazy load, e.g. App\Entity\Task::$assignee. */
     public ?string $lazyRelation = null;
+    /** A lazy load sent while the serializer was writing an entity: an N+1 hidden in a response; profiler only. */
+    public bool $duringSerialization = false;
     /** The beginning of the response, its values masked unless redact_query_values is false; profiler only. */
     public ?string $responsePreview = null;
 

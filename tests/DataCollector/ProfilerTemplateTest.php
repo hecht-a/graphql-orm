@@ -378,6 +378,24 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itWarnsAboutTheRelationsLoadedWhileSerializing(): void
+    {
+        $collector = $this->collector(['query { tasks { id } }']);
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { users { id } }';
+        $trace->origin = 'lazy';
+        $trace->duringSerialization = true;
+        $collector->addQuery($trace);
+        $collector->entityNormalized('App\\Entity\\User', 'identifier');
+
+        $html = $this->render($collector);
+        $text = self::text($html);
+
+        self::assertStringContainsString('1 relation loaded while serializing', $text);
+        self::assertStringContainsString('data-graphql-orm-tab="serializer"', $html);
+    }
+
+    #[Test]
     public function itWarnsAboutRepeatedQueries(): void
     {
         $collector = $this->collector([
