@@ -55,6 +55,19 @@ final class GetReferenceTest extends TestCase
     }
 
     #[Test]
+    public function itLoadsTheReferencesOfAClassWithOneQueryThroughTheSharedIdentityMap(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['labels' => ['items' => [['code' => 'bug', 'position' => 1], ['code' => 'docs', 'position' => 3]]]]]);
+        $labels = $this->labels($client, new IdentityMap());
+        $bug = $labels->getReference('bug');
+        $docs = $labels->getReference('docs');
+
+        self::assertSame(1, $bug->position);
+        self::assertSame(3, $docs->position);
+        self::assertSame(1, $client->callCount);
+    }
+
+    #[Test]
     public function itThrowsOnFirstAccessWhenTheEntityDoesNotExist(): void
     {
         $label = $this->labels(new FakeGraphqlClient(['data' => ['labels' => ['items' => []]]]))->getReference('nope');

@@ -32,9 +32,10 @@ class Invoice
 ```
 
 When Doctrine loads an `Invoice`, the bundle sets `$client` with a reference to the GraphQL `Client` (see
-[`getReference()`](#references)): no query is sent until a property other than the identifier is read, and the clients
-of the invoices read in a same page are loaded together when the dialect loads lazy relations in batches. An identifier
-the API no longer knows throws an `EntityNotFoundException` on first access.
+[`getReference()`](#references)): no query is sent until a property other than the identifier is read, and the
+clients of the invoices read in a same page are loaded together, with the shared identity map (the default) and a
+dialect loading lazy relations in batches. An identifier the API no longer knows throws an `EntityNotFoundException` on
+first access.
 
 Before the first persist of an entity, the identifier column is filled from the reference set. Doctrine sees no change
 of a property it does not map: to change the reference of a stored entity, change its identifier column too, as
@@ -53,4 +54,6 @@ $client->id;    // 'C-042', no query
 $client->name;  // loads the client
 ```
 
-The entity the shared identity map already knows is given as is.
+The entity the shared identity map already knows is given as is. With the shared identity map, the first reference
+accessed loads the other references of its class waiting to be, with one query when the dialect loads lazy relations in
+batches; they are forgotten between two requests or messages.

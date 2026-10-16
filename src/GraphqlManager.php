@@ -32,12 +32,13 @@ use Psr\Container\ContainerInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Depend on GraphqlManagerInterface to simulate or decorate it.
  */
 #[AutoconfigureTag('graphql.manager')]
-final class GraphqlManager implements GraphqlManagerInterface
+final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
 {
     /**
      * Identifiers loaded by one lazy loading query.
@@ -55,6 +56,8 @@ final class GraphqlManager implements GraphqlManagerInterface
     private const RESPONSE_PREVIEW_BYTES = 2048;
 
     private bool $loadingLazily = false;
+
+    private ?GraphqlExecutionContext $referenceContext = null;
 
     /** The relation whose lazy load is running, e.g. Task::$assignee. */
     private ?string $lazyRelation = null;
@@ -147,8 +150,7 @@ final class GraphqlManager implements GraphqlManagerInterface
             return $known;
         }
 
-        $context = new GraphqlExecutionContext(dialect: $this->dialect);
-        $context->lazyLoader = $this->loadLazily(...);
+        $context = $this->referenceContext();
         $entity = $this->hydrator->reference($this->metadataFactory->getMetadata($class), $identifier, $context);
         $this->identityMap?->merge($context->identityMap, []);
         \assert($entity instanceof $class);
@@ -162,6 +164,32 @@ final class GraphqlManager implements GraphqlManagerInterface
     public function clear(): void
     {
         $this->identityMap?->reset();
+        $this->referenceContext = null;
+    }
+
+    /**
+     * Forgets the references waiting to be loaded, between two requests or messages (kernel.reset).
+     */
+    public function reset(): void
+    {
+        $this->referenceContext = null;
+    }
+
+    /**
+     * The context of the references: shared while the identity map is, so that the first reference accessed loads the
+     * others of its class with the same query.
+     */
+    private function referenceContext(): GraphqlExecutionContext
+    {
+        if ($this->identityMap !== null && $this->referenceContext !== null) {
+            return $this->referenceContext;
+        }
+
+        $context = new GraphqlExecutionContext(dialect: $this->dialect);
+        $context->lazyLoader = $this->loadLazily(...);
+        $context->identityMap = $this->identityMap?->entities() ?? [];
+
+        return $this->identityMap !== null ? $this->referenceContext = $context : $context;
     }
 
     /**
