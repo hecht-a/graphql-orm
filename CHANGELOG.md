@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Profiler: a "Serializer" tab counting the relations written as identifiers and the partial entities written by
   `GraphqlEntityNormalizer`, and listing the lazy loads sent while the serializer was writing an entity (an N+1 hidden in
   a response), with a warning on top of the panel and a `serializer` mark on those queries.
+- Profiler: a "Partial entities" tab listing the entities hydrated from a selection of their fields, by class and fields
+  not selected, with the queries hydrating them and the `PartialEntityException` thrown.
 
 ---
 

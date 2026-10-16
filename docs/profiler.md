@@ -20,6 +20,9 @@ For each request, the panel shows:
 - **The lazy loading**: the entities left to be loaded on first access (`Fetch::Lazy`, `lazy_loading`, the references
   of Doctrine entities), by relation: how many, how many were loaded and by which queries, how many were never read and
   so cost no query.
+- **The partial entities**: the entities hydrated from a [selection of their fields](query-builder.md#field-selection),
+  by class and fields not selected: how many, by which queries, and how many `PartialEntityException` were thrown, for
+  which properties (in warning on the tab).
 - **The serializer**: the relations written as identifiers and the partial entities written by
   [`GraphqlEntityNormalizer`](serializer.md), and the lazy loads sent while the serializer was writing an entity, an N+1
   problem hidden in a response, with a warning on top of the panel. Such a query is marked `serializer` in the list.

@@ -25,7 +25,8 @@ $task->done;    // PartialEntityException: "App\Entity\Task" was hydrated withou
 ```
 
 A property with a default value keeps it. The same goes for a relation reduced to its identifier beyond `max_depth`.
-When the shared identity map later meets the entity in full, it is completed.
+When the shared identity map later meets the entity in full, it is completed. The [profiler](profiler.md) lists the
+partial entities of a request, with the fields not selected, and counts the exceptions thrown.
 
 ## Filtering
 
