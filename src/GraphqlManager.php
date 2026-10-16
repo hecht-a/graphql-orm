@@ -15,6 +15,7 @@ use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\Event\QueryExecutedEvent;
 use GraphqlOrm\Event\QueryFailedEvent;
 use GraphqlOrm\Event\QueryStartedEvent;
+use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\Execution\IdentityMap;
 use GraphqlOrm\Hydrator\EntityHydrator;
@@ -28,6 +29,7 @@ use GraphqlOrm\Query\GraphqlQueryCompiler;
 use GraphqlOrm\Query\GraphqlQueryTrace;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
 use GraphqlOrm\Query\QueryOptions;
+use GraphqlOrm\Registry\ManagerRouter;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use Psr\Container\ContainerInterface;
@@ -65,7 +67,13 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
     /** The bytes of a response kept for the profiler. */
     private const RESPONSE_PREVIEW_BYTES = 2048;
 
+    /** The name of the manager without graphql_orm.managers. */
+    private const DEFAULT_NAME = 'default';
+
     private bool $loadingLazily = false;
+
+    /** @var array<class-string, true> the entities checked to belong to this manager */
+    private array $managedClasses = [];
 
     private ?GraphqlExecutionContext $referenceContext = null;
 
@@ -95,7 +103,58 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         private ?IdentityMap $identityMap = null,
         private ?ContainerInterface $repositories = null,
         private GraphqlCache $cache = new GraphqlCache(),
+        private string $name = self::DEFAULT_NAME,
+        private ?ManagerRouter $router = null,
     ) {
+    }
+
+    /**
+     * Checks that an entity, and the entities of its relations, belong to the API of this manager: an API cannot select
+     * the fields of another.
+     *
+     * @internal called by GraphqlEntityRepository
+     *
+     * @param class-string $class
+     *
+     * @throws LogicException when the entity, or the target of one of its relations, belongs to another manager
+     */
+    public function assertManages(string $class): void
+    {
+        $router = $this->router;
+
+        if ($router === null || isset($this->managedClasses[$class])) {
+            return;
+        }
+
+        $owner = $router->managerFor($class);
+
+        if ($owner !== $this->name) {
+            throw new LogicException(\sprintf('"%s" belongs to the GraphQL ORM manager "%s", not "%s": get its repository from GraphqlManagerRegistry::getRepository(), or autowire GraphqlManagerInterface $%3$sManager.', $class, $owner, $this->name));
+        }
+
+        $this->managedClasses[$class] = true;
+
+        foreach ($this->metadataFactory->getMetadata($class)->fields as $field) {
+            if ($field->relation === null) {
+                continue;
+            }
+
+            $targetOwner = $router->managerFor($field->relation);
+
+            if ($targetOwner !== $this->name) {
+                throw new LogicException(\sprintf('%s::$%s targets "%s" of the manager "%s": the API of the manager "%s" cannot select its fields. Map its identifier instead, and load it from its own manager.', $class, $field->property, $field->relation, $targetOwner, $this->name));
+            }
+
+            $this->assertManages($field->relation);
+        }
+    }
+
+    /**
+     * The name of this manager, e.g. crm for graphql_orm.managers.crm.
+     */
+    public function getName(): string
+    {
+        return $this->name;
     }
 
     /**

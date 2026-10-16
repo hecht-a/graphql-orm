@@ -18,6 +18,8 @@ use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\MetadataCacheWarmer;
+use GraphqlOrm\Registry\GraphqlManagerRegistry;
+use GraphqlOrm\Registry\ManagerRouter;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Schema\CountableFieldResolver;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
@@ -103,6 +105,7 @@ final class GraphqlOrmExtension extends Extension
         }
 
         $this->aliasDefaultManager($container, $managers->defaultManager);
+        $this->registerRegistry($container, $managers);
 
         $container->setParameter('graphql_orm.default_manager', $managers->defaultManager);
         $container->setParameter('graphql_orm.managers', array_keys($managers->managers));
@@ -188,6 +191,8 @@ final class GraphqlOrmExtension extends Extension
                 '$repositories' => new ServiceLocatorArgument(new TaggedIteratorArgument(self::REPOSITORY_TAG, null, null, true)),
                 '$cache' => new Reference($id('cache')),
             ])
+            ->setArgument('$name', $name)
+            ->setArgument('$router', new Reference(ManagerRouter::class))
             ->addTag('graphql.manager', ['name' => $name]);
 
         if ($config['variables']['enabled']) {
@@ -277,6 +282,25 @@ final class GraphqlOrmExtension extends Extension
                 '$ttl' => $config['variables']['ttl'],
             ])
             ->addTag('kernel.event_listener', ['event' => KernelEvents::REQUEST, 'priority' => self::SCHEMA_VALIDATION_PRIORITY, 'method' => '__invoke']);
+    }
+
+    /**
+     * The registry of the managers, and the router telling the manager of an entity by its #[Entity] or its namespace.
+     */
+    private function registerRegistry(ContainerBuilder $container, ManagerConfigs $managers): void
+    {
+        $container->register(ManagerRouter::class, ManagerRouter::class)->setArguments([
+            array_map(static fn (array $config): string => $config['mapping']['entity']['namespace'], $managers->managers),
+            $managers->defaultManager,
+        ]);
+
+        $container->register(GraphqlManagerRegistry::class, GraphqlManagerRegistry::class)->setArguments([
+            new ServiceLocatorArgument(array_combine(
+                array_keys($managers->managers),
+                array_map(static fn (string $name): Reference => new Reference('graphql_orm.' . $name . '.manager'), array_keys($managers->managers)),
+            )),
+            new Reference(ManagerRouter::class),
+        ]);
     }
 
     /**

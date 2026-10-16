@@ -15,10 +15,13 @@ final readonly class Entity
     /**
      * @param string $name the GraphQL root query field (e.g. tasks)
      * @param class-string<GraphqlEntityRepository<*>>|null $repositoryClass the repository service of the entity
+     * @param string|null $manager the manager of its API, when not the one whose
+     *                             entity namespace holds it
      */
     public function __construct(
         public string $name,
         public ?string $repositoryClass = null,
+        public ?string $manager = null,
     ) {
     }
 }

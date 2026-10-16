@@ -24,12 +24,14 @@ use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\MetadataCacheWarmer;
 use GraphqlOrm\Metadata\Naming\SnakeCaseNamingStrategy;
+use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Schema\CountableFieldResolver;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Schema\SchemaIntrospector;
 use GraphqlOrm\Serializer\GraphqlEntityNormalizer;
 use GraphqlOrm\Test\MockGraphqlServer;
+use GraphqlOrm\Tests\Fixtures\Crm\Contact;
 use GraphqlOrm\Tests\Fixtures\Depth\ChainA;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntityNamedByStrategy;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeProject;
@@ -674,6 +676,23 @@ final class GraphqlOrmExtensionTest extends TestCase
         self::assertSame('graphql_orm.crm.manager', (string) $container->getAlias(GraphqlManagerInterface::class . ' $crmManager'));
         self::assertSame('graphql_orm.main.manager', (string) $container->getAlias(GraphqlManager::class . ' $mainManager'));
         self::assertSame('graphql_orm.crm.cache', (string) $container->getAlias(GraphqlCache::class . ' $crmCache'));
+    }
+
+    #[Test]
+    public function itGivesTheManagerOfAnEntityThroughTheRegistry(): void
+    {
+        $container = $this->createContainer(debug: false, config: ['managers' => [
+            'main' => ['endpoint' => 'https://main.example.com/graphql'],
+            'crm' => ['endpoint' => 'https://crm.example.com/graphql', 'mapping' => ['entity' => ['namespace' => 'GraphqlOrm\\Tests\\Fixtures\\Crm']]],
+        ]]);
+
+        $container->compile();
+
+        $registry = $container->get(GraphqlManagerRegistry::class);
+        self::assertInstanceOf(GraphqlManagerRegistry::class, $registry);
+        self::assertSame($container->get('graphql_orm.crm.manager'), $registry->getManagerForClass(Contact::class));
+        self::assertSame(['main', 'main'], [$registry->getDefaultManagerName(), $registry->getManager()->getName()]);
+        self::assertSame('crm', $registry->getManager('crm')->getName());
     }
 
     private function cacheProperty(ContainerBuilder $container, string $property): mixed

@@ -35,6 +35,7 @@ class GraphqlEntityRepository
         protected readonly GraphqlManager $manager,
         protected string $entityClass,
     ) {
+        $manager->assertManages($entityClass);
     }
 
     /**
