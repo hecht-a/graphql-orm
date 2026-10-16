@@ -25,7 +25,7 @@ graphql_orm:
     result_cache:
         pool: cache.graphql         # default: cache.app; null disables the result cache
     second_level_cache:
-        enabled: true               # default
+        enabled: true               # default: false, #[Cache] is then ignored
         pool: cache.app             # the entities without region
         default_lifetime: 3600      # seconds
         regions:
@@ -67,6 +67,9 @@ class Label
     // ...
 }
 ```
+
+The second-level cache is disabled by default, as in Doctrine: `#[Cache]` is ignored until
+`graphql_orm.second_level_cache.enabled` is true.
 
 An entity marked `#[Cache]` is kept when a query hydrates it **in full** (every mapped field selected): a partial entity
 is not. It is then read from the cache by:

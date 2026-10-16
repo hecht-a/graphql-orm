@@ -14,8 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   as Doctrine. Each page of a paginated query is kept apart; a response with errors is not kept.
 - Second-level cache: the entities marked `#[Cache(region, lifetime)]` are kept once hydrated in full, and read back by
   `find()`, the references and the lazy loads, their relations kept by their identifier and loaded on first access.
-  `graphql_orm.second_level_cache` sets the default pool and lifetime, and regions with a pool and a lifetime of their
-  own.
+  Disabled by default, as in Doctrine: `graphql_orm.second_level_cache.enabled` turns it on, and sets the default pool
+  and lifetime, and regions with a pool and a lifetime of their own.
 - `GraphqlCache` (also `GraphqlManager::getCache()`): `evictEntity()`, `evictEntityRegion()` (with any pool),
   `evictQueryResult()` and `containsEntity()`.
 - Profiler: the queries answered by the result cache are marked and counted, and a "Second-level cache" tab gives, by
