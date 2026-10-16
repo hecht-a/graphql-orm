@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `lazy_loading`, references of Doctrine entities): how many, how many were loaded and by which queries, how many were
   never read. The references of Doctrine entities are named after their property (`Invoice::$task`) in it and in the N+1
   detection.
+- Profiler: a "Serializer" tab counting the relations written as identifiers and the partial entities written by
+  `GraphqlEntityNormalizer`, and listing the lazy loads sent while the serializer was writing an entity (an N+1 hidden in
+  a response), with a warning on top of the panel and a `serializer` mark on those queries.
 
 ---
 

@@ -21,3 +21,7 @@ problem hidden in a JSON response), or fails on a field the query did not select
 The entities held in full are left to the other normalizers, `ObjectNormalizer` included, with their groups, name
 converters and context as usual. The properties are written under their PHP names. Select the relations you want
 written in full (raise `max_depth`, or select their fields with the query builder).
+
+The [profiler](profiler.md) counts, in its "Serializer" tab, the relations written as identifiers and the partial
+entities written, and warns about the lazy loads sent while the serializer was writing an entity: the N+1 problem above,
+when another normalizer reads the relations.

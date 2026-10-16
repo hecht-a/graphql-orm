@@ -20,6 +20,9 @@ For each request, the panel shows:
 - **The lazy loading**: the entities left to be loaded on first access (`Fetch::Lazy`, `lazy_loading`, the references
   of Doctrine entities), by relation: how many, how many were loaded and by which queries, how many were never read and
   so cost no query.
+- **The serializer**: the relations written as identifiers and the partial entities written by
+  [`GraphqlEntityNormalizer`](serializer.md), and the lazy loads sent while the serializer was writing an entity, an N+1
+  problem hidden in a response, with a warning on top of the panel. Such a query is marked `serializer` in the list.
 - **The identity map**: the entities that `find()` served from the shared identity map, known in full from an earlier
   query, each one a query not sent (see [shared identity map](configuration.md#shared-identity-map)).
 - **The configuration** of the bundle (dialect, endpoint, options; the names of the headers only, never their values
