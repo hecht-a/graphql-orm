@@ -362,6 +362,22 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itSumsUpTheLazyLoadingInATab(): void
+    {
+        $collector = $this->collector(['query { tasks { id } }', 'query { users { id } }']);
+        foreach ([1, 2, 3] as $id) {
+            $collector->ghostCreated('App\\Entity\\User', $id, 'App\\Entity\\Task::$assignee');
+        }
+        $collector->ghostsLoaded('App\\Entity\\User', [1, 2]);
+
+        $html = $this->render($collector);
+        $text = self::text($html);
+
+        self::assertStringContainsString('data-graphql-orm-tab="lazy-loading"', $html);
+        self::assertStringContainsString('Task::$assignee User 3 2 1 #2', $text);
+    }
+
+    #[Test]
     public function itWarnsAboutRepeatedQueries(): void
     {
         $collector = $this->collector([

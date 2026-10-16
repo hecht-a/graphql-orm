@@ -7,7 +7,7 @@ namespace GraphqlOrm\Doctrine;
 use Doctrine\Persistence\Event\LifecycleEventArgs;
 use Doctrine\Persistence\ObjectManager;
 use GraphqlOrm\Exception\InvalidArgumentException;
-use GraphqlOrm\GraphqlManagerInterface;
+use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 
 /**
@@ -25,7 +25,7 @@ final class GraphqlReferenceListener
     private array $references = [];
 
     public function __construct(
-        private readonly GraphqlManagerInterface $manager,
+        private readonly GraphqlManager $manager,
         private readonly GraphqlEntityMetadataFactory $metadataFactory,
     ) {
     }
@@ -41,7 +41,7 @@ final class GraphqlReferenceListener
             $value = $identifier->getValue($entity);
 
             if (\is_int($value) || \is_string($value)) {
-                $reference->setValue($entity, $this->manager->getRepository($target)->getReference($value));
+                $reference->setValue($entity, $this->manager->reference($target, $value, $reference->class . '::$' . $reference->getName()));
             }
         }
     }

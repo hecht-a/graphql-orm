@@ -29,6 +29,13 @@ final class GraphqlExecutionContext
     public bool $lazyLoading = false;
 
     /**
+     * Told of the entities left to be loaded on first access.
+     *
+     * @internal set by GraphqlManager when the profiler is enabled
+     */
+    public ?HydrationObserver $observer = null;
+
+    /**
      * The entities hydrated from a row holding every mapped field, which a shared identity map may serve to find().
      *
      * @internal filled by EntityHydrator

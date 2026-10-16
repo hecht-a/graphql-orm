@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\DataCollector;
 
+use GraphqlOrm\Execution\HydrationObserver;
 use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
@@ -15,7 +16,7 @@ use Symfony\Component\HttpKernel\DataCollector\DataCollector;
 /**
  * @internal
  */
-final class GraphqlOrmDataCollector extends DataCollector
+final class GraphqlOrmDataCollector extends DataCollector implements HydrationObserver
 {
     /**
      * Queries of a same shape sent this many times are reported, as the sign of a loop (an N+1 problem).
@@ -143,6 +144,66 @@ final class GraphqlOrmDataCollector extends DataCollector
             ], array_values($metadata->fields)),
             'error' => null,
         ];
+    }
+
+    public function ghostCreated(string $class, int|string $identifier, ?string $relation): void
+    {
+        $ghosts = $this->ghosts();
+        $ghosts[$class . '#' . $identifier] ??= ['class' => $class, 'relation' => $relation, 'loaded_by' => null];
+        $this->data['ghosts'] = $ghosts;
+    }
+
+    public function ghostsLoaded(string $class, array $identifiers): void
+    {
+        $ghosts = $this->ghosts();
+
+        foreach ($identifiers as $identifier) {
+            if (isset($ghosts[$class . '#' . $identifier])) {
+                $ghosts[$class . '#' . $identifier]['loaded_by'] = $this->getQueryCount();
+            }
+        }
+
+        $this->data['ghosts'] = $ghosts;
+    }
+
+    /**
+     * @return array<string, array{class: string, relation: string|null, loaded_by: int|null}> by class#identifier
+     */
+    private function ghosts(): array
+    {
+        /** @var array<string, array{class: string, relation: string|null, loaded_by: int|null}> $ghosts */
+        $ghosts = $this->data['ghosts'] ?? [];
+
+        return $ghosts;
+    }
+
+    /**
+     * The entities left to be loaded on first access (Fetch::Lazy, lazy_loading, references), by relation: how many,
+     * how many were loaded and by which queries (from 1), how many were never read and so cost no query.
+     *
+     * @return list<array{relation: string, class: string, created: int, loaded: int, unread: int, queries: list<int>}>
+     */
+    public function getLazyLoading(): array
+    {
+        $groups = [];
+
+        foreach ($this->ghosts() as $ghost) {
+            $relation = $ghost['relation'] ?? $ghost['class'];
+            $group = $groups[$relation] ?? ['relation' => $relation, 'class' => $ghost['class'], 'created' => 0, 'loaded' => 0, 'unread' => 0, 'queries' => []];
+            ++$group['created'];
+            $loadedBy = $ghost['loaded_by'];
+
+            if ($loadedBy !== null) {
+                ++$group['loaded'];
+                $group['queries'] = array_values(array_unique([...$group['queries'], $loadedBy]));
+            } else {
+                ++$group['unread'];
+            }
+
+            $groups[$relation] = $group;
+        }
+
+        return array_values($groups);
     }
 
     /**

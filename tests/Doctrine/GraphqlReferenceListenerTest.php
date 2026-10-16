@@ -6,6 +6,7 @@ namespace GraphqlOrm\Tests\Doctrine;
 
 use Doctrine\Persistence\Event\LifecycleEventArgs;
 use Doctrine\Persistence\ObjectManager;
+use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\Doctrine\GraphqlReferenceListener;
 use GraphqlOrm\GraphqlManager;
@@ -54,6 +55,20 @@ final class GraphqlReferenceListenerTest extends TestCase
     }
 
     #[Test]
+    public function itNamesTheReferenceAsTheRelationOfItsLazyLoad(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $invoice = new FakeInvoice();
+        $invoice->labelCode = 'bug';
+        $this->listener($collector)->postLoad($this->event($invoice));
+
+        self::assertSame(1, $invoice->label?->position);
+
+        self::assertSame(FakeInvoice::class . '::$label', $collector->getQueries()[0]['lazy_relation'] ?? null);
+        self::assertSame(FakeInvoice::class . '::$label', $collector->getLazyLoading()[0]['relation'] ?? null);
+    }
+
+    #[Test]
     public function itLeavesTheReferenceEmptyWithoutIdentifier(): void
     {
         $invoice = new FakeInvoice();
@@ -75,11 +90,11 @@ final class GraphqlReferenceListenerTest extends TestCase
         self::assertSame('docs', $invoice->labelCode);
     }
 
-    private function listener(): GraphqlReferenceListener
+    private function listener(?GraphqlOrmDataCollector $collector = null): GraphqlReferenceListener
     {
         $metadataFactory = new GraphqlEntityMetadataFactory();
 
-        return new GraphqlReferenceListener(new GraphqlManager($metadataFactory, $this->client, new EntityHydrator($metadataFactory), null, 1, new DataApiBuilderDialect()), $metadataFactory);
+        return new GraphqlReferenceListener(new GraphqlManager($metadataFactory, $this->client, new EntityHydrator($metadataFactory), $collector, 1, new DataApiBuilderDialect()), $metadataFactory);
     }
 
     /**

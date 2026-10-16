@@ -152,6 +152,11 @@
                         Entities <span class="badge">{{ collector.entities|length }}</span>
                     </button>
                 {% endif %}
+                {% if collector.lazyLoading is not empty %}
+                    <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="lazy-loading">
+                        Lazy loading <span class="badge">{{ collector.lazyLoading|reduce((total, group) => total + group.created, 0) }}</span>
+                    </button>
+                {% endif %}
                 {% if collector.identityMapHitCount > 0 %}
                     <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="identity-map">
                         Identity map <span class="badge">{{ collector.identityMapHitCount }}</span>
@@ -337,6 +342,35 @@
                             {% endif %}
                         </div>
                     {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if collector.lazyLoading is not empty %}
+                {% set created = collector.lazyLoading|reduce((total, group) => total + group.created, 0) %}
+                {% set unread = collector.lazyLoading|reduce((total, group) => total + group.unread, 0) %}
+                <div data-graphql-orm-view="lazy-loading" hidden>
+                    <p class="graphql-orm-muted">
+                        {{ created }} {{ created > 1 ? 'entities were' : 'entity was' }} left to be loaded on first access
+                        (<code>Fetch::Lazy</code>, <code>lazy_loading</code>, references from Doctrine entities):
+                        {{ created - unread }} loaded, {{ unread }} never read, which cost no query.
+                    </p>
+                    <table>
+                        <thead>
+                            <tr><th>Relation</th><th>Entity</th><th class="graphql-orm-number">Created</th><th class="graphql-orm-number">Loaded</th><th class="graphql-orm-number">Never read</th><th>Loaded by</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for group in collector.lazyLoading %}
+                                <tr>
+                                    <td><code title="{{ group.relation }}">{{ group.relation|split('\\')|last }}</code></td>
+                                    <td title="{{ group.class }}">{{ group.class|split('\\')|last }}</td>
+                                    <td class="graphql-orm-number">{{ group.created }}</td>
+                                    <td class="graphql-orm-number">{{ group.loaded }}</td>
+                                    <td class="graphql-orm-number">{{ group.unread }}</td>
+                                    <td>{% for number in group.queries %}<a href="#graphql-orm-query-{{ number }}" data-graphql-orm-open="{{ number }}">#{{ number }}</a>{{ loop.last ? '' : ', ' }}{% else %}<span class="graphql-orm-muted">-</span>{% endfor %}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             {% endif %}
 

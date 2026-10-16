@@ -75,11 +75,11 @@ final class EntityHydrator
      * An entity of which only the identifier is set, loaded on first access with the lazy loader of the context: the
      * entity the context already knows, if any.
      */
-    public function reference(GraphqlEntityMetadata $metadata, int|string $identifier, GraphqlExecutionContext $context): object
+    public function reference(GraphqlEntityMetadata $metadata, int|string $identifier, GraphqlExecutionContext $context, ?string $relation = null): object
     {
         $field = $metadata->identifier ?? throw new LogicException(\sprintf('"%s" has no identifier to be referenced: mark its identifier field with #[Identifier].', $metadata->class));
 
-        return $this->hydrateEntity($metadata, [$field->mappedFrom => $identifier], $context, 0, lazy: true);
+        return $this->hydrateEntity($metadata, [$field->mappedFrom => $identifier], $context, 0, lazy: true, relation: $relation);
     }
 
     /**
@@ -145,6 +145,7 @@ final class EntityHydrator
 
         if ($identifier !== null && $uniqueField !== null && $context->lazyLoader !== null && ($lazy || $context->lazyLoading) && $this->isReducedToIdentifier($metadata, $data, $identifier->mappedFrom)) {
             $ghost = $this->lazyGhost($metadata, $identifier, $uniqueField, $context, $relation);
+            $context->observer?->ghostCreated($metadata->class, $uniqueField, $relation);
             $property = $this->property($metadata->class, $identifier->property);
             $property->setRawValueWithoutLazyInitialization($ghost, $this->normalizeValue($data[$identifier->mappedFrom], $property));
 
@@ -353,6 +354,7 @@ final class EntityHydrator
                 }
             }
 
+            $context->observer?->ghostsLoaded($class, array_values(array_filter(array_keys($pending), fn (int|string $key) => isset($loaded[(string) $key]))));
             $this->copyLoaded($loaded[(string) $identifier] ?? throw EntityNotFoundException::forIdentifier($class, $identifier), $ghost, $identifierField, raw: false);
 
             // The other ghosts are completed without their initializer; one missing from the result stays a ghost.

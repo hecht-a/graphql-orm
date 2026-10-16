@@ -351,6 +351,27 @@ final class GraphqlOrmDataCollectorTest extends TestCase
         self::assertSame([FakeTask::class], array_column($collector->getEntities(), 'class'));
     }
 
+    #[Test]
+    public function itSumsUpTheEntitiesLoadedOnFirstAccessByRelation(): void
+    {
+        foreach ([1, 2, 3] as $id) {
+            $this->collector->ghostCreated('App\\Entity\\User', $id, 'App\\Entity\\Task::$assignee');
+        }
+        $this->collector->addQuery(self::traceOf('query { tasks { id } }'));
+        $this->collector->addQuery(self::traceOf('query { users(filter: {}) { id name } }'));
+
+        $this->collector->ghostsLoaded('App\\Entity\\User', [1, 2]);
+
+        self::assertSame([[
+            'relation' => 'App\\Entity\\Task::$assignee',
+            'class' => 'App\\Entity\\User',
+            'created' => 3,
+            'loaded' => 2,
+            'unread' => 1,
+            'queries' => [2],
+        ]], $this->collector->getLazyLoading());
+    }
+
     private static function lazyLoad(string $relation, float $duration, int $line): GraphqlQueryTrace
     {
         $trace = self::traceOf('query { users(id: 3) { id name } }');

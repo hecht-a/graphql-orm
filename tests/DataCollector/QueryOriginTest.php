@@ -87,6 +87,22 @@ final class QueryOriginTest extends TestCase
     }
 
     #[Test]
+    public function itTellsTheProfilerTheEntitiesCreatedAndLoadedOnFirstAccess(): void
+    {
+        $client = new FakeGraphqlClient(
+            ['data' => ['chainAs' => [['id' => 1, 'label' => 'A', 'next' => ['id' => 2]]]]],
+            ['data' => ['chainBs' => [['id' => 2, 'label' => 'B', 'next' => ['id' => 3]]]]],
+        );
+        $chainA = $this->repository($client, ChainA::class, lazyLoading: true)->findAll()[0];
+        self::assertInstanceOf(ChainA::class, $chainA);
+
+        self::assertSame('B', $chainA->next?->label);
+
+        $loading = $this->collector->getLazyLoading();
+        self::assertSame([ChainA::class . '::$next', 1, 1, [2]], [$loading[0]['relation'], $loading[0]['created'], $loading[0]['loaded'], $loading[0]['queries']]);
+    }
+
+    #[Test]
     public function itRecordsWhenTheQueryStarted(): void
     {
         $before = microtime(true);

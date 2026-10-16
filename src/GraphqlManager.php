@@ -139,10 +139,12 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
      * @template T of object
      *
      * @param class-string<T> $class
+     * @param string|null     $relation the property holding the reference, e.g. App\Entity\Invoice::$task, named in
+     *                                  the profiler as the relation of its lazy load
      *
      * @return T
      */
-    public function reference(string $class, int|string $identifier): object
+    public function reference(string $class, int|string $identifier, ?string $relation = null): object
     {
         $known = $this->identityMap?->entities()[$class][$identifier] ?? null;
 
@@ -151,7 +153,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         }
 
         $context = $this->referenceContext();
-        $entity = $this->hydrator->reference($this->metadataFactory->getMetadata($class), $identifier, $context);
+        $entity = $this->hydrator->reference($this->metadataFactory->getMetadata($class), $identifier, $context, $relation);
         $this->identityMap?->merge($context->identityMap, []);
         \assert($entity instanceof $class);
 
@@ -188,6 +190,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         $context = new GraphqlExecutionContext(dialect: $this->dialect);
         $context->lazyLoader = $this->loadLazily(...);
         $context->identityMap = $this->identityMap?->entities() ?? [];
+        $context->observer = $this->collector;
 
         return $this->identityMap !== null ? $this->referenceContext = $context : $context;
     }
@@ -228,6 +231,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
 
         // Always set: a relation mapped with Fetch::Lazy is a lazy ghost even without lazy_loading.
         $context->lazyLoader = $this->loadLazily(...);
+        $context->observer = $this->collector;
         $context->lazyLoading = $this->lazyLoading;
 
         if ($graphql instanceof QueryNode) {
