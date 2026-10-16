@@ -11,6 +11,7 @@ use GraphqlOrm\Command\EntityClassLocator;
 use GraphqlOrm\Command\FindCommand;
 use GraphqlOrm\Command\MakeGraphqlEntityCommand;
 use GraphqlOrm\Command\SchemaValidateCommand;
+use GraphqlOrm\Controller\EntityAutocompleteController;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Doctrine\GraphqlReferenceListener;
 use GraphqlOrm\EventListener\SchemaValidationListener;
@@ -97,7 +98,14 @@ return static function (ContainerConfigurator $config) {
     if (interface_exists(FormTypeInterface::class)) {
         $services->set(GraphqlEntityType::class)
             ->autoconfigure(false)
+            ->arg('$uriSigner', service('uri_signer')->nullOnInvalid())
             ->tag('form.type');
+
+        $services->set(EntityAutocompleteController::class)
+            ->autoconfigure(false)
+            ->arg('$uriSigner', service('uri_signer')->nullOnInvalid())
+            ->tag('controller.service_arguments')
+            ->public();
     }
 
     $services->set(GraphqlClientInterface::class);

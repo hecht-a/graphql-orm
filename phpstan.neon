@@ -5,6 +5,8 @@ parameters:
 		- tests/
 	excludePaths:
 		- src/Resources/stubs/*
+		# Loaded by the routing of the application: symfony/routing is no dependency of the bundle
+		- src/Resources/config/routes.php
 		# Code analysed by the tests of the bundle rules, with deliberate errors
 		- tests/PHPStan/data/*
 

@@ -7,11 +7,9 @@ namespace GraphqlOrm\Form;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\GraphqlManager;
-use GraphqlOrm\Query\GraphqlQueryBuilder;
-use GraphqlOrm\Query\Pagination\PaginatedResult;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\ChoiceList\Loader\CallbackChoiceLoader;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\HttpFoundation\UriSigner;
 use Symfony\Component\OptionsResolver\Options;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
@@ -21,8 +19,15 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
  */
 final class GraphqlEntityType extends AbstractType
 {
+    /** The endpoint answering the search of an autocomplete field, see Resources/config/routes.php. */
+    public const AUTOCOMPLETE_PATH = '/_graphql_orm/autocomplete';
+
+    /**
+     * @param UriSigner|null $uriSigner signs the search of the autocomplete fields, so that the endpoint queries nothing else
+     */
     public function __construct(
         private readonly GraphqlManager $manager,
+        private readonly ?UriSigner $uriSigner = null,
     ) {
     }
 
@@ -33,9 +38,15 @@ final class GraphqlEntityType extends AbstractType
         $resolver->setDefault('query_builder', null);
         $resolver->setAllowedTypes('query_builder', ['null', 'callable']);
 
-        $resolver->setDefault('choice_loader', fn (Options $options) => new CallbackChoiceLoader(
-            fn () => $this->load(self::entityClass($options), $options['query_builder']),
-        ));
+        $resolver->setDefault('choice_loader', fn (Options $options) => new GraphqlEntityChoiceLoader($this->manager, self::entityClass($options), $options['query_builder']));
+
+        // Symfony UX Autocomplete: the field searches the endpoint of the bundle, and loads only the entity submitted.
+        $resolver->setDefault('autocomplete', false);
+        $resolver->setAllowedTypes('autocomplete', 'bool');
+        $resolver->setDefault('search_fields', null);
+        $resolver->setAllowedTypes('search_fields', ['null', 'string[]']);
+        $resolver->setDefault('choice_lazy', fn (Options $options) => $options['autocomplete'] === true);
+        $resolver->setDefault('autocomplete_url', fn (Options $options) => $options['autocomplete'] === true ? $this->searchUrl($options) : null);
         $resolver->setDefault('choice_value', fn (Options $options) => fn (?object $entity) => $this->identifierValue(self::entityClass($options), $entity));
         $resolver->setDefault('choice_label', fn (Options $options) => fn (object $entity) => $entity instanceof \Stringable
             ? (string) $entity
@@ -62,30 +73,29 @@ final class GraphqlEntityType extends AbstractType
     }
 
     /**
-     * @param class-string $class
-     * @param mixed        $queryBuilder the "query_builder" option: null, or a callable receiving the repository
+     * The signed URL of the search: the endpoint only queries the entity and the fields a form asked for.
      *
-     * @return list<object>
-     *
-     * @throws InvalidArgumentException when the "query_builder" option does not return a query builder
+     * @throws LogicException when the fields to search are not given, or the UriSigner of FrameworkBundle is missing
      */
-    private function load(string $class, mixed $queryBuilder): array
+    private function searchUrl(Options $options): string
     {
-        $repository = $this->manager->getRepository($class);
+        $fields = $options['search_fields'];
 
-        if (!\is_callable($queryBuilder)) {
-            return array_values($repository->findAll());
+        if (!\is_array($fields) || $fields === []) {
+            throw new LogicException(\sprintf('An autocomplete "%s" needs the "search_fields" option: the fields whose value contains the search.', self::class));
         }
 
-        $qb = $queryBuilder($repository);
-
-        if (!$qb instanceof GraphqlQueryBuilder) {
-            throw new InvalidArgumentException(\sprintf('The "query_builder" option of "%s" must return a "%s".', self::class, GraphqlQueryBuilder::class));
+        if ($this->uriSigner === null) {
+            throw new LogicException(\sprintf('An autocomplete "%s" needs the UriSigner of FrameworkBundle to sign its search.', self::class));
         }
 
-        $result = $qb->getQuery()->getResult();
+        $parameters = ['class' => self::entityClass($options), 'fields' => implode(',', array_filter($fields, 'is_string'))];
 
-        return array_values($result instanceof PaginatedResult ? $result->items : $result);
+        if (\is_string($options['choice_label'])) {
+            $parameters['label'] = $options['choice_label'];
+        }
+
+        return $this->uriSigner->sign(self::AUTOCOMPLETE_PATH . '?' . http_build_query($parameters));
     }
 
     /**

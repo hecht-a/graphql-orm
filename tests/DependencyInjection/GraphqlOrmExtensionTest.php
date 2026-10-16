@@ -6,6 +6,7 @@ namespace GraphqlOrm\Tests\DependencyInjection;
 
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Command\FindCommand;
+use GraphqlOrm\Controller\EntityAutocompleteController;
 use GraphqlOrm\Command\MakeGraphqlEntityCommand;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\DependencyInjection\GraphqlOrmExtension;
@@ -328,6 +329,17 @@ final class GraphqlOrmExtensionTest extends TestCase
             [['event' => 'postLoad'], ['event' => 'prePersist']],
             $container->getDefinition(GraphqlReferenceListener::class)->getTag('doctrine.event_listener'),
         );
+    }
+
+    #[Test]
+    public function itRegistersTheSearchOfTheAutocompleteFields(): void
+    {
+        $container = $this->createContainer(debug: false);
+
+        $definition = $container->getDefinition(EntityAutocompleteController::class);
+
+        self::assertTrue($definition->isPublic());
+        self::assertTrue($definition->hasTag('controller.service_arguments'));
     }
 
     #[Test]

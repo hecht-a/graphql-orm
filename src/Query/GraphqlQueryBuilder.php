@@ -64,6 +64,18 @@ final class GraphqlQueryBuilder
     }
 
     /**
+     * Adds a condition to those of where(), as Doctrine andWhere().
+     *
+     * @return GraphqlQueryBuilder<T>
+     */
+    public function andWhere(FilterExpressionInterface $expr): self
+    {
+        $this->filter = $this->filter !== null ? $this->expr()->andX($this->filter, $expr) : $expr;
+
+        return $this;
+    }
+
+    /**
      * Keys the result by a field of its entities, as Doctrine indexBy: an identifier, a code...
      *
      * @param string $field GraphQL field name or PHP property
