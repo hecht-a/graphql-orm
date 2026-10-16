@@ -60,6 +60,11 @@ graphql_orm:
 | `dialect`                         | `DefaultDialect`         | GraphQL dialect to use                  |
 | `headers`                         | `[]`                     | HTTP headers sent with every request    |
 | `naming_strategy`                 | `DefaultNamingStrategy`  | Names the fields without `mappedFrom` (see [naming strategy](entity-mapping.md#naming-strategy)) |
+| `result_cache.pool`               | `cache.app`              | Cache pool of the [result cache](caching.md#result-cache); `null` disables it |
+| `second_level_cache.enabled`      | `true`                   | Keep the entities marked `#[Cache]` (see [second-level cache](caching.md#second-level-cache)) |
+| `second_level_cache.pool`         | `cache.app`              | Cache pool of the entities without region |
+| `second_level_cache.default_lifetime` | `3600`               | Seconds an entity is kept, unless its region or `#[Cache]` says otherwise |
+| `second_level_cache.regions`      | `[]`                     | Regions by name, each with a `pool` and a `lifetime` (see [choosing the pools](caching.md#choosing-the-pools)) |
 | `metadata_cache_pool`             | `cache.system`           | Cache pool for entity metadata outside debug mode (see [metadata cache](#metadata-cache)); `null` disables it |
 | `headers_provider`                | `null`                   | Service id computing headers per request (see [dynamic headers](#dynamic-headers)) |
 | `http_client_options.verify_host` | `true`                   | TLS host verification                   |

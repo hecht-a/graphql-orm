@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Result cache: `GraphqlQuery::enableResultCache(lifetime, key)` keeps the response of the query in
+  `graphql_orm.result_cache.pool` (`cache.app` by default, any Symfony cache pool, Redis included) and answers from it,
+  as Doctrine. Each page of a paginated query is kept apart; a response with errors is not kept.
+- Second-level cache: the entities marked `#[Cache(region, lifetime)]` are kept once hydrated in full, and read back by
+  `find()`, the references and the lazy loads, their relations kept by their identifier and loaded on first access.
+  `graphql_orm.second_level_cache` sets the default pool and lifetime, and regions with a pool and a lifetime of their
+  own.
+- `GraphqlCache` (also `GraphqlManager::getCache()`): `evictEntity()`, `evictEntityRegion()` (with any pool),
+  `evictQueryResult()` and `containsEntity()`.
+- Profiler: the queries answered by the result cache are marked and counted, and a "Second-level cache" tab gives, by
+  entity, its region, the hits, the misses and the entities kept.
+
+---
+
 ## [5.4.0] — 2026-10-16
 
 ### Added

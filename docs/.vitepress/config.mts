@@ -52,6 +52,7 @@ export default defineConfig({
                     { text: 'Forms', link: '/forms' },
                     { text: 'Serializer', link: '/serializer' },
                     { text: 'Doctrine', link: '/doctrine' },
+                    { text: 'Caching', link: '/caching' },
                     { text: 'Events', link: '/events' },
                     { text: 'Schema validation', link: '/schema-validation' },
                     { text: 'Console commands', link: '/commands' },
