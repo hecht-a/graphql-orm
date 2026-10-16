@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\DependencyInjection;
 
+use GraphqlOrm\Cache\GraphqlCache;
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Command\FindCommand;
 use GraphqlOrm\Command\MakeGraphqlEntityCommand;
@@ -519,6 +520,45 @@ final class GraphqlOrmExtensionTest extends TestCase
         self::assertInstanceOf(RootArgumentTypeResolver::class, $resolver);
         self::assertSame($container->get('cache.graphql'), (new \ReflectionProperty(RootArgumentTypeResolver::class, 'cache'))->getValue($resolver));
         self::assertSame(600, (new \ReflectionProperty(RootArgumentTypeResolver::class, 'ttl'))->getValue($resolver));
+    }
+
+    #[Test]
+    public function itKeepsTheQueryResultsInTheAppCacheByDefault(): void
+    {
+        $container = $this->createContainer(debug: false);
+
+        $container->compile();
+
+        self::assertSame($container->get('cache.app'), $this->resultPool($container));
+        $manager = $container->get(GraphqlManager::class);
+        self::assertInstanceOf(GraphqlManager::class, $manager);
+        self::assertSame($container->get(GraphqlCache::class), $manager->getCache());
+    }
+
+    #[Test]
+    public function itKeepsTheQueryResultsInTheConfiguredPool(): void
+    {
+        $container = $this->createContainer(debug: false, config: ['result_cache' => ['pool' => 'cache.redis']]);
+        $container->register('cache.redis', ArrayAdapter::class);
+
+        $container->compile();
+
+        self::assertSame($container->get('cache.redis'), $this->resultPool($container));
+    }
+
+    #[Test]
+    public function itCanDisableTheResultCache(): void
+    {
+        $container = $this->createContainer(debug: false, config: ['result_cache' => ['pool' => null]]);
+
+        $container->compile();
+
+        self::assertNull($this->resultPool($container));
+    }
+
+    private function resultPool(ContainerBuilder $container): mixed
+    {
+        return (new \ReflectionProperty(GraphqlCache::class, 'results'))->getValue($container->get(GraphqlCache::class));
     }
 
     private function metadataFactoryCache(ContainerBuilder $container): mixed

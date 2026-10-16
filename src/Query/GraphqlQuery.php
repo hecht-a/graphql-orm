@@ -55,6 +55,37 @@ final readonly class GraphqlQuery
     }
 
     /**
+     * Keeps the response in the result cache (graphql_orm.result_cache.pool) and answers from it while it is kept, as
+     * Doctrine Query::enableResultCache(). The response is hydrated again from the cache: the entities are new instances.
+     *
+     * @param int|null    $lifetime seconds the response is kept, null for the default lifetime of the pool
+     * @param string|null $key      the key to evict it with GraphqlCache::evictQueryResult(); derived from the query and
+     *                              its variables when null
+     *
+     * @return self<T>
+     */
+    public function enableResultCache(?int $lifetime = null, ?string $key = null): self
+    {
+        $options = clone $this->options;
+        $options->resultCache = true;
+        $options->resultCacheLifetime = $lifetime;
+        $options->resultCacheKey = $key;
+
+        return new self($this->graphql, $this->entityClass, $this->manager, $options, $this->unmappedFieldHints);
+    }
+
+    /**
+     * @return self<T>
+     */
+    public function disableResultCache(): self
+    {
+        $options = clone $this->options;
+        $options->resultCache = false;
+
+        return new self($this->graphql, $this->entityClass, $this->manager, $options, $this->unmappedFieldHints);
+    }
+
+    /**
      * @return T[]|PaginatedResult<T>
      */
     public function getResult(): array|PaginatedResult

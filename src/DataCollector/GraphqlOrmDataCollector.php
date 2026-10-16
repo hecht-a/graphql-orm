@@ -67,6 +67,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
             'entity_class' => $trace->entityClass,
             'lazy_relation' => $trace->lazyRelation,
             'index_by' => $trace->indexBy,
+            'result_cache' => $trace->resultCache,
             'collections' => array_map(
                 static fn (string $relation, array $collection) => ['relation' => $relation, ...$collection],
                 array_keys($trace->collections),

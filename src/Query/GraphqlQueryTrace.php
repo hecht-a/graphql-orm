@@ -42,6 +42,8 @@ final class GraphqlQueryTrace
     public ?string $identifierProperty = null;
     /** The relation whose first access sent this lazy load, e.g. App\Entity\Task::$assignee. */
     public ?string $lazyRelation = null;
+    /** "hit" for a response read from the result cache, "miss" for one sent and kept; null without result cache. */
+    public ?string $resultCache = null;
     /** The property indexing the result (indexBy), e.g. "code"; profiler only. */
     public ?string $indexBy = null;
     /** @var array<string, array{type: string, collections: int, items: int}> the collections hydrated, by relation (e.g. App\Entity\User::$tasks) */

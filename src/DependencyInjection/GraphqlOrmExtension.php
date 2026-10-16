@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\DependencyInjection;
 
+use GraphqlOrm\Cache\GraphqlCache;
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Client\GraphqlClientInterface;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
@@ -44,6 +45,7 @@ final class GraphqlOrmExtension extends Extension
          *   dialect: string,
          *   headers: array<string, string>,
          *   metadata_cache_pool: string|null,
+         *   result_cache: array{pool: string|null},
          *   naming_strategy: string,
          *   slow_query_threshold: int|float|null,
          *   identity_map: bool,
@@ -121,6 +123,8 @@ final class GraphqlOrmExtension extends Extension
         if ($config['lazy_loading']) {
             $container->getDefinition(GraphqlManager::class)->setArgument('$lazyLoading', true);
         }
+
+        $container->getDefinition(GraphqlCache::class)->setArgument('$results', $config['result_cache']['pool'] !== null ? new Reference($config['result_cache']['pool']) : null);
 
         if (!$config['redact_query_values']) {
             $container->getDefinition(GraphqlManager::class)->setArgument('$redactor', null);

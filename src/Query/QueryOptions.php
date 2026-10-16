@@ -31,4 +31,13 @@ final class QueryOptions
      * @internal set by GraphqlQueryBuilder::indexBy() and GraphqlEntityRepository::findBy()
      */
     public ?string $indexBy = null;
+
+    /** Whether the response is kept in the result cache and read from it. */
+    public bool $resultCache = false;
+
+    /** Seconds the response is kept, null for the default lifetime of the pool. */
+    public ?int $resultCacheLifetime = null;
+
+    /** The key the response is kept under, to evict it; derived from the query and its variables when null. */
+    public ?string $resultCacheKey = null;
 }

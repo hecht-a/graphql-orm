@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Doctrine\Persistence\Event\LifecycleEventArgs;
+use GraphqlOrm\Cache\GraphqlCache;
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Client\GraphqlClientInterface;
 use GraphqlOrm\Codegen\StubRenderer;
@@ -56,6 +57,8 @@ return static function (ContainerConfigurator $config) {
         ->autowire()
         ->autoconfigure();
 
+    $services->set(GraphqlCache::class);
+
     $services->set(GraphqlManager::class)
         ->arg('$collector', service(GraphqlOrmDataCollector::class)->nullOnInvalid())
         ->arg('$maxDepth', '%graphql_orm.max_depth%')
@@ -63,7 +66,8 @@ return static function (ContainerConfigurator $config) {
         ->arg('$logger', service('monolog.logger.graphql_orm')->nullOnInvalid())
         ->arg('$redactor', service(QueryRedactor::class))
         ->arg('$eventDispatcher', service('event_dispatcher')->nullOnInvalid())
-        ->arg('$repositories', tagged_locator('graphql_orm.repository'));
+        ->arg('$repositories', tagged_locator('graphql_orm.repository'))
+        ->arg('$cache', service(GraphqlCache::class));
 
     $services->alias(GraphqlManagerInterface::class, GraphqlManager::class);
 

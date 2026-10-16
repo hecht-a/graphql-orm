@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm;
 
+use GraphqlOrm\Cache\GraphqlCache;
 use GraphqlOrm\Client\ConcurrentGraphqlClientInterface;
 use GraphqlOrm\Client\GraphqlClientInterface;
 use GraphqlOrm\Controller\EntityAutocompleteController;
@@ -90,6 +91,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         private ?float $slowQueryThreshold = null,
         private ?IdentityMap $identityMap = null,
         private ?ContainerInterface $repositories = null,
+        private GraphqlCache $cache = new GraphqlCache(),
     ) {
     }
 
@@ -273,9 +275,9 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         $this->eventDispatcher?->dispatch(new QueryStartedEvent($this->redact(clone $context->trace)));
 
         try {
-            $response = $this->client instanceof ConcurrentGraphqlClientInterface
-                ? $this->client->send($compiled, $context, $variables)
-                : fn (): array => $this->client->query($compiled, $context, $variables);
+            $response = $options->resultCache
+                ? $this->sendThroughResultCache($compiled, $context, $variables, $options)
+                : $this->sendToClient($compiled, $context, $variables);
         } catch (\Throwable $exception) {
             $this->record($context, $exception);
 
@@ -309,6 +311,48 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
             }
 
             return $entities;
+        };
+    }
+
+    /**
+     * @param array<string, mixed> $variables
+     *
+     * @return \Closure(): array<string, mixed>
+     */
+    private function sendToClient(string $compiled, GraphqlExecutionContext $context, array $variables): \Closure
+    {
+        return $this->client instanceof ConcurrentGraphqlClientInterface
+            ? $this->client->send($compiled, $context, $variables)
+            : fn (): array => $this->client->query($compiled, $context, $variables);
+    }
+
+    /**
+     * Answers from the result cache, or sends the query and keeps its response.
+     *
+     * @param array<string, mixed> $variables
+     *
+     * @return \Closure(): array<string, mixed>
+     */
+    private function sendThroughResultCache(string $compiled, GraphqlExecutionContext $context, array $variables, QueryOptions $options): \Closure
+    {
+        $item = $this->cache->resultItem($compiled, $variables, $options->resultCacheKey, $options->cursor);
+        $cached = $item->isHit() ? $item->get() : null;
+
+        if (\is_array($cached)) {
+            $context->trace->resultCache = 'hit';
+
+            /** @var array<string, mixed> $cached */
+            return static fn (): array => $cached;
+        }
+
+        $context->trace->resultCache = 'miss';
+        $response = $this->sendToClient($compiled, $context, $variables);
+
+        return function () use ($response, $item, $options): array {
+            $result = $response();
+            $this->cache->saveResult($item, $result, $options->resultCacheLifetime);
+
+            return $result;
         };
     }
 
@@ -463,6 +507,14 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
     public function getDialect(): GraphqlQueryDialect
     {
         return $this->dialect;
+    }
+
+    /**
+     * The caches holding data of the API between requests, to evict what changed, as Doctrine EntityManager::getCache().
+     */
+    public function getCache(): GraphqlCache
+    {
+        return $this->cache;
     }
 
     public function getMetadataFactory(): GraphqlEntityMetadataFactory
