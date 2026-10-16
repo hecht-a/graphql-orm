@@ -695,6 +695,25 @@ final class GraphqlOrmExtensionTest extends TestCase
         self::assertSame('crm', $registry->getManager('crm')->getName());
     }
 
+    #[Test]
+    public function itShowsTheConfigurationOfEveryApiInTheProfiler(): void
+    {
+        $container = $this->createContainer(debug: true, config: ['managers' => [
+            'main' => ['endpoint' => 'https://main.example.com/graphql'],
+            'crm' => ['endpoint' => 'https://user:secret@crm.example.com/graphql', 'headers' => ['X-Api' => 'crm'], 'slow_query_threshold' => 100],
+        ]]);
+
+        /** @var array{apis: array<string, array{endpoint: string, headers: list<string>, slow_query_threshold: float|null}>} $configuration */
+        $configuration = $container->getDefinition(GraphqlOrmDataCollector::class)->getArgument('$configuration');
+
+        self::assertSame(['main', 'crm'], array_keys($configuration['apis']));
+        self::assertSame(['https://crm.example.com/graphql', ['X-Api'], 100.0], [
+            $configuration['apis']['crm']['endpoint'],
+            $configuration['apis']['crm']['headers'],
+            $configuration['apis']['crm']['slow_query_threshold'],
+        ]);
+    }
+
     private function cacheProperty(ContainerBuilder $container, string $property): mixed
     {
         return (new \ReflectionProperty(GraphqlCache::class, $property))->getValue($container->get(GraphqlCache::class));

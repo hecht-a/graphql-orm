@@ -90,7 +90,8 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
             'during_serialization' => $trace->duringSerialization,
             'identifier_property' => $trace->identifierProperty,
             'response_preview' => $trace->responsePreview,
-            'slow' => $this->slowQueryThreshold !== null && $trace->duration >= $this->slowQueryThreshold,
+            // The threshold of the manager of the query, each API having its own
+            'slow' => ($trace->slowQueryThreshold ?? $this->slowQueryThreshold) !== null && $trace->duration >= ($trace->slowQueryThreshold ?? $this->slowQueryThreshold),
         ];
         $this->data['queries'] = $queries;
     }

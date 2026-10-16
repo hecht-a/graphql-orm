@@ -291,6 +291,18 @@ final class GraphqlOrmDataCollectorTest extends TestCase
     }
 
     #[Test]
+    public function itReportsAQuerySlowByTheThresholdOfItsManager(): void
+    {
+        $collector = new GraphqlOrmDataCollector(slowQueryThreshold: 500.0);
+        $trace = self::trace(duration: 150.0, errors: null);
+        $trace->slowQueryThreshold = 100.0;
+
+        $collector->addQuery($trace);
+
+        self::assertTrue($collector->getQueries()[0]['slow'] ?? null);
+    }
+
+    #[Test]
     public function itSumsTheHydrationDurations(): void
     {
         foreach ([1.5, 2.25] as $hydration) {

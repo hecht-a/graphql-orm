@@ -138,7 +138,7 @@ final class GraphqlOrmExtension extends Extension
         $container->register(CachePoolDescriber::class, CachePoolDescriber::class)->setArguments([$cachePools]);
         $container->getDefinition(GraphqlOrmDataCollector::class)
             ->setArgument('$slowQueryThreshold', self::slowQueryThreshold($default))
-            ->setArgument('$configuration', $this->profiledConfiguration($default, array_keys($managers->managers)))
+            ->setArgument('$configuration', $this->profiledConfiguration($managers, $environment))
             ->setArgument('$cachePools', new Reference(CachePoolDescriber::class));
     }
 
@@ -349,17 +349,31 @@ final class GraphqlOrmExtension extends Extension
     }
 
     /**
-     * The options shown by the profiler: the names of the headers only, and no credentials in the endpoint.
-     *
-     * @param ManagerOptions $config
-     * @param list<string>   $managers
+     * The options shown by the profiler: those of the default manager, and those of each API when there are several.
      *
      * @return array<string, mixed>
      */
-    private function profiledConfiguration(array $config, array $managers): array
+    private function profiledConfiguration(ManagerConfigs $managers, ?string $environment): array
+    {
+        $configuration = ['managers' => array_keys($managers->managers)] + $this->profiledOptions($managers->managers[$managers->defaultManager], $environment);
+
+        if (\count($managers->managers) > 1) {
+            $configuration['apis'] = array_map(fn (array $config): array => $this->profiledOptions($config, $environment), $managers->managers);
+        }
+
+        return $configuration;
+    }
+
+    /**
+     * The options of a manager shown by the profiler: the names of the headers only, and no credentials in the endpoint.
+     *
+     * @param ManagerOptions $config
+     *
+     * @return array<string, mixed>
+     */
+    private function profiledOptions(array $config, ?string $environment): array
     {
         return [
-            'managers' => $managers,
             'dialect' => $config['dialect'],
             'endpoint' => GraphqlOrmDataCollector::withoutCredentials($config['endpoint']),
             'headers' => array_keys($config['headers']),
@@ -374,7 +388,7 @@ final class GraphqlOrmExtension extends Extension
             'redact_query_values' => $config['redact_query_values'],
             'result_cache' => $config['result_cache'],
             'second_level_cache' => $config['second_level_cache'],
-            'schema_validation' => '%graphql_orm.schema_validation.mode%',
+            'schema_validation' => self::schemaValidationMode($config, $environment),
         ];
     }
 
