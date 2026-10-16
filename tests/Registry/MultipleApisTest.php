@@ -19,6 +19,7 @@ use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use GraphqlOrm\Registry\ManagerRouter;
 use GraphqlOrm\Serializer\GraphqlEntityNormalizer;
 use GraphqlOrm\Tests\Fixtures\Crm\Contact;
+use GraphqlOrm\Tests\Fixtures\Crm\Repository\ContactRepository;
 use GraphqlOrm\Tests\Fixtures\Doctrine\FakeOrder;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
 use GraphqlOrm\ValueResolver\GraphqlEntityValueResolver;
@@ -116,6 +117,15 @@ final class MultipleApisTest extends TestCase
         $tester->execute(['entity' => 'Contact']);
 
         self::assertStringContainsString('Contact A', $tester->getDisplay());
+        $this->assertSentToTheCrm();
+    }
+
+    #[Test]
+    public function itGivesARepositoryOfTheApplicationTheManagerOfTheApiOfItsEntity(): void
+    {
+        $contacts = (new ContactRepository($this->registry))->findAll();
+
+        self::assertSame('Contact A', $contacts[0]->name);
         $this->assertSentToTheCrm();
     }
 

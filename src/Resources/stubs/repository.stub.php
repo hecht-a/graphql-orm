@@ -3,16 +3,16 @@
 namespace {{ namespace }};
 
 use {{ entity_namespace }}\{{ entity_short }};
-use GraphqlOrm\GraphqlManager;
-use GraphqlOrm\Repository\GraphqlEntityRepository;
+use GraphqlOrm\Registry\GraphqlManagerRegistry;
+use GraphqlOrm\Repository\ServiceGraphqlEntityRepository;
 
 /**
- * @extends GraphqlEntityRepository<{{ entity_short }}>
+ * @extends ServiceGraphqlEntityRepository<{{ entity_short }}>
  */
-class {{ repo_class_name }} extends GraphqlEntityRepository
+class {{ repo_class_name }} extends ServiceGraphqlEntityRepository
 {
-    public function __construct(GraphqlManager $graphQLManager)
-{
-    parent::__construct($graphQLManager, {{ entity_short }}::class);
+    public function __construct(GraphqlManagerRegistry $registry)
+    {
+        parent::__construct($registry, {{ entity_short }}::class);
     }
 }

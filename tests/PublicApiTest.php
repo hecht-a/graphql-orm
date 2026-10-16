@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests;
 
+use GraphqlOrm\Cache\CachePoolDescriber;
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Codegen\PropertyDefinition;
 use GraphqlOrm\Codegen\SchemaPropertyMapper;
@@ -14,6 +15,7 @@ use GraphqlOrm\Command\SchemaValidateCommand;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\DependencyInjection\Configuration;
 use GraphqlOrm\DependencyInjection\GraphqlOrmExtension;
+use GraphqlOrm\DependencyInjection\ManagerConfigs;
 use GraphqlOrm\EventListener\SchemaValidationListener;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\GraphqlManager;
@@ -29,6 +31,8 @@ use GraphqlOrm\PHPStan\QueryBuilderFieldNamesRule;
 use GraphqlOrm\PHPStan\RepositoryFieldNamesRule;
 use GraphqlOrm\Query\GraphqlQueryCompiler;
 use GraphqlOrm\Query\GraphqlQueryStringBuilder;
+use GraphqlOrm\Registry\GraphqlManagerRegistry;
+use GraphqlOrm\Registry\ManagerRouter;
 use GraphqlOrm\Schema\GraphqlSchema;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Schema\ScalarTypes;
@@ -53,6 +57,7 @@ final class PublicApiTest extends TestCase
             GraphqlQueryCompiler::class,
             GraphqlOrmDataCollector::class,
             GraphqlExecutionContext::class,
+            GraphqlManagerRegistry::class,
         ] as $class) {
             yield $class => [$class];
         }
@@ -91,6 +96,9 @@ final class PublicApiTest extends TestCase
             EntityClassResolver::class,
             RepositoryFieldNamesRule::class,
             QueryBuilderFieldNamesRule::class,
+            ManagerRouter::class,
+            ManagerConfigs::class,
+            CachePoolDescriber::class,
         ] as $class) {
             yield $class => [$class];
         }

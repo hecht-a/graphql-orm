@@ -53,7 +53,8 @@ final class MakeGraphqlEntityCommandTest extends TestCase
         $tester->execute(['name' => 'Task']);
 
         $repositoryCode = (string) file_get_contents($this->outputDir . '/Repository/TaskRepository.php');
-        self::assertStringContainsString('@extends GraphqlEntityRepository<Task>', $repositoryCode);
+        self::assertStringContainsString('@extends ServiceGraphqlEntityRepository<Task>', $repositoryCode);
+        self::assertStringContainsString('parent::__construct($registry, Task::class);', $repositoryCode);
         self::assertStringNotContainsString('@method', $repositoryCode);
     }
 
