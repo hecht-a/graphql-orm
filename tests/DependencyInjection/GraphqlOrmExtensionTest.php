@@ -13,6 +13,7 @@ use GraphqlOrm\Controller\EntityAutocompleteController;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\DependencyInjection\GraphqlOrmExtension;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
+use GraphqlOrm\Dialect\HasuraDialect;
 use GraphqlOrm\Doctrine\GraphqlReferenceListener;
 use GraphqlOrm\EventListener\SchemaValidationListener;
 use GraphqlOrm\Execution\IdentityMap;
@@ -135,7 +136,7 @@ final class GraphqlOrmExtensionTest extends TestCase
     {
         $container = $this->createContainer(debug: true, config: ['slow_query_threshold' => 500]);
 
-        self::assertSame(500.0, $container->getDefinition(GraphqlManager::class)->getArgument('$slowQueryThreshold'));
+        self::assertSame(500.0, $container->findDefinition(GraphqlManager::class)->getArgument('$slowQueryThreshold'));
         self::assertSame(500.0, $container->getDefinition(GraphqlOrmDataCollector::class)->getArgument('$slowQueryThreshold'));
     }
 
@@ -153,8 +154,8 @@ final class GraphqlOrmExtensionTest extends TestCase
     {
         $container = $this->createContainer(debug: false, config: ['identity_map' => true]);
 
-        self::assertTrue($container->getDefinition(IdentityMap::class)->hasTag('kernel.reset'));
-        self::assertEquals(new Reference(IdentityMap::class), $container->getDefinition(GraphqlManager::class)->getArgument('$identityMap'));
+        self::assertTrue($container->findDefinition(IdentityMap::class)->hasTag('kernel.reset'));
+        self::assertEquals(new Reference('graphql_orm.default.identity_map'), $container->findDefinition(GraphqlManager::class)->getArgument('$identityMap'));
     }
 
     #[Test]
@@ -162,7 +163,7 @@ final class GraphqlOrmExtensionTest extends TestCase
     {
         $container = $this->createContainer(debug: false);
 
-        self::assertTrue($container->hasDefinition(IdentityMap::class));
+        self::assertTrue($container->has(IdentityMap::class));
     }
 
     #[Test]
@@ -178,7 +179,7 @@ final class GraphqlOrmExtensionTest extends TestCase
     {
         $container = $this->createContainer(debug: false);
 
-        self::assertSame(1, $container->getParameterBag()->resolveValue($container->getDefinition(GraphqlManager::class)->getArgument('$maxDepth')));
+        self::assertSame(1, $container->getParameterBag()->resolveValue($container->findDefinition(GraphqlManager::class)->getArgument('$maxDepth')));
     }
 
     #[Test]
@@ -208,7 +209,7 @@ final class GraphqlOrmExtensionTest extends TestCase
     {
         $container = $this->createContainer(debug: false);
 
-        self::assertSame(GraphqlManager::class, (string) $container->getAlias(GraphqlManagerInterface::class));
+        self::assertSame((string) $container->getAlias(GraphqlManager::class), (string) $container->getAlias(GraphqlManagerInterface::class));
     }
 
     #[Test]
@@ -350,7 +351,7 @@ final class GraphqlOrmExtensionTest extends TestCase
     {
         $container = $this->createContainer(debug: true, config: ['variables' => ['cache_pool' => 'cache.app', 'ttl' => 120]]);
 
-        $definition = $container->getDefinition(SchemaValidationListener::class);
+        $definition = $container->findDefinition(SchemaValidationListener::class);
 
         self::assertEquals(new Reference('cache.app'), $definition->getArgument('$cache'));
         self::assertSame(120, $definition->getArgument('$ttl'));
@@ -430,7 +431,7 @@ final class GraphqlOrmExtensionTest extends TestCase
         $container->compile();
 
         self::assertSame($container->get('cache.graphql'), $this->metadataFactoryCache($container));
-        self::assertTrue($container->getDefinition(MetadataCacheWarmer::class)->hasTag('kernel.cache_warmer'));
+        self::assertTrue($container->findDefinition(MetadataCacheWarmer::class)->hasTag('kernel.cache_warmer'));
     }
 
     #[Test]
@@ -576,7 +577,7 @@ final class GraphqlOrmExtensionTest extends TestCase
 
         self::assertSame($container->get('cache.app'), $this->cacheProperty($container, 'entities'));
         self::assertSame(3600, $this->cacheProperty($container, 'defaultLifetime'));
-        self::assertTrue($container->getDefinition(GraphqlCache::class)->hasTag('kernel.reset'));
+        self::assertTrue($container->findDefinition(GraphqlCache::class)->hasTag('kernel.reset'));
     }
 
     #[Test]
@@ -630,6 +631,51 @@ final class GraphqlOrmExtensionTest extends TestCase
         ], $describer->describe());
     }
 
+    #[Test]
+    public function itRegistersAManagerPerApi(): void
+    {
+        $container = $this->createContainer(debug: false, config: ['managers' => [
+            'main' => ['endpoint' => 'https://main.example.com/graphql'],
+            'crm' => ['endpoint' => 'https://crm.example.com/graphql', 'dialect' => HasuraDialect::class, 'max_depth' => 3],
+        ]]);
+
+        $container->compile();
+
+        self::assertInstanceOf(GraphqlManager::class, $container->get('graphql_orm.crm.manager'));
+        self::assertNotSame($container->get('graphql_orm.main.manager'), $container->get('graphql_orm.crm.manager'));
+        self::assertSame('https://crm.example.com/graphql', (new \ReflectionProperty(GraphqlClient::class, 'endpoint'))->getValue($container->get('graphql_orm.crm.client')));
+        self::assertInstanceOf(HasuraDialect::class, $container->get('graphql_orm.crm.dialect'));
+        self::assertSame(3, (new \ReflectionProperty(GraphqlManager::class, 'maxDepth'))->getValue($container->get('graphql_orm.crm.manager')));
+        self::assertSame($container->get('graphql_orm.main.manager'), $container->get(GraphqlManager::class));
+    }
+
+    #[Test]
+    public function itAutowiresTheManagerNamedByTheDefaultManagerOption(): void
+    {
+        $container = $this->createContainer(debug: false, config: ['default_manager' => 'crm', 'managers' => [
+            'main' => ['endpoint' => 'https://main.example.com/graphql'],
+            'crm' => ['endpoint' => 'https://crm.example.com/graphql'],
+        ]]);
+
+        $container->compile();
+
+        self::assertSame($container->get('graphql_orm.crm.manager'), $container->get(GraphqlManagerInterface::class));
+        self::assertSame($container->get('graphql_orm.crm.cache'), $container->get(GraphqlCache::class));
+    }
+
+    #[Test]
+    public function itAutowiresAManagerByTheNameOfItsArgument(): void
+    {
+        $container = $this->createContainer(debug: false, config: ['managers' => [
+            'main' => ['endpoint' => 'https://main.example.com/graphql'],
+            'crm' => ['endpoint' => 'https://crm.example.com/graphql'],
+        ]]);
+
+        self::assertSame('graphql_orm.crm.manager', (string) $container->getAlias(GraphqlManagerInterface::class . ' $crmManager'));
+        self::assertSame('graphql_orm.main.manager', (string) $container->getAlias(GraphqlManager::class . ' $mainManager'));
+        self::assertSame('graphql_orm.crm.cache', (string) $container->getAlias(GraphqlCache::class . ' $crmCache'));
+    }
+
     private function cacheProperty(ContainerBuilder $container, string $property): mixed
     {
         return (new \ReflectionProperty(GraphqlCache::class, $property))->getValue($container->get(GraphqlCache::class));
@@ -680,6 +726,11 @@ final class GraphqlOrmExtensionTest extends TestCase
             {
                 foreach ($container->getDefinitions() as $definition) {
                     $definition->setPublic(true);
+                }
+
+                // The services of the default manager are aliased by their class
+                foreach ($container->getAliases() as $alias) {
+                    $alias->setPublic(true);
                 }
             }
         }, PassConfig::TYPE_BEFORE_OPTIMIZATION);
