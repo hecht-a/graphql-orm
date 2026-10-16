@@ -35,7 +35,8 @@ When Doctrine loads an `Invoice`, the bundle sets `$client` with a reference to 
 [`getReference()`](#references)): no query is sent until a property other than the identifier is read, and the
 clients of the invoices read in a same page are loaded together, with the shared identity map (the default) and a
 dialect loading lazy relations in batches. An identifier the API no longer knows throws an `EntityNotFoundException` on
-first access.
+first access. The profiler names the property (`Invoice::$client`) as the relation of the lazy load, in its "Lazy
+loading" tab and in its N+1 detection.
 
 Before the first persist of an entity, the identifier column is filled from the reference set. Doctrine sees no change
 of a property it does not map: to change the reference of a stored entity, change its identifier column too, as

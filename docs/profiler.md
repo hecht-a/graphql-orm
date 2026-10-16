@@ -17,6 +17,9 @@ For each request, the panel shows:
 - **The entities**: those of the mapping directory and those read by the queries of the request (first), as the bundle
   maps them: root field, identifier, repository, and for each property its GraphQL field, the target of a relation
   (`[]` for a collection) and its fetch mode. An entity whose mapping fails shows the error.
+- **The lazy loading**: the entities left to be loaded on first access (`Fetch::Lazy`, `lazy_loading`, the references
+  of Doctrine entities), by relation: how many, how many were loaded and by which queries, how many were never read and
+  so cost no query.
 - **The identity map**: the entities that `find()` served from the shared identity map, known in full from an earlier
   query, each one a query not sent (see [shared identity map](configuration.md#shared-identity-map)).
 - **The configuration** of the bundle (dialect, endpoint, options; the names of the headers only, never their values
