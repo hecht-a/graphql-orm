@@ -95,7 +95,7 @@ final class Configuration implements ConfigurationInterface
             ->addDefaultsIfNotSet()
             ->info('Keeps the entities marked #[Cache] between requests once hydrated in full: find(), the references and the lazy loads read them from there.')
             ->children()
-            ->booleanNode('enabled')->defaultTrue()->end()
+            ->booleanNode('enabled')->defaultFalse()->info('Disabled by default, as in Doctrine: #[Cache] is ignored until it is enabled.')->end()
             ->scalarNode('pool')
             ->defaultValue('cache.app')
             ->cannotBeEmpty()

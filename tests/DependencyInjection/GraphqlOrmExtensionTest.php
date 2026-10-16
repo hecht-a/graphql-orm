@@ -557,9 +557,19 @@ final class GraphqlOrmExtensionTest extends TestCase
     }
 
     #[Test]
-    public function itKeepsTheEntitiesInTheAppCacheByDefault(): void
+    public function itDoesNotKeepTheEntitiesByDefault(): void
     {
         $container = $this->createContainer(debug: false);
+
+        $container->compile();
+
+        self::assertNull($this->cacheProperty($container, 'entities'));
+    }
+
+    #[Test]
+    public function itKeepsTheEntitiesInTheAppCacheOnceEnabled(): void
+    {
+        $container = $this->createContainer(debug: false, config: ['second_level_cache' => ['enabled' => true]]);
 
         $container->compile();
 
@@ -572,6 +582,7 @@ final class GraphqlOrmExtensionTest extends TestCase
     public function itKeepsTheEntitiesInTheRegionsConfigured(): void
     {
         $container = $this->createContainer(debug: false, config: ['second_level_cache' => [
+            'enabled' => true,
             'pool' => 'cache.apcu',
             'default_lifetime' => 600,
             'regions' => ['reference_data' => ['pool' => 'cache.redis', 'lifetime' => 86400], 'short' => ['lifetime' => 60]],
