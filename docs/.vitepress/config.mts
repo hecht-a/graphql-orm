@@ -1,5 +1,13 @@
 import { defineConfig } from 'vitepress'
 
+// The documentation of each maintained version, built by .github/workflows/docs.yml of main from its branch: main at the
+// root, 4.x under /4.x/. The links are absolute, the versions being separate builds.
+const SITE = 'https://hecht-a.github.io/graphql-orm'
+const VERSIONS = [
+    { text: '5.x (current)', link: `${SITE}/` },
+    { text: '4.x', link: `${SITE}/4.x/` },
+]
+
 // Documentation site of the bundle, built from the Markdown pages of docs/ and published on GitHub Pages.
 export default defineConfig({
     title: 'GraphQL ORM',
@@ -17,6 +25,7 @@ export default defineConfig({
         nav: [
             { text: 'Guide', link: '/configuration' },
             { text: 'Changelog', link: '/changelog' },
+            { text: '4.x', items: VERSIONS },
         ],
         sidebar: [
             {
