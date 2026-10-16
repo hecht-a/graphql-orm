@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Integration;
 
+use GraphqlOrm\Cache\GraphqlCache;
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
@@ -59,6 +60,7 @@ abstract class IntegrationTestCase extends TestCase
         ?GraphqlOrmDataCollector $collector = null,
         NamingStrategy $namingStrategy = new DefaultNamingStrategy(),
         ?IdentityMap $identityMap = null,
+        GraphqlCache $cache = new GraphqlCache(),
     ): GraphqlEntityRepository {
         $metadataFactory = new GraphqlEntityMetadataFactory(namingStrategy: $namingStrategy);
         $manager = new GraphqlManager(
@@ -71,6 +73,7 @@ abstract class IntegrationTestCase extends TestCase
             argumentTypeResolver: $argumentTypeResolver,
             lazyLoading: $lazyLoading,
             identityMap: $identityMap,
+            cache: $cache,
         );
 
         return new GraphqlEntityRepository($manager, $entityClass);

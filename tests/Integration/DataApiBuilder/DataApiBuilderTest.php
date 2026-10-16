@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Integration\DataApiBuilder;
 
+use GraphqlOrm\Cache\GraphqlCache;
 use GraphqlOrm\Codegen\SchemaPropertyMapper;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
@@ -23,6 +24,7 @@ use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Schema\SchemaIntrospector;
 use GraphqlOrm\Schema\SchemaValidator;
 use GraphqlOrm\Tests\Integration\Entity\BrokenTask;
+use GraphqlOrm\Tests\Integration\Entity\CachedTask;
 use GraphqlOrm\Tests\Integration\Entity\Label;
 use GraphqlOrm\Tests\Integration\Entity\LazyTask;
 use GraphqlOrm\Tests\Integration\Entity\SnakeCaseTask;
@@ -45,6 +47,40 @@ final class DataApiBuilderTest extends IntegrationTestCase
     protected function dialect(): GraphqlQueryDialect
     {
         return new DataApiBuilderDialect(new CountableFieldResolver($this->client, new ArrayAdapter(), 3600));
+    }
+
+    #[Test]
+    public function itAnswersAPageFromTheResultCache(): void
+    {
+        $cache = new GraphqlCache(new ArrayAdapter());
+        $query = fn (?GraphqlOrmDataCollector $collector = null) => $this->repository(Task::class, collector: $collector, cache: $cache)
+            ->createQueryBuilder()->paginate()->limit(2)->getQuery()->enableResultCache(lifetime: 60);
+        $first = $query()->getResult();
+        $collector = new GraphqlOrmDataCollector();
+
+        $second = $query($collector)->getResult();
+
+        self::assertInstanceOf(PaginatedResult::class, $second);
+        self::assertInstanceOf(PaginatedResult::class, $first);
+        self::assertSame(self::ids($first->items), self::ids($second->items));
+        self::assertSame(['hit'], array_column($collector->getQueries(), 'result_cache'));
+    }
+
+    #[Test]
+    public function itFindsAnEntityOfTheSecondLevelCacheAndLoadsItsRelationOnFirstAccess(): void
+    {
+        $cache = new GraphqlCache(entities: new ArrayAdapter(), defaultLifetime: 60);
+        $this->repository(CachedTask::class, cache: $cache)->findAll();
+        $collector = new GraphqlOrmDataCollector();
+
+        $task = $this->repository(CachedTask::class, collector: $collector, cache: $cache)->find(1);
+
+        self::assertInstanceOf(CachedTask::class, $task);
+        self::assertSame('Write the docs', $task->title);
+        self::assertEquals(new \DateTimeImmutable('2026-01-15T10:00:00Z'), $task->dueDate);
+        self::assertSame(0, $collector->getQueryCount());
+        self::assertSame('User A', $task->user?->name);
+        self::assertSame(1, $collector->getQueryCount());
     }
 
     #[Test]
