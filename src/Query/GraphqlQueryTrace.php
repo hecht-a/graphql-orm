@@ -42,6 +42,10 @@ final class GraphqlQueryTrace
     public ?string $identifierProperty = null;
     /** The relation whose first access sent this lazy load, e.g. App\Entity\Task::$assignee. */
     public ?string $lazyRelation = null;
+    /** The property indexing the result (indexBy), e.g. "code"; profiler only. */
+    public ?string $indexBy = null;
+    /** @var array<string, array{type: string, collections: int, items: int}> the collections hydrated, by relation (e.g. App\Entity\User::$tasks) */
+    public array $collections = [];
     /** A lazy load sent while the serializer was writing an entity: an N+1 hidden in a response; profiler only. */
     public bool $duringSerialization = false;
     /** The beginning of the response, its values masked unless redact_query_values is false; profiler only. */

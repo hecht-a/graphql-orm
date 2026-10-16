@@ -877,10 +877,27 @@
                     <tr><th>Entities</th><td>{{ query.hydrated_entities }}</td></tr>
                     <tr><th>Relations</th><td>{{ query.hydrated_relations }}</td></tr>
                     <tr><th>Collections</th><td>{{ query.hydrated_collections }}</td></tr>
-                    <tr><th>Root result count</th><td>{{ query.hydrated_count }}</td></tr>
+                    <tr><th>Root result count</th><td>{{ query.hydrated_count }}{% if query.index_by ?? null %}, indexed by <code>{{ query.index_by }}</code>{% endif %}</td></tr>
                     <tr><th>Depth used</th><td>{{ query.depth_used }}</td></tr>
                 </tbody>
             </table>
+            {% if query.collections ?? [] is not empty %}
+                <table>
+                    <thead>
+                        <tr><th>Collection</th><th>Type</th><th class="graphql-orm-number">Hydrated</th><th class="graphql-orm-number">Items</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for collection in query.collections %}
+                            <tr>
+                                <td><code title="{{ collection.relation }}">{{ collection.relation|split('\\')|last }}</code></td>
+                                <td title="{{ collection.type }}">{{ collection.type|split('\\')|last }}</td>
+                                <td class="graphql-orm-number">{{ collection.collections }}</td>
+                                <td class="graphql-orm-number">{{ collection.items }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
         </div>
 
         <div class="graphql-orm-actions">

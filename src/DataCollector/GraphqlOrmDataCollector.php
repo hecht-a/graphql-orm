@@ -68,6 +68,12 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
             'origin' => $trace->origin,
             'entity_class' => $trace->entityClass,
             'lazy_relation' => $trace->lazyRelation,
+            'index_by' => $trace->indexBy,
+            'collections' => array_map(
+                static fn (string $relation, array $collection) => ['relation' => $relation, ...$collection],
+                array_keys($trace->collections),
+                array_values($trace->collections),
+            ),
             'during_serialization' => $trace->duringSerialization,
             'identifier_property' => $trace->identifierProperty,
             'response_preview' => $trace->responsePreview,

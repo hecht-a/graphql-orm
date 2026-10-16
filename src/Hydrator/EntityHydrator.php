@@ -236,10 +236,25 @@ final class EntityHydrator
                 ? new ArrayCollection(array_values($value))
                 : $this->normalizeValue($value, $property);
 
+            if ($field->isCollection && is_countable($value)) {
+                self::countCollection($context, $metadata->class . '::$' . $field->property, $value);
+            }
+
             $this->isUninitializedGhost($entity)
                 ? $property->setRawValueWithoutLazyInitialization($entity, $value)
                 : $property->setValue($entity, $value);
         }
+    }
+
+    /**
+     * @param \Countable|array<mixed> $collection
+     */
+    private static function countCollection(GraphqlExecutionContext $context, string $relation, \Countable|array $collection): void
+    {
+        $counted = $context->trace->collections[$relation] ?? ['type' => get_debug_type($collection), 'collections' => 0, 'items' => 0];
+        ++$counted['collections'];
+        $counted['items'] += \count($collection);
+        $context->trace->collections[$relation] = $counted;
     }
 
     /**

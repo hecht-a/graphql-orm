@@ -429,6 +429,22 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itDetailsTheCollectionsAndTheIndexOfAQuery(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { users { id tasks { id } } }';
+        $trace->indexBy = 'id';
+        $trace->collections = ['App\\Entity\\User::$tasks' => ['type' => 'Doctrine\\Common\\Collections\\ArrayCollection', 'collections' => 3, 'items' => 12]];
+        $collector->addQuery($trace);
+
+        $text = self::text($this->render($collector));
+
+        self::assertStringContainsString('indexed by id', $text);
+        self::assertStringContainsString('User::$tasks ArrayCollection 3 12', $text);
+    }
+
+    #[Test]
     public function itWarnsAboutRepeatedQueries(): void
     {
         $collector = $this->collector([

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\DataCollector;
 
+use Doctrine\Common\Collections\ArrayCollection;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\DefaultDialect;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
@@ -18,6 +19,7 @@ use GraphqlOrm\Tests\Fixtures\Depth\ChainA;
 use GraphqlOrm\Tests\Fixtures\Depth\ChainB;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeLabel;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
+use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeUserWithTaskCollection;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -125,6 +127,34 @@ final class QueryOriginTest extends TestCase
             'exceptions' => 1,
             'missing' => ['position'],
         ]], $this->collector->getPartialEntities());
+    }
+
+    #[Test]
+    public function itRecordsTheFieldIndexingTheResult(): void
+    {
+        $this->repository(new FakeGraphqlClient(['data' => ['labels' => [['code' => 'bug', 'position' => 1]]]]), FakeLabel::class)
+            ->createQueryBuilder()
+            ->indexBy('code')
+            ->getQuery()
+            ->getResult();
+
+        self::assertSame('code', $this->collector->getQueries()[0]['index_by'] ?? null);
+    }
+
+    #[Test]
+    public function itRecordsTheCollectionsHydratedByRelation(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['users' => [
+            ['id' => 1, 'tasks' => [['id' => 7, 'title' => 'A'], ['id' => 8, 'title' => 'B']]],
+            ['id' => 2, 'tasks' => []],
+        ]]]);
+
+        $this->repository($client, FakeUserWithTaskCollection::class)->findAll();
+
+        self::assertSame(
+            [['relation' => FakeUserWithTaskCollection::class . '::$tasks', 'type' => ArrayCollection::class, 'collections' => 2, 'items' => 2]],
+            $this->collector->getQueries()[0]['collections'] ?? null,
+        );
     }
 
     #[Test]

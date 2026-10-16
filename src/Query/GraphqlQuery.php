@@ -242,6 +242,7 @@ final readonly class GraphqlQuery
             );
 
             if ($this->options->indexBy !== null) {
+                $context->trace->indexBy = $this->options->indexBy;
                 $items = self::indexed($items, $this->options->indexBy);
             }
 
