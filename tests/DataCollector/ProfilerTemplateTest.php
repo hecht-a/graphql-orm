@@ -458,6 +458,35 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itSumsUpTheSecondLevelCacheInATab(): void
+    {
+        $collector = $this->collector(['query { tasks { id } }']);
+        $collector->secondLevelCacheLookup('App\\Entity\\Label', 'reference_data', hits: 3, misses: 1);
+        $collector->secondLevelCachePut('App\\Entity\\Label', 'reference_data');
+
+        $html = $this->render($collector);
+        $text = self::text($html);
+
+        self::assertStringContainsString('data-graphql-orm-tab="second-level-cache"', $html);
+        self::assertStringContainsString('Label reference_data 3 1 1', $text);
+    }
+
+    #[Test]
+    public function itMarksTheQueriesAnsweredByTheResultCache(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { tasks { id } }';
+        $trace->resultCache = 'hit';
+        $collector->addQuery($trace);
+
+        $text = self::text($this->render($collector));
+
+        self::assertStringContainsString('result cache', $text);
+        self::assertStringContainsString('1 Served by the result cache', $text);
+    }
+
+    #[Test]
     public function itWarnsAboutRepeatedQueries(): void
     {
         $collector = $this->collector([

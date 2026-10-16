@@ -182,6 +182,8 @@ final class GraphqlOrmExtension extends Extension
                     'naming_strategy' => $config['naming_strategy'],
                     'slow_query_threshold' => $slowQueryThreshold,
                     'redact_query_values' => $config['redact_query_values'],
+                    'result_cache' => $config['result_cache'],
+                    'second_level_cache' => $config['second_level_cache'],
                     'schema_validation' => '%graphql_orm.schema_validation.mode%',
                 ]);
         }

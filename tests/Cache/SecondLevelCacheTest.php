@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GraphqlOrm\Tests\Cache;
 
 use GraphqlOrm\Cache\GraphqlCache;
+use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\DefaultDialect;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\GraphqlManager;
@@ -193,6 +194,19 @@ final class SecondLevelCacheTest extends TestCase
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('"unknown"');
         $this->repository(new FakeGraphqlClient(['data' => ['labels' => [['code' => 'bug']]]]), CachedInUnknownRegion::class)->findAll();
+    }
+
+    #[Test]
+    public function itTellsTheProfilerTheHitsTheMissesAndTheEntitiesKept(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $this->cache = new GraphqlCache(entities: $this->pool, defaultLifetime: 3600, regions: ['reference_data' => ['pool' => $this->referenceData]], collector: $collector);
+        $this->repository(new FakeGraphqlClient(['data' => ['tasks' => []]]), CachedTask::class)->find(1);
+        $this->keepTask();
+
+        $this->repository(new FakeGraphqlClient(), CachedTask::class)->find(1);
+
+        self::assertSame([['class' => CachedTask::class, 'region' => 'reference_data', 'hits' => 1, 'misses' => 1, 'puts' => 1]], $collector->getSecondLevelCache());
     }
 
     private function keepTask(): void

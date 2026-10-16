@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Cache;
 
+use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\Mapping\Cache;
 use Psr\Cache\CacheItemInterface;
@@ -43,6 +44,7 @@ final class GraphqlCache implements ResetInterface
         private readonly ?CacheItemPoolInterface $entities = null,
         private readonly ?int $defaultLifetime = null,
         private readonly array $regions = [],
+        private readonly ?GraphqlOrmDataCollector $collector = null,
     ) {
     }
 
@@ -201,11 +203,13 @@ final class GraphqlCache implements ResetInterface
             $row = $item instanceof CacheItemInterface && $item->isHit() ? $item->get() : null;
 
             if (\is_array($row) && \is_string($key) && isset($keys[$key])) {
-                /* @var array<string, mixed> $row */
                 $rows[$keys[$key]] = $row;
             }
         }
 
+        $this->collector?->secondLevelCacheLookup($class, $this->attribute($class)?->region, \count($rows), \count($identifiers) - \count($rows));
+
+        /** @var array<int|string, array<string, mixed>> $rows the rows kept by the bundle, keyed by GraphQL field */
         return $rows;
     }
 
@@ -227,6 +231,7 @@ final class GraphqlCache implements ResetInterface
 
         $item = $region[0]->getItem($this->entityKey($class, $identifier, $region[0]));
         $region[0]->save($item->set($row)->expiresAfter($region[1]));
+        $this->collector?->secondLevelCachePut($class, $this->attribute($class)?->region);
     }
 
     /**

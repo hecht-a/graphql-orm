@@ -112,6 +112,12 @@
                     <span class="value">{{ collector.hydratedEntityCount }}</span>
                     <span class="label">Entities hydrated</span>
                 </div>
+                {% if collector.resultCacheHitCount > 0 %}
+                    <div class="metric">
+                        <span class="value">{{ collector.resultCacheHitCount }}</span>
+                        <span class="label">Served by the result cache</span>
+                    </div>
+                {% endif %}
                 {% if collector.identityMapHitCount > 0 %}
                     <div class="metric">
                         <span class="value">{{ collector.identityMapHitCount }}</span>
@@ -176,6 +182,11 @@
                     <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="serializer">
                         Serializer
                         {% if serialization.lazy_loads is not empty %}<span class="badge status-warning">{{ serialization.lazy_loads|length }}</span>{% endif %}
+                    </button>
+                {% endif %}
+                {% if collector.secondLevelCache is not empty %}
+                    <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="second-level-cache">
+                        Second-level cache <span class="badge">{{ collector.secondLevelCache|reduce((total, entry) => total + entry.hits, 0) }}</span>
                     </button>
                 {% endif %}
                 {% if collector.autocompleteSearches is not empty %}
@@ -485,6 +496,31 @@
                     {% else %}
                         <p class="graphql-orm-muted">The serializer sent no query: every relation it wrote was loaded or written as its identifier.</p>
                     {% endif %}
+                </div>
+            {% endif %}
+
+            {% if collector.secondLevelCache is not empty %}
+                <div data-graphql-orm-view="second-level-cache" hidden>
+                    <p class="graphql-orm-muted">
+                        The entities marked <code>#[Cache]</code>: read from the second-level cache by <code>find()</code>, the
+                        references and the lazy loads (hits) or not found there (misses), and kept once hydrated in full.
+                    </p>
+                    <table>
+                        <thead>
+                            <tr><th>Entity</th><th>Region</th><th class="graphql-orm-number">Hits</th><th class="graphql-orm-number">Misses</th><th class="graphql-orm-number">Kept</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in collector.secondLevelCache %}
+                                <tr>
+                                    <td title="{{ entry.class }}">{{ entry.class|split('\\')|last }}</td>
+                                    <td>{% if entry.region %}<code>{{ entry.region }}</code>{% else %}<span class="graphql-orm-muted">default</span>{% endif %}</td>
+                                    <td class="graphql-orm-number">{{ entry.hits }}</td>
+                                    <td class="graphql-orm-number">{{ entry.misses }}</td>
+                                    <td class="graphql-orm-number">{{ entry.puts }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             {% endif %}
 
@@ -842,6 +878,7 @@
 {% macro renderOrigin(query) %}
     {% if query.origin ?? null %}
         <span class="graphql-orm-origin graphql-orm-origin-{{ _self.originKind(query.origin)|trim }}">{{ query.origin }}</span>
+        {% if (query.result_cache ?? null) == 'hit' %}<span class="graphql-orm-origin graphql-orm-origin-count" title="Answered by the result cache, without being sent">result cache</span>{% endif %}
         {% if query.during_serialization ?? false %}<span class="graphql-orm-origin graphql-orm-origin-lazy" title="Sent while the serializer was writing an entity">serializer</span>{% endif %}
     {% else %}
         <span class="graphql-orm-muted">-</span>

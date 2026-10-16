@@ -346,6 +346,55 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     }
 
     /**
+     * Records a lookup of entities in the second-level cache.
+     *
+     * @param string|null $region null for the default region
+     */
+    public function secondLevelCacheLookup(string $class, ?string $region, int $hits, int $misses): void
+    {
+        $this->countSecondLevelCache($class, $region, ['hits' => $hits, 'misses' => $misses]);
+    }
+
+    /**
+     * Records an entity kept in the second-level cache.
+     */
+    public function secondLevelCachePut(string $class, ?string $region): void
+    {
+        $this->countSecondLevelCache($class, $region, ['puts' => 1]);
+    }
+
+    /**
+     * The second-level cache during the request, by entity: its region, the entities read from it, those not found
+     * there, and those kept.
+     *
+     * @return list<array{class: string, region: string|null, hits: int, misses: int, puts: int}>
+     */
+    public function getSecondLevelCache(): array
+    {
+        /** @var array<string, array{class: string, region: string|null, hits: int, misses: int, puts: int}> $classes */
+        $classes = $this->data['second_level_cache'] ?? [];
+
+        return array_values($classes);
+    }
+
+    /**
+     * @param array{hits?: int, misses?: int, puts?: int} $counts
+     */
+    private function countSecondLevelCache(string $class, ?string $region, array $counts): void
+    {
+        /** @var array<string, array{class: string, region: string|null, hits: int, misses: int, puts: int}> $classes */
+        $classes = $this->data['second_level_cache'] ?? [];
+        $entry = $classes[$class] ?? ['class' => $class, 'region' => $region, 'hits' => 0, 'misses' => 0, 'puts' => 0];
+
+        foreach ($counts as $name => $count) {
+            $entry[$name] += $count;
+        }
+
+        $classes[$class] = $entry;
+        $this->data['second_level_cache'] = $classes;
+    }
+
+    /**
      * Records a lookup in a cache of introspection results: served by the cache, or introspected.
      *
      * @param float $duration in milliseconds, the introspection included
@@ -600,6 +649,14 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     /**
      * @return float the milliseconds spent hydrating the responses, apart from the network
      */
+    /**
+     * The queries answered by the result cache, without being sent.
+     */
+    public function getResultCacheHitCount(): int
+    {
+        return \count(array_filter($this->getQueries(), static fn (array $query) => ($query['result_cache'] ?? null) === 'hit'));
+    }
+
     public function getHydrationDuration(): float
     {
         return array_sum(array_map(fn (array $query): float => \is_float($query['hydration_duration'] ?? null) ? $query['hydration_duration'] : 0.0, $this->getQueries()));
