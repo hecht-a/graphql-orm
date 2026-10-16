@@ -305,6 +305,26 @@
                     </table>
                 {% endif %}
 
+                {% if collector.introspectionCaches is not empty %}
+                    {% set cacheLabels = {argument_types: 'Argument types (variables)', countable_fields: 'Countable fields (count())', schema_validation: 'Schema validation'} %}
+                    <h3>Introspection caches</h3>
+                    <table>
+                        <thead>
+                            <tr><th>Cache</th><th class="graphql-orm-number">Lookups</th><th>Outcome</th><th class="graphql-orm-number">Time</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for cache in collector.introspectionCaches %}
+                                <tr>
+                                    <td>{{ cacheLabels[cache.name] ?? cache.name }}</td>
+                                    <td class="graphql-orm-number">{{ cache.lookups }}</td>
+                                    <td>{% if cache.introspected > 0 %}<span class="graphql-orm-warning">introspected</span>{% else %}served by the cache{% endif %}</td>
+                                    <td class="graphql-orm-number">{{ cache.duration|number_format(1) }} ms</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+
                 <h3>Schema validation</h3>
                 {% set validation = collector.schemaValidation %}
                 {% if validation is null %}

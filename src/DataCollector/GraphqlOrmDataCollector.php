@@ -310,6 +310,43 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     }
 
     /**
+     * Records a lookup in a cache of introspection results: served by the cache, or introspected.
+     *
+     * @param float $duration in milliseconds, the introspection included
+     */
+    public function introspectionCacheLookup(string $name, bool $introspected, float $duration): void
+    {
+        $caches = $this->getIntrospectionCaches();
+        $index = array_search($name, array_column($caches, 'name'), true);
+        $cache = $index !== false ? $caches[$index] : ['name' => $name, 'lookups' => 0, 'introspected' => 0, 'duration' => 0.0];
+        ++$cache['lookups'];
+        $cache['introspected'] += $introspected ? 1 : 0;
+        $cache['duration'] += $duration;
+
+        if ($index !== false) {
+            $caches[$index] = $cache;
+        } else {
+            $caches[] = $cache;
+        }
+
+        $this->data['introspection_caches'] = $caches;
+    }
+
+    /**
+     * The caches of introspection results looked up during the request (argument_types, countable_fields,
+     * schema_validation): how many lookups, how many introspected the schema, and the time spent.
+     *
+     * @return list<array{name: string, lookups: int, introspected: int, duration: float}>
+     */
+    public function getIntrospectionCaches(): array
+    {
+        /** @var list<array{name: string, lookups: int, introspected: int, duration: float}> $caches */
+        $caches = $this->data['introspection_caches'] ?? [];
+
+        return $caches;
+    }
+
+    /**
      * @return array{mode: string, violations: list<string>|null, failure: string|null}|null
      */
     public function getSchemaValidation(): ?array

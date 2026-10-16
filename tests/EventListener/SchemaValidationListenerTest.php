@@ -70,6 +70,10 @@ final class SchemaValidationListenerTest extends TestCase
 
         self::assertSame(1, $client->callCount);
         self::assertCount(1, $collector->getSchemaValidation()['violations'] ?? []);
+        self::assertSame([['schema_validation', 1, 0]], array_map(
+            static fn (array $cache) => [$cache['name'], $cache['lookups'], $cache['introspected']],
+            $collector->getIntrospectionCaches(),
+        ));
     }
 
     #[Test]

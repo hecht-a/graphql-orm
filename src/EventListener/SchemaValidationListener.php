@@ -22,6 +22,8 @@ use Symfony\Contracts\Cache\ItemInterface;
 #[AsEventListener(event: KernelEvents::REQUEST, priority: 255)]
 final class SchemaValidationListener
 {
+    private const PROFILER_NAME = 'schema_validation';
+
     private const CACHE_KEY_PREFIX = 'graphql_orm.schema_validation.';
 
     private const DEFAULT_TTL = 3600;
@@ -120,12 +122,16 @@ final class SchemaValidationListener
             return $this->introspectAndValidate();
         }
 
+        $startedAt = hrtime(true);
+        $introspected = false;
         /** @var array{list<string>, string|null} $outcome */
-        $outcome = $this->cache->get(self::CACHE_KEY_PREFIX . $this->fingerprint(), function (ItemInterface $item): array {
+        $outcome = $this->cache->get(self::CACHE_KEY_PREFIX . $this->fingerprint(), function (ItemInterface $item) use (&$introspected): array {
             $item->expiresAfter($this->ttl);
+            $introspected = true;
 
             return $this->introspectAndValidate();
         });
+        $this->collector?->introspectionCacheLookup(self::PROFILER_NAME, $introspected, (hrtime(true) - $startedAt) / 1e6);
 
         return $outcome;
     }

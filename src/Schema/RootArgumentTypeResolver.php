@@ -20,6 +20,8 @@ use Symfony\Contracts\Cache\ItemInterface;
  */
 final readonly class RootArgumentTypeResolver
 {
+    private const PROFILER_NAME = 'argument_types';
+
     private const CACHE_KEY = 'graphql_orm.root_argument_types';
 
     private const INTROSPECTION_QUERY = <<<'GQL'
@@ -67,11 +69,15 @@ final readonly class RootArgumentTypeResolver
      */
     public function argumentTypes(string $rootField): ?array
     {
-        $fields = $this->cache->get(self::CACHE_KEY, function (ItemInterface $item): ?array {
+        $startedAt = hrtime(true);
+        $introspected = false;
+        $fields = $this->cache->get(self::CACHE_KEY, function (ItemInterface $item) use (&$introspected): ?array {
             $item->expiresAfter($this->ttl);
+            $introspected = true;
 
             return $this->introspect();
         });
+        $this->collector?->introspectionCacheLookup(self::PROFILER_NAME, $introspected, (hrtime(true) - $startedAt) / 1e6);
 
         if (!\is_array($fields)) {
             return null;

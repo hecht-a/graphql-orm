@@ -414,6 +414,21 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itTellsWhetherTheIntrospectionCachesServedTheSchema(): void
+    {
+        $collector = $this->collector(['query { tasks { id } }']);
+        $collector->introspectionCacheLookup('argument_types', false, 0.2);
+        $collector->introspectionCacheLookup('argument_types', false, 0.3);
+        $collector->introspectionCacheLookup('countable_fields', true, 41.0);
+
+        $text = self::text($this->render($collector));
+
+        self::assertStringContainsString('Introspection caches', $text);
+        self::assertStringContainsString('Argument types (variables) 2 served by the cache 0.5 ms', $text);
+        self::assertStringContainsString('Countable fields (count()) 1 introspected 41.0 ms', $text);
+    }
+
+    #[Test]
     public function itWarnsAboutRepeatedQueries(): void
     {
         $collector = $this->collector([

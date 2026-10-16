@@ -58,6 +58,43 @@ final class IntrospectionTracingTest extends TestCase
         $this->assertIntrospectionRecorded();
     }
 
+    #[Test]
+    public function itTellsTheProfilerWhetherTheCacheServedTheArgumentTypes(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['__schema' => ['queryType' => ['fields' => []]]]]);
+        $resolver = new RootArgumentTypeResolver($client, new ArrayAdapter(), self::TTL, collector: $this->collector);
+
+        $resolver->argumentTypes('tasks');
+        $resolver->argumentTypes('users');
+
+        self::assertSame([['name' => 'argument_types', 'lookups' => 2, 'introspected' => 1]], $this->cachesWithoutDuration());
+    }
+
+    #[Test]
+    public function itTellsTheProfilerWhetherTheCacheServedTheCountableFields(): void
+    {
+        $cache = new ArrayAdapter();
+        $client = new FakeGraphqlClient(FakeDataApiBuilderSchema::introspectionResponse());
+        (new CountableFieldResolver($client, $cache, self::TTL))->countableFields('labels');
+
+        (new CountableFieldResolver($client, $cache, self::TTL, collector: $this->collector))->countableFields('labels');
+
+        self::assertSame([['name' => 'countable_fields', 'lookups' => 1, 'introspected' => 0]], $this->cachesWithoutDuration());
+        self::assertGreaterThan(0.0, $this->collector->getIntrospectionCaches()[0]['duration']);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function cachesWithoutDuration(): array
+    {
+        return array_map(static function (array $cache): array {
+            unset($cache['duration']);
+
+            return $cache;
+        }, $this->collector->getIntrospectionCaches());
+    }
+
     private function assertIntrospectionRecorded(): void
     {
         $queries = $this->collector->getQueries();

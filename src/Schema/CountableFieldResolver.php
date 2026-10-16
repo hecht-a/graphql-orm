@@ -20,6 +20,8 @@ use Symfony\Contracts\Cache\ItemInterface;
  */
 final readonly class CountableFieldResolver
 {
+    private const PROFILER_NAME = 'countable_fields';
+
     private const CACHE_KEY = 'graphql_orm.countable_fields';
 
     private const CONNECTION_SUFFIX = 'Connection';
@@ -74,11 +76,15 @@ final readonly class CountableFieldResolver
      */
     public function countableFields(string $rootField): ?array
     {
-        $fields = $this->cache->get(self::CACHE_KEY, function (ItemInterface $item): ?array {
+        $startedAt = hrtime(true);
+        $introspected = false;
+        $fields = $this->cache->get(self::CACHE_KEY, function (ItemInterface $item) use (&$introspected): ?array {
             $item->expiresAfter($this->ttl);
+            $introspected = true;
 
             return $this->introspect();
         });
+        $this->collector?->introspectionCacheLookup(self::PROFILER_NAME, $introspected, (hrtime(true) - $startedAt) / 1e6);
 
         $countable = \is_array($fields) ? ($fields[$rootField] ?? null) : null;
 
