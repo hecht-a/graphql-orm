@@ -197,6 +197,24 @@ final class SecondLevelCacheTest extends TestCase
     }
 
     #[Test]
+    public function itKeepsAnEntityOnceForAResponseHoldingItSeveralTimes(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $this->cache = new GraphqlCache(entities: $this->pool, defaultLifetime: 3600, regions: ['reference_data' => ['pool' => $this->referenceData]], collector: $collector);
+        $user = ['id' => 7, 'name' => 'User A', 'tasks' => []];
+
+        $this->repository(new FakeGraphqlClient(['data' => ['tasks' => [
+            ['id' => 1, 'title' => 'A', 'dueDate' => null, 'assignee' => $user],
+            ['id' => 2, 'title' => 'B', 'dueDate' => null, 'assignee' => $user],
+        ]]]), CachedTask::class, maxDepth: 2)->findAll();
+
+        self::assertSame([[CachedUser::class, 1], [CachedTask::class, 2]], array_map(
+            static fn (array $entry) => [$entry['class'], $entry['puts']],
+            $collector->getSecondLevelCache(),
+        ));
+    }
+
+    #[Test]
     public function itTellsTheProfilerTheHitsTheMissesAndTheEntitiesKept(): void
     {
         $collector = new GraphqlOrmDataCollector();
@@ -232,7 +250,7 @@ final class SecondLevelCacheTest extends TestCase
      *
      * @return GraphqlEntityRepository<T>
      */
-    private function repository(FakeGraphqlClient $client, string $class, bool $lazyLoading = false): GraphqlEntityRepository
+    private function repository(FakeGraphqlClient $client, string $class, bool $lazyLoading = false, int $maxDepth = 1): GraphqlEntityRepository
     {
         $metadataFactory = new GraphqlEntityMetadataFactory();
         $manager = new GraphqlManager(
@@ -240,7 +258,7 @@ final class SecondLevelCacheTest extends TestCase
             $client,
             new EntityHydrator($metadataFactory),
             null,
-            $lazyLoading ? 0 : 1,
+            $lazyLoading ? 0 : $maxDepth,
             new DefaultDialect(),
             lazyLoading: $lazyLoading,
             cache: $this->cache,

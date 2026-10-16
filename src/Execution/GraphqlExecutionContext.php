@@ -44,6 +44,15 @@ final class GraphqlExecutionContext
     public ?GraphqlCache $entityCache = null;
 
     /**
+     * The entities already kept in the second-level cache by this response, which may hold one several times.
+     *
+     * @internal filled by EntityHydrator
+     *
+     * @var array<string, true> by class and identifier
+     */
+    public array $keptInCache = [];
+
+    /**
      * The entities hydrated from a row holding every mapped field, which a shared identity map may serve to find().
      *
      * @internal filled by EntityHydrator

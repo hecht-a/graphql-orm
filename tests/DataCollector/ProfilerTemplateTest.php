@@ -468,6 +468,7 @@ final class ProfilerTemplateTest extends TestCase
         $text = self::text($html);
 
         self::assertStringContainsString('data-graphql-orm-tab="second-level-cache"', $html);
+        self::assertStringContainsString('Second-level cache 3/4', $text);
         self::assertStringContainsString('Label reference_data 3 1 1', $text);
     }
 

@@ -186,7 +186,8 @@
                 {% endif %}
                 {% if collector.secondLevelCache is not empty %}
                     <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="second-level-cache">
-                        Second-level cache <span class="badge">{{ collector.secondLevelCache|reduce((total, entry) => total + entry.hits, 0) }}</span>
+                        {% set secondLevelHits = collector.secondLevelCache|reduce((total, entry) => total + entry.hits, 0) %}
+                        Second-level cache <span class="badge" title="Entities read from the cache / looked up">{{ secondLevelHits }}/{{ secondLevelHits + collector.secondLevelCache|reduce((total, entry) => total + entry.misses, 0) }}</span>
                     </button>
                 {% endif %}
                 {% if collector.autocompleteSearches is not empty %}

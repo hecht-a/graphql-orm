@@ -201,6 +201,12 @@ final class EntityHydrator
             return;
         }
 
+        $kept = $metadata->class . '#' . $value;
+
+        if (isset($context->keptInCache[$kept])) {
+            return;
+        }
+
         $row = [];
 
         foreach ($metadata->fields as $field) {
@@ -229,6 +235,7 @@ final class EntityHydrator
         }
 
         $context->entityCache->putEntityRow($metadata->class, $value, $row);
+        $context->keptInCache[$kept] = true;
     }
 
     /**
