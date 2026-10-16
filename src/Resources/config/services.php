@@ -57,7 +57,8 @@ return static function (ContainerConfigurator $config) {
         ->autowire()
         ->autoconfigure();
 
-    $services->set(GraphqlCache::class);
+    $services->set(GraphqlCache::class)
+        ->tag('kernel.reset', ['method' => 'reset']);
 
     $services->set(GraphqlManager::class)
         ->arg('$collector', service(GraphqlOrmDataCollector::class)->nullOnInvalid())

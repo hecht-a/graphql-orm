@@ -21,6 +21,7 @@ use GraphqlOrm\Test\MockGraphqlServer;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
@@ -31,6 +32,25 @@ use Symfony\Component\Finder\Finder;
  */
 final class GraphqlOrmExtension extends Extension
 {
+    /**
+     * @param array{enabled: bool, pool: string, default_lifetime: int, regions: array<string, array{pool: string|null, lifetime: int|null}>} $secondLevel
+     */
+    private function configureCache(Definition $cache, ?string $resultPool, array $secondLevel): void
+    {
+        $cache->setArgument('$results', $resultPool !== null ? new Reference($resultPool) : null);
+
+        if (!$secondLevel['enabled']) {
+            return;
+        }
+
+        $cache->setArgument('$entities', new Reference($secondLevel['pool']));
+        $cache->setArgument('$defaultLifetime', $secondLevel['default_lifetime']);
+        $cache->setArgument('$regions', array_map(
+            static fn (array $region) => ['pool' => new Reference($region['pool'] ?? $secondLevel['pool']), 'lifetime' => $region['lifetime'] ?? $secondLevel['default_lifetime']],
+            $secondLevel['regions'],
+        ));
+    }
+
     public function load(array $configs, ContainerBuilder $container): void
     {
         $configuration = new Configuration();
@@ -46,6 +66,7 @@ final class GraphqlOrmExtension extends Extension
          *   headers: array<string, string>,
          *   metadata_cache_pool: string|null,
          *   result_cache: array{pool: string|null},
+         *   second_level_cache: array{enabled: bool, pool: string, default_lifetime: int, regions: array<string, array{pool: string|null, lifetime: int|null}>},
          *   naming_strategy: string,
          *   slow_query_threshold: int|float|null,
          *   identity_map: bool,
@@ -124,7 +145,7 @@ final class GraphqlOrmExtension extends Extension
             $container->getDefinition(GraphqlManager::class)->setArgument('$lazyLoading', true);
         }
 
-        $container->getDefinition(GraphqlCache::class)->setArgument('$results', $config['result_cache']['pool'] !== null ? new Reference($config['result_cache']['pool']) : null);
+        $this->configureCache($container->getDefinition(GraphqlCache::class), $config['result_cache']['pool'], $config['second_level_cache']);
 
         if (!$config['redact_query_values']) {
             $container->getDefinition(GraphqlManager::class)->setArgument('$redactor', null);

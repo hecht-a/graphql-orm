@@ -556,6 +556,53 @@ final class GraphqlOrmExtensionTest extends TestCase
         self::assertNull($this->resultPool($container));
     }
 
+    #[Test]
+    public function itKeepsTheEntitiesInTheAppCacheByDefault(): void
+    {
+        $container = $this->createContainer(debug: false);
+
+        $container->compile();
+
+        self::assertSame($container->get('cache.app'), $this->cacheProperty($container, 'entities'));
+        self::assertSame(3600, $this->cacheProperty($container, 'defaultLifetime'));
+        self::assertTrue($container->getDefinition(GraphqlCache::class)->hasTag('kernel.reset'));
+    }
+
+    #[Test]
+    public function itKeepsTheEntitiesInTheRegionsConfigured(): void
+    {
+        $container = $this->createContainer(debug: false, config: ['second_level_cache' => [
+            'pool' => 'cache.apcu',
+            'default_lifetime' => 600,
+            'regions' => ['reference_data' => ['pool' => 'cache.redis', 'lifetime' => 86400], 'short' => ['lifetime' => 60]],
+        ]]);
+        $container->register('cache.apcu', ArrayAdapter::class);
+        $container->register('cache.redis', ArrayAdapter::class);
+
+        $container->compile();
+
+        self::assertSame($container->get('cache.apcu'), $this->cacheProperty($container, 'entities'));
+        self::assertSame([
+            'reference_data' => ['pool' => $container->get('cache.redis'), 'lifetime' => 86400],
+            'short' => ['pool' => $container->get('cache.apcu'), 'lifetime' => 60],
+        ], $this->cacheProperty($container, 'regions'));
+    }
+
+    #[Test]
+    public function itCanDisableTheSecondLevelCache(): void
+    {
+        $container = $this->createContainer(debug: false, config: ['second_level_cache' => ['enabled' => false]]);
+
+        $container->compile();
+
+        self::assertNull($this->cacheProperty($container, 'entities'));
+    }
+
+    private function cacheProperty(ContainerBuilder $container, string $property): mixed
+    {
+        return (new \ReflectionProperty(GraphqlCache::class, $property))->getValue($container->get(GraphqlCache::class));
+    }
+
     private function resultPool(ContainerBuilder $container): mixed
     {
         return (new \ReflectionProperty(GraphqlCache::class, 'results'))->getValue($container->get(GraphqlCache::class));

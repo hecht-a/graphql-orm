@@ -137,9 +137,51 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
 
         if ($entity !== null) {
             $this->collector?->addIdentityMapHit($class, $identifier, self::callSite());
+
+            return $entity;
         }
 
-        return $entity;
+        $rows = $this->cache->findEntityRows($class, [$identifier]);
+
+        return $rows !== [] ? $this->hydrateCached($class, $rows)[0] : null;
+    }
+
+    /**
+     * Hydrates rows of the second-level cache: their relations, reduced to their identifier, are lazy ghosts.
+     *
+     * @template T of object
+     *
+     * @param class-string<T>                         $class
+     * @param array<int|string, array<string, mixed>> $rows
+     *
+     * @return list<T>
+     */
+    private function hydrateCached(string $class, array $rows): array
+    {
+        $context = new GraphqlExecutionContext(dialect: new DefaultDialect());
+        $shared = $this->identityMap !== null && !$this->loadingLazily;
+
+        if ($shared) {
+            $context->identityMap = $this->identityMap->entities();
+        }
+
+        $context->lazyLoader = $this->loadLazily(...);
+        $context->observer = $this->collector;
+        $context->lazyLoading = true;
+        $metadata = $this->metadataFactory->getMetadata($class);
+        $entities = [];
+
+        foreach ($rows as $row) {
+            $entity = $this->hydrator->hydrate($metadata, $row, $context);
+            \assert($entity instanceof $class);
+            $entities[] = $entity;
+        }
+
+        if ($shared) {
+            $this->identityMap->merge($context->identityMap, $context->completeEntities);
+        }
+
+        return $entities;
     }
 
     /**
@@ -244,6 +286,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         $context->lazyLoader = $this->loadLazily(...);
         $context->observer = $this->collector;
         $context->lazyLoading = $this->lazyLoading;
+        $context->entityCache = $this->cache;
 
         if ($graphql instanceof QueryNode) {
             $compiledQuery = $this->compile($graphql, $options);
@@ -340,6 +383,8 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
 
         if (\is_array($cached)) {
             $context->trace->resultCache = 'hit';
+            // As old as the result: keeping its entities again would prolong them.
+            $context->entityCache = null;
 
             /** @var array<string, mixed> $cached */
             return static fn (): array => $cached;
@@ -484,12 +529,13 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         try {
             $repository = new GraphqlEntityRepository($this, $class);
             $identifier = $this->metadataFactory->getMetadata($class)->identifier;
+            $cached = $this->cache->findEntityRows($class, $identifiers);
+            $entities = $cached !== [] ? $this->hydrateCached($class, $cached) : [];
+            $identifiers = array_values(array_filter($identifiers, static fn (int|string $id) => !\array_key_exists($id, $cached)));
 
-            if ($identifier === null || \count($identifiers) === 1 || !$this->dialect instanceof BatchLoadingDialect) {
-                return array_values(array_filter(array_map($repository->find(...), $identifiers)));
+            if ($identifier === null || \count($identifiers) <= 1 || !$this->dialect instanceof BatchLoadingDialect) {
+                return [...$entities, ...array_values(array_filter(array_map($repository->find(...), $identifiers)))];
             }
-
-            $entities = [];
 
             foreach (array_chunk($identifiers, self::LAZY_LOADING_BATCH_SIZE) as $batch) {
                 $qb = $repository->createQueryBuilder();

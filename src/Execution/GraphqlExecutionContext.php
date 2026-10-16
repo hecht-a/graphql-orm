@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Execution;
 
+use GraphqlOrm\Cache\GraphqlCache;
 use GraphqlOrm\Dialect\DefaultDialect;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\Query\GraphqlQueryTrace;
@@ -34,6 +35,13 @@ final class GraphqlExecutionContext
      * @internal set by GraphqlManager when the profiler is enabled
      */
     public ?HydrationObserver $observer = null;
+
+    /**
+     * Keeps the entities marked #[Cache] hydrated in full; null for rows read from a cache, which must not prolong them.
+     *
+     * @internal set by GraphqlManager
+     */
+    public ?GraphqlCache $entityCache = null;
 
     /**
      * The entities hydrated from a row holding every mapped field, which a shared identity map may serve to find().
