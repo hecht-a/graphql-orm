@@ -488,6 +488,44 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itSumsUpTheRequestInTheToolbarAsDoctrineDoes(): void
+    {
+        $collector = new GraphqlOrmDataCollector(configuration: ['result_cache' => ['pool' => 'cache.app'], 'second_level_cache' => ['enabled' => false]]);
+        foreach (['query { users(id: 1) { id } }', 'query { users(id: 2) { id } }', 'query { tasks { id } }'] as $index => $graphql) {
+            $trace = new GraphqlQueryTrace();
+            $trace->graphql = $graphql;
+            $trace->duration = 2.0;
+            $trace->hydratedEntities = 2;
+            $trace->resultCache = $index === 2 ? 'hit' : null;
+            $collector->addQuery($trace);
+        }
+        $collector->setSchemaValidation('warning', ['tasks.title is missing'], null);
+
+        $text = self::text($this->render($collector));
+
+        self::assertStringContainsString('Queries 3 Different statements 2 Query time 6.00 ms', $text);
+        self::assertStringContainsString('Invalid entities 1', $text);
+        self::assertStringContainsString('Entities hydrated 6', $text);
+        self::assertStringContainsString('Result cache 1/1 hits', $text);
+        self::assertStringContainsString('Second-level cache disabled', $text);
+    }
+
+    #[Test]
+    public function itGivesTheHitsOfTheSecondLevelCacheInTheToolbar(): void
+    {
+        $collector = new GraphqlOrmDataCollector(configuration: ['result_cache' => ['pool' => null], 'second_level_cache' => ['enabled' => true]]);
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { tasks { id } }';
+        $collector->addQuery($trace);
+        $collector->secondLevelCacheLookup('App\\Entity\\Label', null, hits: 3, misses: 1);
+
+        $text = self::text($this->render($collector));
+
+        self::assertStringContainsString('Result cache disabled', $text);
+        self::assertStringContainsString('Second-level cache 3/4 hits', $text);
+    }
+
+    #[Test]
     public function itWarnsAboutRepeatedQueries(): void
     {
         $collector = $this->collector([

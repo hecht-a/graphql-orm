@@ -11,17 +11,48 @@
     {% endset %}
 
     {% set text %}
+        {% set validation = collector.schemaValidation %}
+        {% set resultCache = collector.resultCacheUsage %}
+        {% set secondLevelCache = collector.secondLevelCacheUsage %}
         <div class="sf-toolbar-info-piece">
             <b>Queries</b>
-            <span class="sf-toolbar-status sf-toolbar-status-">{{ collector.queryCount }}</span>
+            <span class="sf-toolbar-status">{{ collector.queryCount }}</span>
         </div>
         <div class="sf-toolbar-info-piece">
-            <b>Duration</b>
-            <span class="sf-toolbar-status">{{ collector.totalDuration|number_format(2) }} ms</span>
+            <b>Different statements</b>
+            <span>{{ collector.distinctQueryCount }}</span>
+        </div>
+        <div class="sf-toolbar-info-piece">
+            <b>Query time</b>
+            <span>{{ collector.totalDuration|number_format(2) }} ms</span>
+        </div>
+        <div class="sf-toolbar-info-piece">
+            <b>Hydration</b>
+            <span>{{ collector.hydrationDuration|number_format(2) }} ms</span>
         </div>
         <div class="sf-toolbar-info-piece">
             <b>Errors</b>
-            <span class="sf-toolbar-status sf-toolbar-status-red">{{ collector.errorCount|default(0) }}</span>
+            <span class="sf-toolbar-status {{ collector.errorCount > 0 ? 'sf-toolbar-status-red' }}">{{ collector.errorCount|default(0) }}</span>
+        </div>
+        <div class="sf-toolbar-info-piece">
+            <b>Invalid entities</b>
+            {% if validation is null or validation.violations is null %}
+                <span>{{ validation.failure ?? null ? 'introspection failed' : 'not checked' }}</span>
+            {% else %}
+                <span class="sf-toolbar-status {{ validation.violations is not empty ? 'sf-toolbar-status-yellow' }}">{{ validation.violations|length }}</span>
+            {% endif %}
+        </div>
+        <div class="sf-toolbar-info-piece">
+            <b>Entities hydrated</b>
+            <span>{{ collector.hydratedEntityCount }}{% if collector.identityMapHitCount > 0 %}, {{ collector.identityMapHitCount }} from the identity map{% endif %}</span>
+        </div>
+        <div class="sf-toolbar-info-piece">
+            <b>Result cache</b>
+            <span>{{ resultCache is null ? 'disabled' : resultCache.hits ~ '/' ~ resultCache.lookups ~ ' hits' }}</span>
+        </div>
+        <div class="sf-toolbar-info-piece">
+            <b>Second-level cache</b>
+            <span>{{ secondLevelCache is null ? 'disabled' : secondLevelCache.hits ~ '/' ~ secondLevelCache.lookups ~ ' hits' }}</span>
         </div>
         {% if collector.slowQueryCount|default(0) > 0 %}
             <div class="sf-toolbar-info-piece">

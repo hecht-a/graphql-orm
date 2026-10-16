@@ -650,6 +650,50 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
      * @return float the milliseconds spent hydrating the responses, apart from the network
      */
     /**
+     * The queries of different shapes, their values aside, as the "different statements" of Doctrine.
+     */
+    public function getDistinctQueryCount(): int
+    {
+        return \count(array_unique(array_map(static fn (array $query) => (string) ($query['shape'] ?? ''), $this->getQueries())));
+    }
+
+    /**
+     * The result cache during the request: the queries answered by it, among those asking for it; null when disabled.
+     *
+     * @return array{hits: int, lookups: int}|null
+     */
+    public function getResultCacheUsage(): ?array
+    {
+        $resultCache = $this->configuration['result_cache'] ?? null;
+
+        if (\is_array($resultCache) && ($resultCache['pool'] ?? null) === null) {
+            return null;
+        }
+
+        $lookups = array_filter($this->getQueries(), static fn (array $query) => ($query['result_cache'] ?? null) !== null);
+
+        return ['hits' => $this->getResultCacheHitCount(), 'lookups' => \count($lookups)];
+    }
+
+    /**
+     * The second-level cache during the request: the entities read from it, among those looked up; null when disabled.
+     *
+     * @return array{hits: int, lookups: int}|null
+     */
+    public function getSecondLevelCacheUsage(): ?array
+    {
+        $secondLevel = $this->configuration['second_level_cache'] ?? null;
+
+        if (\is_array($secondLevel) && ($secondLevel['enabled'] ?? false) !== true) {
+            return null;
+        }
+
+        $hits = array_sum(array_column($this->getSecondLevelCache(), 'hits'));
+
+        return ['hits' => $hits, 'lookups' => $hits + array_sum(array_column($this->getSecondLevelCache(), 'misses'))];
+    }
+
+    /**
      * The queries answered by the result cache, without being sent.
      */
     public function getResultCacheHitCount(): int
