@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Hydrator;
 
+use Doctrine\Common\Collections\ArrayCollection;
 use GraphqlOrm\Attribute\AfterHydrate;
 use GraphqlOrm\Attribute\BeforeHydrate;
 use GraphqlOrm\Exception\CastException;
@@ -202,10 +203,9 @@ final class EntityHydrator
 
             $property = $this->property($metadata->class, $field->property);
 
-            $value = $this->normalizeValue(
-                $value,
-                $property
-            );
+            $value = $field->isCollection && \is_array($value) && self::acceptsArrayCollection($property)
+                ? new ArrayCollection(array_values($value))
+                : $this->normalizeValue($value, $property);
 
             $this->isUninitializedGhost($entity)
                 ? $property->setRawValueWithoutLazyInitialization($entity, $value)
@@ -457,6 +457,26 @@ final class EntityHydrator
         }
 
         return null;
+    }
+
+    /**
+     * Whether the property is typed with a collection of doctrine/collections, which an ArrayCollection satisfies.
+     */
+    private static function acceptsArrayCollection(\ReflectionProperty $property): bool
+    {
+        $type = $property->getType();
+
+        if (!class_exists(ArrayCollection::class) || $type === null) {
+            return false;
+        }
+
+        foreach ($type instanceof \ReflectionUnionType ? $type->getTypes() : [$type] as $named) {
+            if ($named instanceof \ReflectionNamedType && !$named->isBuiltin() && is_a(ArrayCollection::class, $named->getName(), true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function normalizeValue(

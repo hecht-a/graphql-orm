@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Metadata;
 
+use Doctrine\Common\Collections\Collection;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Exception\NotAGraphqlEntityException;
 use GraphqlOrm\Exception\TooManyIdentifiersException;
@@ -190,14 +191,14 @@ final class GraphqlEntityMetadataFactory
     private function resolveRelation(\ReflectionProperty $property, ?string $targetEntity): array
     {
         $types = $this->namedTypes($property->getType());
-        $isArray = \in_array('array', array_map(fn (\ReflectionNamedType $type) => $type->getName(), $types), true);
+        $isArray = array_filter($types, fn (\ReflectionNamedType $type) => $type->getName() === 'array' || self::isCollectionClass($type->getName())) !== [];
 
         if ($targetEntity !== null) {
             return [$targetEntity, $isArray];
         }
 
         foreach ($types as $type) {
-            if (!$type->isBuiltin() && $this->isEntity($type->getName())) {
+            if (!$type->isBuiltin() && !self::isCollectionClass($type->getName()) && $this->isEntity($type->getName())) {
                 /** @var class-string $relation */
                 $relation = $type->getName();
 
@@ -227,6 +228,14 @@ final class GraphqlEntityMetadataFactory
             ),
             default => [],
         };
+    }
+
+    /**
+     * Whether the type is a collection of doctrine/collections, e.g. Collection<int, Task>: a list of entities as an array.
+     */
+    private static function isCollectionClass(string $type): bool
+    {
+        return interface_exists(Collection::class) && is_a($type, Collection::class, true);
     }
 
     /**

@@ -48,10 +48,12 @@
         "twig/twig": "^3.20",
         "symfony/form": "^7.4 || ^8.0",
         "phpbench/phpbench": "^1.7",
-        "symfony/serializer": "^7.4 || ^8.0"
+        "symfony/serializer": "^7.4 || ^8.0",
+        "doctrine/collections": "^2.2 || ^3.0"
     },
     "suggest": {
         "phpstan/extension-installer": "Enables the PHPStan rules checking field names (extension.neon)",
+        "doctrine/collections": "Hydrates the relations whose property is typed Collection as an ArrayCollection",
         "symfony/form": "Enables GraphqlEntityType, a form field whose choices are entities",
         "symfony/serializer": "Writes the entities without loading their lazy relations (GraphqlEntityNormalizer)"
     },
