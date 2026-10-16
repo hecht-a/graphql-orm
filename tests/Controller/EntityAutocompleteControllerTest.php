@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GraphqlOrm\Tests\Controller;
 
 use GraphqlOrm\Controller\EntityAutocompleteController;
+use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\Form\GraphqlEntityType;
 use GraphqlOrm\GraphqlManager;
@@ -55,6 +56,29 @@ final class EntityAutocompleteControllerTest extends TestCase
     }
 
     #[Test]
+    public function itTellsTheProfilerTheSearch(): void
+    {
+        $collector = new GraphqlOrmDataCollector(configuration: ['redact_query_values' => false]);
+        $url = $this->signer()->sign(GraphqlEntityType::AUTOCOMPLETE_PATH . '?' . http_build_query(['class' => FakeTask::class, 'fields' => 'title']));
+
+        $this->controller($collector)(Request::create($url . '&query=Fix'));
+
+        self::assertSame('autocomplete', $collector->getQueries()[0]['origin'] ?? null);
+        self::assertSame([['class' => FakeTask::class, 'fields' => ['title'], 'query' => 'Fix', 'results' => 2, 'limit' => 20]], $collector->getAutocompleteSearches());
+    }
+
+    #[Test]
+    public function itMasksTheSearchedTextInTheProfilerAsTheValuesOfTheQueries(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $url = $this->signer()->sign(GraphqlEntityType::AUTOCOMPLETE_PATH . '?' . http_build_query(['class' => FakeTask::class, 'fields' => 'title']));
+
+        $this->controller($collector)(Request::create($url . '&query=Fix'));
+
+        self::assertSame('***', $collector->getAutocompleteSearches()[0]['query']);
+    }
+
+    #[Test]
     public function itRefusesASearchItDidNotSign(): void
     {
         $url = GraphqlEntityType::AUTOCOMPLETE_PATH . '?' . http_build_query(['class' => FakeTask::class, 'fields' => 'id']);
@@ -63,12 +87,12 @@ final class EntityAutocompleteControllerTest extends TestCase
         $this->controller()(Request::create($url . '&query=1'));
     }
 
-    private function controller(): EntityAutocompleteController
+    private function controller(?GraphqlOrmDataCollector $collector = null): EntityAutocompleteController
     {
         $metadataFactory = new GraphqlEntityMetadataFactory();
-        $manager = new GraphqlManager($metadataFactory, $this->client, new EntityHydrator($metadataFactory), null, 2, new DataApiBuilderDialect());
+        $manager = new GraphqlManager($metadataFactory, $this->client, new EntityHydrator($metadataFactory), $collector, 2, new DataApiBuilderDialect());
 
-        return new EntityAutocompleteController($manager, $this->signer());
+        return new EntityAutocompleteController($manager, $this->signer(), $collector);
     }
 
     private function signer(): UriSigner

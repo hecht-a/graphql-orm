@@ -178,6 +178,11 @@
                         {% if serialization.lazy_loads is not empty %}<span class="badge status-warning">{{ serialization.lazy_loads|length }}</span>{% endif %}
                     </button>
                 {% endif %}
+                {% if collector.autocompleteSearches is not empty %}
+                    <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="autocomplete">
+                        Autocomplete <span class="badge">{{ collector.autocompleteSearches|length }}</span>
+                    </button>
+                {% endif %}
                 {% if collector.identityMapHitCount > 0 %}
                     <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="identity-map">
                         Identity map <span class="badge">{{ collector.identityMapHitCount }}</span>
@@ -480,6 +485,31 @@
                     {% else %}
                         <p class="graphql-orm-muted">The serializer sent no query: every relation it wrote was loaded or written as its identifier.</p>
                     {% endif %}
+                </div>
+            {% endif %}
+
+            {% if collector.autocompleteSearches is not empty %}
+                <div data-graphql-orm-view="autocomplete" hidden>
+                    <p class="graphql-orm-muted">
+                        The searches of autocomplete fields answered by the bundle: the entities whose fields contain the
+                        text typed, up to the number of results of the field (<code>max_results</code>).
+                    </p>
+                    <table>
+                        <thead>
+                            <tr><th>Entity</th><th>Fields searched</th><th>Text</th><th class="graphql-orm-number">Results</th><th class="graphql-orm-number">Limit</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for search in collector.autocompleteSearches %}
+                                <tr>
+                                    <td title="{{ search.class }}">{{ search.class|split('\\')|last }}</td>
+                                    <td>{{ search.fields|join(', ') }}</td>
+                                    <td>{% if search.query is not same as('') %}<code>{{ search.query }}</code>{% else %}<span class="graphql-orm-muted">(empty)</span>{% endif %}</td>
+                                    <td class="graphql-orm-number">{{ search.results }}</td>
+                                    <td class="graphql-orm-number">{{ search.limit }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             {% endif %}
 

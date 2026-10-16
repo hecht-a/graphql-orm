@@ -105,6 +105,7 @@ return static function (ContainerConfigurator $config) {
         $services->set(EntityAutocompleteController::class)
             ->autoconfigure(false)
             ->arg('$uriSigner', service('uri_signer')->nullOnInvalid())
+            ->arg('$collector', service(GraphqlOrmDataCollector::class)->nullOnInvalid())
             ->tag('controller.service_arguments')
             ->public();
     }

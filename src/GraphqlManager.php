@@ -6,6 +6,7 @@ namespace GraphqlOrm;
 
 use GraphqlOrm\Client\ConcurrentGraphqlClientInterface;
 use GraphqlOrm\Client\GraphqlClientInterface;
+use GraphqlOrm\Controller\EntityAutocompleteController;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\BatchLoadingDialect;
 use GraphqlOrm\Dialect\DefaultDialect;
@@ -49,6 +50,9 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
     private const ORIGIN_STACK_DEPTH = 40;
 
     private const LAZY_ORIGIN = 'lazy';
+
+    /** The search of an autocomplete field, rather than the __invoke() of its controller. */
+    private const AUTOCOMPLETE_ORIGIN = 'autocomplete';
 
     /** Frames read to find the serializer behind a lazy load: a normalizer reading a property is deep in the stack. */
     private const SERIALIZER_STACK_DEPTH = 80;
@@ -338,7 +342,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
                 break;
             }
 
-            $origin = $frame['function'];
+            $origin = $object instanceof EntityAutocompleteController ? self::AUTOCOMPLETE_ORIGIN : $frame['function'];
         }
 
         return [$this->loadingLazily ? self::LAZY_ORIGIN : $origin, $entityClass];

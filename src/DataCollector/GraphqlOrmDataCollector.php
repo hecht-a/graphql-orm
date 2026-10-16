@@ -26,11 +26,9 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     private const LAZY_ORIGIN = 'lazy';
 
     /**
-     * @param float|null $slowQueryThreshold duration in milliseconds from which a query is reported as slow
-     */
-    /**
-     * @param array<string, mixed> $configuration the options of the bundle shown by the profiler, without secrets
-     * @param list<class-string>   $entityClasses the entities of the mapping directory, described with those the queries read
+     * @param float|null           $slowQueryThreshold duration in milliseconds from which a query is reported as slow
+     * @param array<string, mixed> $configuration      the options of the bundle shown by the profiler, without secrets
+     * @param list<class-string>   $entityClasses      the entities of the mapping directory, described with those the queries read
      */
     public function __construct(
         private readonly QueryRedactor $redactor = new QueryRedactor(),
@@ -313,6 +311,37 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     public function setSchemaValidation(string $mode, ?array $violations, ?string $failure): void
     {
         $this->data['schema_validation'] = ['mode' => $mode, 'violations' => $violations, 'failure' => $failure];
+    }
+
+    /**
+     * Records the search of an autocomplete field. The text searched is masked as the values of the queries, unless
+     * redact_query_values is false.
+     *
+     * @param list<string> $fields the fields searched
+     * @param int          $limit  the number of results asked for
+     */
+    public function autocompleteSearched(string $class, array $fields, string $query, int $results, int $limit): void
+    {
+        $searches = $this->getAutocompleteSearches();
+        $searches[] = [
+            'class' => $class,
+            'fields' => $fields,
+            'query' => ($this->configuration['redact_query_values'] ?? true) !== false ? QueryRedactor::MASK : $query,
+            'results' => $results,
+            'limit' => $limit,
+        ];
+        $this->data['autocomplete'] = $searches;
+    }
+
+    /**
+     * @return list<array{class: string, fields: list<string>, query: string, results: int, limit: int}>
+     */
+    public function getAutocompleteSearches(): array
+    {
+        /** @var list<array{class: string, fields: list<string>, query: string, results: int, limit: int}> $searches */
+        $searches = $this->data['autocomplete'] ?? [];
+
+        return $searches;
     }
 
     /**

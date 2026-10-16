@@ -445,6 +445,19 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itDescribesTheAutocompleteSearchesInATab(): void
+    {
+        $collector = $this->collector(['query { tasks { id } }']);
+        $collector->autocompleteSearched('App\\Entity\\Task', ['title', 'code'], 'Fix', 2, 20);
+
+        $html = $this->render($collector);
+        $text = self::text($html);
+
+        self::assertStringContainsString('data-graphql-orm-tab="autocomplete"', $html);
+        self::assertStringContainsString('Task title, code *** 2 20', $text);
+    }
+
+    #[Test]
     public function itWarnsAboutRepeatedQueries(): void
     {
         $collector = $this->collector([

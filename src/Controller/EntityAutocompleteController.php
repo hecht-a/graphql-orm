@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Controller;
 
+use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Form\GraphqlEntityType;
 use GraphqlOrm\GraphqlManager;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -31,6 +32,7 @@ final class EntityAutocompleteController
     public function __construct(
         private readonly GraphqlManager $manager,
         private readonly ?UriSigner $uriSigner,
+        private readonly ?GraphqlOrmDataCollector $collector = null,
     ) {
     }
 
@@ -64,7 +66,8 @@ final class EntityAutocompleteController
         }
 
         $max = is_numeric($signed['max'] ?? null) ? (int) $signed['max'] : self::DEFAULT_RESULTS;
-        $result = $qb->limit(max(1, min($max, self::MAX_RESULTS)))->getQuery()->getResult();
+        $limit = max(1, min($max, self::MAX_RESULTS));
+        $result = $qb->limit($limit)->getQuery()->getResult();
         $results = [];
 
         foreach (\is_array($result) ? $result : $result->items as $entity) {
@@ -77,6 +80,8 @@ final class EntityAutocompleteController
                 }),
             ];
         }
+
+        $this->collector?->autocompleteSearched($class, $fields, $query, \count($results), $limit);
 
         return new JsonResponse(['results' => $results, 'next_page' => null]);
     }
