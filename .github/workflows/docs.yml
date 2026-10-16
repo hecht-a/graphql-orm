@@ -1,7 +1,8 @@
 name: Documentation
 on:
   push:
-    branches: [ main ]
+    # Each version is published from its branch: a change to either rebuilds both.
+    branches: [ main, 4.x ]
     paths:
       - 'docs/**'
       - 'CHANGELOG.md'
@@ -23,6 +24,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v5
         with:
+          ref: main
           fetch-depth: 0
       - name: setup node
         uses: actions/setup-node@v7.0.0
@@ -36,6 +38,19 @@ jobs:
       - name: build the site
         run: npx vitepress build
         working-directory: docs
+      # The documentation of 4.x, from its branch, served under /4.x/
+      - name: checkout 4.x
+        uses: actions/checkout@v5
+        with:
+          ref: 4.x
+          path: v4
+          fetch-depth: 0
+      - name: install VitePress for 4.x
+        run: npm ci
+        working-directory: v4/docs
+      - name: build the site of 4.x
+        run: npx vitepress build --base /graphql-orm/4.x/ --outDir "$GITHUB_WORKSPACE/docs/.vitepress/dist/4.x"
+        working-directory: v4/docs
       - name: configure pages
         uses: actions/configure-pages@v6.0.0
       - name: upload the site
