@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace GraphqlOrm\Controller;
 
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
-use GraphqlOrm\Form\GraphqlEntityType;
 use GraphqlOrm\GraphqlManager;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -22,6 +21,9 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
  */
 final class EntityAutocompleteController
 {
+    /** The path of the route of config/routes.php, signed by GraphqlEntityType. */
+    public const PATH = '/_graphql_orm/autocomplete';
+
     /** The results without the max_results option of UX Autocomplete, and their ceiling whatever it says. */
     private const DEFAULT_RESULTS = 20;
     private const MAX_RESULTS = 100;
@@ -44,7 +46,7 @@ final class EntityAutocompleteController
     {
         $signed = array_intersect_key($request->query->all(), array_flip(self::SIGNED_PARAMETERS));
 
-        if ($this->uriSigner === null || !$this->uriSigner->check(GraphqlEntityType::AUTOCOMPLETE_PATH . '?' . http_build_query($signed))) {
+        if ($this->uriSigner === null || !$this->uriSigner->check(self::PATH . '?' . http_build_query($signed))) {
             throw new AccessDeniedHttpException('The search of an autocomplete field must come from the URL its form signed.');
         }
 

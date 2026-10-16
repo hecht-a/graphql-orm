@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Form;
 
+use GraphqlOrm\Controller\EntityAutocompleteController;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\GraphqlManager;
@@ -20,7 +21,7 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 final class GraphqlEntityType extends AbstractType
 {
     /** The endpoint answering the search of an autocomplete field, see Resources/config/routes.php. */
-    public const AUTOCOMPLETE_PATH = '/_graphql_orm/autocomplete';
+    public const AUTOCOMPLETE_PATH = EntityAutocompleteController::PATH;
 
     /**
      * @param UriSigner|null $uriSigner signs the search of the autocomplete fields, so that the endpoint queries nothing else
