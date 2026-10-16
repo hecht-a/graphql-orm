@@ -23,6 +23,8 @@ For each request, the panel shows:
 - **The partial entities**: the entities hydrated from a [selection of their fields](query-builder.md#field-selection),
   by class and fields not selected: how many, by which queries, and how many `PartialEntityException` were thrown, for
   which properties (in warning on the tab).
+- **The autocomplete searches** answered by the bundle (see [forms](forms.md)): entity, fields searched, text typed
+  (masked unless `redact_query_values` is false), results and limit. Their queries have the origin `autocomplete`.
 - **The serializer**: the relations written as identifiers and the partial entities written by
   [`GraphqlEntityNormalizer`](serializer.md), and the lazy loads sent while the serializer was writing an entity, an N+1
   problem hidden in a response, with a warning on top of the panel. Such a query is marked `serializer` in the list.

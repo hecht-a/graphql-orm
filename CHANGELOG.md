@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fields, schema validation), whether it served the request or introspected the schema, and the time spent.
 - Profiler: the "Hydration" detail of a query lists the collections hydrated by relation, with their type, how many and
   their items, and the field indexing the result (`indexBy`).
+- Profiler: an "Autocomplete" tab describing the searches of autocomplete fields (entity, fields searched, text typed,
+  masked unless `redact_query_values` is false, results and limit); their queries have the origin `autocomplete`
+  instead of `__invoke`.
 
 ---
 

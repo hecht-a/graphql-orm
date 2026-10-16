@@ -78,3 +78,7 @@ the selected entity is loaded to render or submit the form (`choice_lazy` is on)
 The URL of the search is signed with the `UriSigner` of FrameworkBundle: the endpoint only queries the entity, the
 fields and the label a form of the application asked for. Restrict the endpoint as the pages using it are, e.g. with an
 `access_control` on `^/_graphql_orm/autocomplete`.
+
+In the [profiler](profiler.md), the query of a search has the origin `autocomplete`, and the "Autocomplete" tab
+describes the search: entity, fields searched, text typed (masked unless `redact_query_values` is false), results and
+limit.
