@@ -54,7 +54,8 @@ Click a query to see its detail:
 - **Variables**
 - **Response**: the first 2 KB of the response, indented, values masked unless `redact_query_values` is false
 - **AST**: an interactive viewer of the query built by the ORM
-- **Hydration**: entities, relations, collections, root result count and depth used
+- **Hydration**: entities, relations, collections, root result count (and the field indexing it, with `indexBy`) and
+  depth used; the collections by relation, with their type (`array` or `ArrayCollection`), how many and their items
 - The "Copy" and "Copy as cURL" buttons (see [below](#copy-as-curl)), the caller (file and line that triggered the
   query) and the endpoint
 

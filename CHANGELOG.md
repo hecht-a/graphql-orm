@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   not selected, with the queries hydrating them and the `PartialEntityException` thrown.
 - Profiler: the "Configuration" tab tells, for each cache of introspection results (types of the variables, countable
   fields, schema validation), whether it served the request or introspected the schema, and the time spent.
+- Profiler: the "Hydration" detail of a query lists the collections hydrated by relation, with their type, how many and
+  their items, and the field indexing the result (`indexBy`).
 
 ---
 
