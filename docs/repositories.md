@@ -51,6 +51,9 @@ $task = $repository->find(42);
 $tasks = $repository->findBy(['status' => 'active']);
 $tasks = $repository->findBy(['status' => 'active'], ['createdAt' => Direction::Desc], 10);
 
+// The entity of an identifier without a query, loaded on first access (see doctrine.md#references)
+$client = $clientRepository->getReference('C-042');
+
 // Keyed by a field, as Doctrine indexBy: ['bug' => Label, 'docs' => Label, ...]
 $labels = $labelRepository->findBy([], indexBy: 'code');
 

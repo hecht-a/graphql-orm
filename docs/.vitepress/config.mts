@@ -42,6 +42,7 @@ export default defineConfig({
                     { text: 'Hydration hooks', link: '/hydration-hooks' },
                     { text: 'Forms', link: '/forms' },
                     { text: 'Serializer', link: '/serializer' },
+                    { text: 'Doctrine', link: '/doctrine' },
                     { text: 'Events', link: '/events' },
                     { text: 'Schema validation', link: '/schema-validation' },
                     { text: 'Console commands', link: '/commands' },

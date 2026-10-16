@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `GraphqlEntityRepository::getReference()`, as Doctrine: the entity of an identifier without a query, loaded on first
+  access.
+- `#[GraphqlReference]`: a Doctrine entity references a GraphQL entity by an identifier column. The bundle sets it on
+  load with a reference loaded on first access, and fills the column from the reference before the first persist.
+  `doctrine/orm` is suggested.
 - A relation typed `Collection` of `doctrine/collections` (suggested) is hydrated as an `ArrayCollection`, its item
   type read from the generic type (`/** @var Collection<int, Task> */`). The `array` properties stay arrays.
 - `GraphqlEntityNormalizer`, registered with `symfony/serializer`: a relation loaded on first access and not read yet is
