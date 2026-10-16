@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\DependencyInjection;
 
+use GraphqlOrm\Cache\CachePoolDescriber;
 use GraphqlOrm\Cache\GraphqlCache;
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Client\GraphqlClientInterface;
@@ -49,6 +50,33 @@ final class GraphqlOrmExtension extends Extension
             static fn (array $region) => ['pool' => new Reference($region['pool'] ?? $secondLevel['pool']), 'lifetime' => $region['lifetime'] ?? $secondLevel['default_lifetime']],
             $secondLevel['regions'],
         ));
+    }
+
+    /**
+     * Tells the profiler the pools of the caches: their id and, at runtime, their adapter.
+     *
+     * @param array{enabled: bool, pool: string, default_lifetime: int, regions: array<string, array{pool: string|null, lifetime: int|null}>} $secondLevel
+     */
+    private function registerCachePoolDescriber(ContainerBuilder $container, ?string $resultPool, array $secondLevel): Reference
+    {
+        $caches = [];
+
+        if ($resultPool !== null) {
+            $caches[GraphqlCache::RESULT_CACHE] = ['id' => $resultPool, 'pool' => new Reference($resultPool), 'lifetime' => null];
+        }
+
+        if ($secondLevel['enabled']) {
+            $caches[GraphqlCache::DEFAULT_REGION] = ['id' => $secondLevel['pool'], 'pool' => new Reference($secondLevel['pool']), 'lifetime' => $secondLevel['default_lifetime']];
+
+            foreach ($secondLevel['regions'] as $name => $region) {
+                $pool = $region['pool'] ?? $secondLevel['pool'];
+                $caches[$name] = ['id' => $pool, 'pool' => new Reference($pool), 'lifetime' => $region['lifetime'] ?? $secondLevel['default_lifetime']];
+            }
+        }
+
+        $container->register(CachePoolDescriber::class, CachePoolDescriber::class)->setArguments([$caches]);
+
+        return new Reference(CachePoolDescriber::class);
     }
 
     public function load(array $configs, ContainerBuilder $container): void
@@ -185,7 +213,8 @@ final class GraphqlOrmExtension extends Extension
                     'result_cache' => $config['result_cache'],
                     'second_level_cache' => $config['second_level_cache'],
                     'schema_validation' => '%graphql_orm.schema_validation.mode%',
-                ]);
+                ])
+                ->setArgument('$cachePools', $this->registerCachePoolDescriber($container, $config['result_cache']['pool'], $config['second_level_cache']));
         }
 
         $container->getDefinition(GraphqlEntityMetadataFactory::class)->setArgument('$namingStrategy', new Reference($config['naming_strategy']));

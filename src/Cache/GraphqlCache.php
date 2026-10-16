@@ -18,6 +18,10 @@ use Symfony\Contracts\Service\ResetInterface;
  */
 final class GraphqlCache implements ResetInterface
 {
+    /** The names of the caches in the profiler, besides the regions. */
+    public const RESULT_CACHE = 'result cache';
+    public const DEFAULT_REGION = 'default region';
+
     private const RESULT_KEY_PREFIX = 'graphql_orm.result.';
 
     private const ENTITY_KEY_PREFIX = 'graphql_orm.entity.';
@@ -54,7 +58,11 @@ final class GraphqlCache implements ResetInterface
      */
     public function evictQueryResult(string $key): void
     {
-        $this->results?->deleteItem(self::resultKey($key));
+        if ($this->results !== null) {
+            $results = $this->results;
+            $this->measured(self::RESULT_CACHE, 'delete', static fn () => $results->deleteItem(self::resultKey($key)));
+        }
+
         $this->collector?->cacheEvicted(__FUNCTION__, $key, self::caller());
     }
 
@@ -80,7 +88,8 @@ final class GraphqlCache implements ResetInterface
         $region = $this->region($class);
 
         if ($region !== null) {
-            $region[0]->deleteItem($this->entityKey($class, $identifier, $region[0]));
+            $key = $this->entityKey($class, $identifier, $region[0]);
+            $this->measured($region[2], 'delete', static fn () => $region[0]->deleteItem($key));
         }
 
         $this->collector?->cacheEvicted(__FUNCTION__, $class . ' #' . $identifier, self::caller());
@@ -102,7 +111,7 @@ final class GraphqlCache implements ResetInterface
 
         $item = $region[0]->getItem(self::GENERATION_KEY_PREFIX . hash('xxh128', $class));
         $generation = \is_int($item->get()) ? $item->get() + 1 : 1;
-        $region[0]->save($item->set($generation));
+        $this->measured($region[2], 'write', static fn () => $region[0]->save($item->set($generation)));
         $this->generations[$class] = $generation;
     }
 
@@ -145,7 +154,10 @@ final class GraphqlCache implements ResetInterface
             ? ($cursor !== null ? $key . "\0" . $cursor : $key)
             : $graphql . "\0" . json_encode($variables, \JSON_THROW_ON_ERROR);
 
-        return $this->results->getItem(self::resultKey($key));
+        $results = $this->results;
+        $key = self::resultKey($key);
+
+        return $this->measured(self::RESULT_CACHE, 'read', static fn () => $results->getItem($key));
     }
 
     /**
@@ -162,7 +174,8 @@ final class GraphqlCache implements ResetInterface
             return;
         }
 
-        $this->results->save($item->set($response)->expiresAfter($lifetime));
+        $results = $this->results;
+        $this->measured(self::RESULT_CACHE, 'write', static fn () => $results->save($item->set($response)->expiresAfter($lifetime)), $response);
     }
 
     /**
@@ -204,7 +217,9 @@ final class GraphqlCache implements ResetInterface
 
         $rows = [];
 
-        foreach ($region[0]->getItems(array_keys($keys)) as $key => $item) {
+        $items = $this->measured($region[2], 'read', static fn () => iterator_to_array($region[0]->getItems(array_keys($keys))), count: \count($keys));
+
+        foreach ($items as $key => $item) {
             $row = $item instanceof CacheItemInterface && $item->isHit() ? $item->get() : null;
 
             if (\is_array($row) && \is_string($key) && isset($keys[$key])) {
@@ -237,17 +252,17 @@ final class GraphqlCache implements ResetInterface
         }
 
         $item = $region[0]->getItem($this->entityKey($class, $identifier, $region[0]));
-        $region[0]->save($item->set($row)->expiresAfter($region[1]));
+        $this->measured($region[2], 'write', static fn () => $region[0]->save($item->set($row)->expiresAfter($region[1])), $row);
         // The query being hydrated, named by the profiler
         $this->collector?->secondLevelCacheEntry($class, $this->attribute($class)?->region, $identifier, 'kept', null);
     }
 
     /**
-     * The pool and lifetime of the entities of a class, null when they are not kept.
+     * The pool, lifetime and name of the region of the entities of a class, null when they are not kept.
      *
      * @param class-string $class
      *
-     * @return array{CacheItemPoolInterface, int|null}|null
+     * @return array{CacheItemPoolInterface, int|null, string}|null
      *
      * @throws LogicException when the region of the class is not configured
      */
@@ -264,12 +279,12 @@ final class GraphqlCache implements ResetInterface
         }
 
         if ($attribute->region === null) {
-            return [$this->entities, $attribute->lifetime ?? $this->defaultLifetime];
+            return [$this->entities, $attribute->lifetime ?? $this->defaultLifetime, self::DEFAULT_REGION];
         }
 
         $region = $this->regions[$attribute->region] ?? throw new LogicException(\sprintf('"%s" is kept in the region "%s", which graphql_orm.second_level_cache.regions does not declare.', $class, $attribute->region));
 
-        return [$region['pool'], $attribute->lifetime ?? $region['lifetime'] ?? $this->defaultLifetime];
+        return [$region['pool'], $attribute->lifetime ?? $region['lifetime'] ?? $this->defaultLifetime, $attribute->region];
     }
 
     /**
@@ -284,6 +299,30 @@ final class GraphqlCache implements ResetInterface
         }
 
         return $this->attributes[$class];
+    }
+
+    /**
+     * Runs an operation on a pool, its time and the size of what it writes told to the profiler.
+     *
+     * @template R
+     *
+     * @param 'read'|'write'|'delete' $operation
+     * @param \Closure(): R           $run
+     * @param array<mixed>|null       $written   the value written, measured as serialized by PHP
+     *
+     * @return R
+     */
+    private function measured(string $cache, string $operation, \Closure $run, ?array $written = null, int $count = 1): mixed
+    {
+        if ($this->collector === null) {
+            return $run();
+        }
+
+        $startedAt = hrtime(true);
+        $result = $run();
+        $this->collector->cacheOperation($cache, $operation, $count, (hrtime(true) - $startedAt) / 1e6, $written !== null ? \strlen(serialize($written)) : 0);
+
+        return $result;
     }
 
     /**

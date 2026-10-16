@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\DataCollector;
 
+use GraphqlOrm\Cache\CachePoolDescriber;
+use GraphqlOrm\Cache\GraphqlCache;
 use GraphqlOrm\Execution\HydrationObserver;
 use GraphqlOrm\Logging\QueryRedactor;
+use GraphqlOrm\Mapping\Cache;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Query\GraphqlQueryTrace;
@@ -28,6 +31,9 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     /** The entities of the second-level cache detailed by a profile, which a page reading thousands would bloat. */
     private const MAX_CACHE_ENTRIES = 500;
 
+    /** The adapter of CachePoolDescriber keeping its values in the memory of the process. */
+    private const ARRAY_ADAPTER = 'Array';
+
     /**
      * @param float|null           $slowQueryThreshold duration in milliseconds from which a query is reported as slow
      * @param array<string, mixed> $configuration      the options of the bundle shown by the profiler, without secrets
@@ -39,6 +45,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
         private readonly array $configuration = [],
         private readonly ?GraphqlEntityMetadataFactory $metadataFactory = null,
         private readonly array $entityClasses = [],
+        private readonly ?CachePoolDescriber $cachePools = null,
     ) {
     }
 
@@ -69,6 +76,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
             'origin' => $trace->origin,
             'entity_class' => $trace->entityClass,
             'lazy_relation' => $trace->lazyRelation,
+            'from_cached_entity' => $trace->fromCachedEntity,
             'index_by' => $trace->indexBy,
             'result_cache' => $trace->resultCache,
             'result_cache_key' => $trace->resultCacheKey,
@@ -394,6 +402,99 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     }
 
     /**
+     * Records an operation on the pool of a cache of the bundle.
+     *
+     * @param string                  $cache     result cache, default region, or the name of a region
+     * @param 'read'|'write'|'delete' $operation
+     * @param int                     $count     the values read, written or deleted
+     * @param float                   $duration  in milliseconds
+     * @param int                     $bytes     the size of the values written, as serialized by PHP
+     */
+    public function cacheOperation(string $cache, string $operation, int $count, float $duration, int $bytes): void
+    {
+        /** @var array<string, array{name: string, reads: int, writes: int, deletes: int, duration: float, bytes_written: int}> $operations */
+        $operations = $this->data['cache_operations'] ?? [];
+        $entry = $operations[$cache] ?? ['name' => $cache, 'reads' => 0, 'writes' => 0, 'deletes' => 0, 'duration' => 0.0, 'bytes_written' => 0];
+        $entry[$operation . 's'] += $count;
+        $entry['duration'] += $duration;
+        $entry['bytes_written'] += $bytes;
+        $operations[$cache] = $entry;
+        $this->data['cache_operations'] = $operations;
+    }
+
+    /**
+     * The operations on the pools of the caches, by cache: values read, written and deleted, their time and the size
+     * written.
+     *
+     * @return list<array{name: string, reads: int, writes: int, deletes: int, duration: float, bytes_written: int}>
+     */
+    public function getCacheOperations(): array
+    {
+        /** @var array<string, array{name: string, reads: int, writes: int, deletes: int, duration: float, bytes_written: int}> $operations */
+        $operations = $this->data['cache_operations'] ?? [];
+
+        return array_values($operations);
+    }
+
+    /**
+     * Where the caches of the bundle live: the id and the adapter of their pool, and their lifetime.
+     *
+     * @return list<array{name: string, id: string, adapter: string, lifetime: int|null}>
+     */
+    public function getCachePools(): array
+    {
+        /** @var list<array{name: string, id: string, adapter: string, lifetime: int|null}> $pools */
+        $pools = $this->data['cache_pools'] ?? [];
+
+        return $pools;
+    }
+
+    /**
+     * What is wrong with the configuration of the caches, e.g. #[Cache] ignored.
+     *
+     * @return list<string>
+     */
+    public function getCacheWarnings(): array
+    {
+        /** @var list<string> $warnings */
+        $warnings = $this->data['cache_warnings'] ?? [];
+
+        return $warnings;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function cacheWarnings(): array
+    {
+        $warnings = [];
+        $secondLevel = $this->getConfiguration()['second_level_cache'] ?? null;
+
+        if (\is_array($secondLevel) && ($secondLevel['enabled'] ?? false) !== true) {
+            $classes = array_unique([...$this->entityClasses, ...array_filter(array_column($this->getQueries(), 'entity_class'), \is_string(...))]);
+
+            foreach ($classes as $class) {
+                if (class_exists($class) && (new \ReflectionClass($class))->getAttributes(Cache::class) !== []) {
+                    $warnings[] = \sprintf('#[Cache] is ignored on %s: graphql_orm.second_level_cache.enabled is false.', (new \ReflectionClass($class))->getShortName());
+                }
+            }
+        }
+
+        foreach ($this->cachePools?->describe() ?? [] as $pool) {
+            if ($pool['adapter'] === self::ARRAY_ADAPTER) {
+                $cache = match ($pool['name']) {
+                    GraphqlCache::RESULT_CACHE => 'The result cache',
+                    GraphqlCache::DEFAULT_REGION => 'The default region',
+                    default => 'The region ' . $pool['name'],
+                };
+                $warnings[] = \sprintf('%s is kept in %s, an ArrayAdapter: its values do not outlive the process.', $cache, $pool['id']);
+            }
+        }
+
+        return $warnings;
+    }
+
+    /**
      * Records an eviction from the caches of the bundle.
      *
      * @param string      $call   the method of GraphqlCache, e.g. evictEntity
@@ -591,6 +692,8 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
         // A profile read from the storage only has its data: the constructor is not called again.
         $this->data['slow_query_threshold'] = $this->slowQueryThreshold;
         $this->data['entities'] = $this->describeEntities();
+        $this->data['cache_pools'] = $this->cachePools?->describe() ?? [];
+        $this->data['cache_warnings'] = $this->cacheWarnings();
         $startedAt = $request->server->get('REQUEST_TIME_FLOAT');
         $this->data['request_started_at'] = \is_float($startedAt) || \is_int($startedAt) ? (float) $startedAt : null;
     }

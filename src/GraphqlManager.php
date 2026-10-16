@@ -72,6 +72,9 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
     /** The relation whose lazy load is running, e.g. Task::$assignee. */
     private ?string $lazyRelation = null;
 
+    /** Whether the lazy load running is of a relation of an entity read from the second-level cache. */
+    private bool $loadingFromCachedEntity = false;
+
     /** @var array<class-string, GraphqlEntityRepository<object>> */
     private array $genericRepositories = [];
 
@@ -147,6 +150,26 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
     }
 
     /**
+     * Loads the relations of an entity read from the second-level cache, its lazy loads marked as such in the profiler.
+     *
+     * @param class-string     $class
+     * @param list<int|string> $identifiers
+     *
+     * @return list<object>
+     */
+    private function loadCachedEntityRelationLazily(string $class, array $identifiers, ?string $relation = null): array
+    {
+        $loadingFromCachedEntity = $this->loadingFromCachedEntity;
+        $this->loadingFromCachedEntity = true;
+
+        try {
+            return $this->loadLazily($class, $identifiers, $relation);
+        } finally {
+            $this->loadingFromCachedEntity = $loadingFromCachedEntity;
+        }
+    }
+
+    /**
      * What looks an entity up in the second-level cache, told to the profiler: find(), or the lazy load of a relation.
      */
     private function cacheTrigger(): string
@@ -177,7 +200,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
             $context->identityMap = $this->identityMap->entities();
         }
 
-        $context->lazyLoader = $this->loadLazily(...);
+        $context->lazyLoader = $this->loadCachedEntityRelationLazily(...);
         $context->observer = $this->collector;
         $context->lazyLoading = true;
         $metadata = $this->metadataFactory->getMetadata($class);
@@ -324,6 +347,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
 
         if ($this->loadingLazily) {
             $context->trace->lazyRelation = $this->lazyRelation;
+            $context->trace->fromCachedEntity = $this->loadingFromCachedEntity;
             $context->trace->duringSerialization = $this->collector !== null && self::whileSerializing();
         }
 

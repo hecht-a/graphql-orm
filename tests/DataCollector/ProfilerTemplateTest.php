@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\DataCollector;
 
+use GraphqlOrm\Cache\CachePoolDescriber;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Query\GraphqlQueryTrace;
@@ -11,6 +12,7 @@ use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use GraphqlOrm\Twig\GraphqlOrmTwigExtension;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Twig\Environment;
@@ -507,7 +509,7 @@ final class ProfilerTemplateTest extends TestCase
 
         $text = self::text($this->render($collector));
 
-        self::assertStringContainsString('Queries 3 Different statements 2 Query time 6.00 ms', $text);
+        self::assertStringContainsString('Queries 3 Sent to the API 2 Different statements 2 Query time 6.00 ms', $text);
         self::assertStringContainsString('Invalid entities 1', $text);
         self::assertStringContainsString('Entities hydrated 6', $text);
         self::assertStringContainsString('Result cache 1/1 hits', $text);
@@ -560,6 +562,72 @@ final class ProfilerTemplateTest extends TestCase
 
         self::assertStringContainsString('Label bug hit lazy load of Task::$label 1', $text);
         self::assertStringContainsString('evictEntity Label #bug LabelController.php:42', $text);
+    }
+
+    #[Test]
+    public function itTellsTheQueriesSentToTheApiAndTheBackendsInTheToolbar(): void
+    {
+        $collector = new GraphqlOrmDataCollector(
+            configuration: ['result_cache' => ['pool' => 'cache.redis'], 'second_level_cache' => ['enabled' => true]],
+            cachePools: new CachePoolDescriber([
+                'result cache' => ['id' => 'cache.redis', 'pool' => new ArrayAdapter(), 'lifetime' => null],
+                'default region' => ['id' => 'cache.app', 'pool' => new ArrayAdapter(), 'lifetime' => 3600],
+            ]),
+        );
+        foreach (['hit', 'miss', null] as $resultCache) {
+            $trace = new GraphqlQueryTrace();
+            $trace->graphql = 'query { tasks { id } }';
+            $trace->resultCache = $resultCache;
+            $collector->addQuery($trace);
+        }
+        $collector->collect(new Request(), new Response());
+
+        $text = self::text($this->render($collector));
+
+        self::assertStringContainsString('Queries 3 Sent to the API 2', $text);
+        self::assertStringContainsString('Result cache 1/2 hits (Array)', $text);
+        self::assertStringContainsString('Second-level cache 0/0 hits (Array)', $text);
+    }
+
+    #[Test]
+    public function itDescribesThePoolsTheOperationsAndTheWarningsOfTheCaches(): void
+    {
+        $collector = new GraphqlOrmDataCollector(cachePools: new CachePoolDescriber([
+            'reference_data' => ['id' => 'cache.array', 'pool' => new ArrayAdapter(), 'lifetime' => 86400],
+        ]));
+        $collector->secondLevelCacheEntry('App\\Entity\\Label', 'reference_data', 'bug', 'hit', 'find');
+        $collector->cacheOperation('reference_data', 'read', 1, 0.42, 0);
+        $collector->cacheOperation('reference_data', 'write', 2, 0.58, 2048);
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { tasks { id } }';
+        $trace->origin = 'lazy';
+        $trace->fromCachedEntity = true;
+        $collector->addQuery($trace);
+        $collector->collect(new Request(), new Response());
+
+        $html = $this->render($collector);
+        $text = self::text($html);
+
+        self::assertStringContainsString('The region reference_data is kept in cache.array, an ArrayAdapter', $text);
+        self::assertStringContainsString('reference_data cache.array Array 86400 s', $text);
+        self::assertStringContainsString('reference_data 1 2 0 1.00 ms 2.0 KB', $text);
+        self::assertStringContainsString('1 query sent by the relations of entities read from the cache: #1', $text);
+        self::assertStringContainsString('from cached entity', $text);
+    }
+
+    #[Test]
+    public function itShowsTheCachesOfARequestSendingNoQuery(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $collector->secondLevelCacheEntry('App\\Entity\\Label', null, 'bug', 'hit', 'find');
+        $collector->cacheEvicted('evictEntity', 'App\\Entity\\Label #docs', '/app/src/Controller/LabelController.php:42');
+
+        $html = $this->render($collector);
+        $text = self::text($html);
+
+        self::assertStringNotContainsString('No GraphQL queries were executed', $text);
+        self::assertStringContainsString('data-graphql-orm-tab="cache"', $html);
+        self::assertStringContainsString('evictEntity Label #docs LabelController.php:42', $text);
     }
 
     #[Test]

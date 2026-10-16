@@ -14,9 +14,15 @@
         {% set validation = collector.schemaValidation %}
         {% set resultCache = collector.resultCacheUsage %}
         {% set secondLevelCache = collector.secondLevelCacheUsage %}
+        {% set resultCacheAdapters = collector.cachePools|filter(pool => pool.name == 'result cache')|map(pool => pool.adapter)|join(', ') %}
+        {% set secondLevelAdapters = collector.cachePools|filter(pool => pool.name != 'result cache')|map(pool => pool.adapter)|reduce((adapters, adapter) => adapter in adapters ? adapters : adapters|merge([adapter]), [])|join(', ') %}
         <div class="sf-toolbar-info-piece">
             <b>Queries</b>
             <span class="sf-toolbar-status">{{ collector.queryCount }}</span>
+        </div>
+        <div class="sf-toolbar-info-piece">
+            <b>Sent to the API</b>
+            <span>{{ collector.queryCount - collector.resultCacheHitCount }}</span>
         </div>
         <div class="sf-toolbar-info-piece">
             <b>Different statements</b>
@@ -48,12 +54,18 @@
         </div>
         <div class="sf-toolbar-info-piece">
             <b>Result cache</b>
-            <span>{{ resultCache is null ? 'disabled' : resultCache.hits ~ '/' ~ resultCache.lookups ~ ' hits' }}</span>
+            <span>{{ resultCache is null ? 'disabled' : resultCache.hits ~ '/' ~ resultCache.lookups ~ ' hits' ~ (resultCacheAdapters ? ' (' ~ resultCacheAdapters ~ ')') }}</span>
         </div>
         <div class="sf-toolbar-info-piece">
             <b>Second-level cache</b>
-            <span>{{ secondLevelCache is null ? 'disabled' : secondLevelCache.hits ~ '/' ~ secondLevelCache.lookups ~ ' hits' }}</span>
+            <span>{{ secondLevelCache is null ? 'disabled' : secondLevelCache.hits ~ '/' ~ secondLevelCache.lookups ~ ' hits' ~ (secondLevelAdapters ? ' (' ~ secondLevelAdapters ~ ')') }}</span>
         </div>
+        {% if collector.cacheWarnings is not empty %}
+            <div class="sf-toolbar-info-piece">
+                <b>Cache warnings</b>
+                <span class="sf-toolbar-status sf-toolbar-status-yellow">{{ collector.cacheWarnings|length }}</span>
+            </div>
+        {% endif %}
         {% if collector.slowQueryCount|default(0) > 0 %}
             <div class="sf-toolbar-info-piece">
                 <b>Slow</b>
@@ -78,7 +90,7 @@
         link: profiler_url,
         icon: icon,
         text: text,
-        status: collector.errorCount > 0 ? 'red' : (collector.repeatedQueries is not empty or collector.lazyLoadsByRelation is not empty or collector.slowQueryCount|default(0) > 0 ? 'yellow')
+        status: collector.errorCount > 0 ? 'red' : (collector.repeatedQueries is not empty or collector.lazyLoadsByRelation is not empty or collector.slowQueryCount|default(0) > 0 or collector.cacheWarnings is not empty ? 'yellow')
     }) }}
 
 {% endblock %}
@@ -104,7 +116,8 @@
 
 {% block panel %}
     <h2>GraphQL ORM</h2>
-    {% if collector.queryCount == 0 %}
+    {# A request may only read the second-level cache, or evict from the caches, without sending a query #}
+    {% if collector.queryCount == 0 and collector.secondLevelCache is empty and collector.cacheEvictions is empty and collector.cacheWarnings is empty %}
         <div class="empty">
             <p>No GraphQL queries were executed.</p>
         </div>
@@ -176,6 +189,12 @@
                     <a href="#graphql-orm-serializer" data-graphql-orm-goto="serializer">See which ones</a>
                 </div>
             {% endif %}
+            {% for warning in collector.cacheWarnings %}
+                <div class="graphql-orm-alert">
+                    <strong>{{ warning }}</strong>
+                    <a href="#graphql-orm-cache" data-graphql-orm-goto="cache">See the caches</a>
+                </div>
+            {% endfor %}
             {% if collector.repeatedQueries is not empty %}
                 <div class="graphql-orm-alert">
                     <strong>{{ collector.repeatedQueries|length }} {{ collector.repeatedQueries|length > 1 ? 'queries are' : 'query is' }} repeated with other values</strong>
@@ -216,7 +235,8 @@
                     </button>
                 {% endif %}
                 {% set resultCacheQueries = collector.queries|filter(query => (query.result_cache ?? null) is not null) %}
-                {% set showCache = resultCacheQueries is not empty or collector.secondLevelCache is not empty or collector.cacheEvictions is not empty %}
+                {% set cachedEntityQueries = collector.queries|filter(query => query.from_cached_entity ?? false) %}
+                {% set showCache = resultCacheQueries is not empty or collector.secondLevelCache is not empty or collector.cacheEvictions is not empty or collector.cacheOperations is not empty or collector.cacheWarnings is not empty %}
                 {% if showCache %}
                     {% set cacheHits = resultCacheQueries|filter(query => query.result_cache == 'hit')|length + collector.secondLevelCache|reduce((total, entry) => total + entry.hits, 0) %}
                     {% set cacheLookups = resultCacheQueries|length + collector.secondLevelCache|reduce((total, entry) => total + entry.hits + entry.misses, 0) %}
@@ -535,7 +555,60 @@
             {% endif %}
 
             {% if showCache %}
-                <div data-graphql-orm-view="cache" hidden>
+                <div data-graphql-orm-view="cache" id="graphql-orm-cache" hidden>
+                    {% if collector.cachePools is not empty %}
+                        <h3>Pools</h3>
+                        <table>
+                            <thead>
+                                <tr><th>Cache</th><th>Pool</th><th>Adapter</th><th class="graphql-orm-number">Lifetime</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for pool in collector.cachePools %}
+                                    <tr>
+                                        <td>{{ pool.name }}</td>
+                                        <td><code>{{ pool.id }}</code></td>
+                                        <td>{{ pool.adapter }}</td>
+                                        <td class="graphql-orm-number">{{ pool.lifetime is not null ? pool.lifetime ~ ' s' : 'per query' }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% endif %}
+
+                    {% if collector.cacheOperations is not empty %}
+                        <h3>Operations</h3>
+                        <table>
+                            <thead>
+                                <tr><th>Cache</th><th class="graphql-orm-number">Read</th><th class="graphql-orm-number">Written</th><th class="graphql-orm-number">Deleted</th><th class="graphql-orm-number">Time</th><th class="graphql-orm-number">Size written</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for operation in collector.cacheOperations %}
+                                    <tr>
+                                        <td>{{ operation.name }}</td>
+                                        <td class="graphql-orm-number">{{ operation.reads }}</td>
+                                        <td class="graphql-orm-number">{{ operation.writes }}</td>
+                                        <td class="graphql-orm-number">{{ operation.deletes }}</td>
+                                        <td class="graphql-orm-number">{{ operation.duration|number_format(2) }} ms</td>
+                                        <td class="graphql-orm-number">{{ (operation.bytes_written / 1024)|number_format(1) }} KB</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <p class="graphql-orm-muted">Values counted one by one; the size is that of PHP serialize(), before the compression of the adapter if any.</p>
+                    {% endif %}
+
+                    {% if cachedEntityQueries is not empty %}
+                        <p class="graphql-orm-warning">
+                            {{ cachedEntityQueries|length }} {{ cachedEntityQueries|length > 1 ? 'queries' : 'query' }} sent by the relations of entities read from the cache:
+                            {% for number, query in collector.queries %}{% if query.from_cached_entity ?? false %}<a href="#graphql-orm-query-{{ number + 1 }}" data-graphql-orm-open="{{ number + 1 }}">#{{ number + 1 }}</a> {% endif %}{% endfor %}
+                        </p>
+                        <p class="graphql-orm-muted">An entity of the second-level cache keeps its relations by their identifier: they are loaded on first access.</p>
+                    {% endif %}
+
+                    {% if profile is defined and profile.hasCollector('cache') %}
+                        <p><a href="?panel=cache">The calls to the pools in the Cache panel of Symfony</a></p>
+                    {% endif %}
+
                     {% if resultCacheQueries is not empty %}
                         <h3>Result cache</h3>
                         <table>
@@ -972,6 +1045,7 @@
     {% if query.origin ?? null %}
         <span class="graphql-orm-origin graphql-orm-origin-{{ _self.originKind(query.origin)|trim }}">{{ query.origin }}</span>
         {% if (query.result_cache ?? null) == 'hit' %}<span class="graphql-orm-origin graphql-orm-origin-count" title="Answered by the result cache, without being sent">result cache</span>{% endif %}
+        {% if query.from_cached_entity ?? false %}<span class="graphql-orm-origin graphql-orm-origin-lazy" title="A relation of an entity read from the second-level cache">from cached entity</span>{% endif %}
         {% if query.during_serialization ?? false %}<span class="graphql-orm-origin graphql-orm-origin-lazy" title="Sent while the serializer was writing an entity">serializer</span>{% endif %}
     {% else %}
         <span class="graphql-orm-muted">-</span>

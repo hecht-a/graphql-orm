@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\DependencyInjection;
 
+use GraphqlOrm\Cache\CachePoolDescriber;
 use GraphqlOrm\Cache\GraphqlCache;
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Command\FindCommand;
@@ -607,6 +608,26 @@ final class GraphqlOrmExtensionTest extends TestCase
         $container->compile();
 
         self::assertNull($this->cacheProperty($container, 'entities'));
+    }
+
+    #[Test]
+    public function itTellsTheProfilerThePoolsOfTheCaches(): void
+    {
+        $container = $this->createContainer(debug: true, config: [
+            'result_cache' => ['pool' => 'cache.redis'],
+            'second_level_cache' => ['enabled' => true, 'regions' => ['reference_data' => ['pool' => 'cache.redis', 'lifetime' => 86400]]],
+        ]);
+        $container->register('cache.redis', ArrayAdapter::class);
+
+        $container->compile();
+
+        $describer = $container->get(CachePoolDescriber::class);
+        self::assertInstanceOf(CachePoolDescriber::class, $describer);
+        self::assertSame([
+            ['name' => 'result cache', 'id' => 'cache.redis', 'adapter' => 'Array', 'lifetime' => null],
+            ['name' => 'default region', 'id' => 'cache.app', 'adapter' => 'Array', 'lifetime' => 3600],
+            ['name' => 'reference_data', 'id' => 'cache.redis', 'adapter' => 'Array', 'lifetime' => 86400],
+        ], $describer->describe());
     }
 
     private function cacheProperty(ContainerBuilder $container, string $property): mixed
