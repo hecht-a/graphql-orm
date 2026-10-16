@@ -25,4 +25,18 @@ interface HydrationObserver
      * @param list<int|string> $identifiers
      */
     public function ghostsLoaded(string $class, array $identifiers): void;
+
+    /**
+     * An entity hydrated from a selection of its fields, by the query being sent.
+     *
+     * @param list<string> $unselected the mapped properties the query did not select
+     */
+    public function partialEntityHydrated(string $class, array $unselected): void;
+
+    /**
+     * A property of a partial entity read without being selected: a PartialEntityException is about to be thrown.
+     *
+     * @param list<string> $missing the properties not selected and left without a value
+     */
+    public function partialEntityRead(string $class, array $missing): void;
 }

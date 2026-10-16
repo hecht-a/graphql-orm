@@ -8,6 +8,7 @@ use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\DefaultDialect;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\Dialect\HasuraDialect;
+use GraphqlOrm\Exception\PartialEntityException;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Logging\QueryRedactor;
@@ -15,6 +16,7 @@ use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Tests\Fixtures\Depth\ChainA;
 use GraphqlOrm\Tests\Fixtures\Depth\ChainB;
+use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeLabel;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
 use PHPUnit\Framework\Attributes\Test;
@@ -100,6 +102,29 @@ final class QueryOriginTest extends TestCase
 
         $loading = $this->collector->getLazyLoading();
         self::assertSame([ChainA::class . '::$next', 1, 1, [2]], [$loading[0]['relation'], $loading[0]['created'], $loading[0]['loaded'], $loading[0]['queries']]);
+    }
+
+    #[Test]
+    public function itTellsTheProfilerThePartialEntitiesAndThePropertiesReadWithoutBeingSelected(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['labels' => [['code' => 'bug'], ['code' => 'docs']]]]);
+        $labels = $this->repository($client, FakeLabel::class)->createQueryBuilder()->select('code')->getQuery()->getResult();
+        self::assertIsArray($labels);
+        self::assertInstanceOf(FakeLabel::class, $labels[0]);
+
+        try {
+            self::assertGreaterThan(0, $labels[0]->position);
+        } catch (PartialEntityException) {
+        }
+
+        self::assertSame([[
+            'class' => FakeLabel::class,
+            'unselected' => ['position'],
+            'hydrated' => 2,
+            'queries' => [1],
+            'exceptions' => 1,
+            'missing' => ['position'],
+        ]], $this->collector->getPartialEntities());
     }
 
     #[Test]

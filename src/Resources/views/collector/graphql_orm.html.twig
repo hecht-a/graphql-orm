@@ -165,6 +165,13 @@
                         Lazy loading <span class="badge">{{ collector.lazyLoading|reduce((total, group) => total + group.created, 0) }}</span>
                     </button>
                 {% endif %}
+                {% if collector.partialEntities is not empty %}
+                    {% set partialExceptions = collector.partialEntities|reduce((total, group) => total + group.exceptions, 0) %}
+                    <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="partial-entities">
+                        Partial entities
+                        <span class="badge{{ partialExceptions > 0 ? ' status-warning' : '' }}">{{ partialExceptions > 0 ? partialExceptions : collector.partialEntities|reduce((total, group) => total + group.hydrated, 0) }}</span>
+                    </button>
+                {% endif %}
                 {% if serialization.identifiers + serialization.partial > 0 or serialization.lazy_loads is not empty %}
                     <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="serializer">
                         Serializer
@@ -388,6 +395,31 @@
                 </div>
             {% endif %}
 
+            {% if collector.partialEntities is not empty %}
+                <div data-graphql-orm-view="partial-entities" hidden>
+                    <p class="graphql-orm-muted">
+                        Entities hydrated from a selection of their fields (<code>select()</code>): reading a field not selected
+                        and left without a value throws a <code>PartialEntityException</code>: select it.
+                    </p>
+                    <table>
+                        <thead>
+                            <tr><th>Entity</th><th>Not selected</th><th class="graphql-orm-number">Hydrated</th><th>By</th><th class="graphql-orm-number">Exceptions</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for group in collector.partialEntities %}
+                                <tr>
+                                    <td title="{{ group.class }}">{{ group.class|split('\\')|last }}</td>
+                                    <td>{{ group.unselected|join(', ') }}</td>
+                                    <td class="graphql-orm-number">{{ group.hydrated }}</td>
+                                    <td>{% for number in group.queries %}<a href="#graphql-orm-query-{{ number }}" data-graphql-orm-open="{{ number }}">#{{ number }}</a>{{ loop.last ? '' : ', ' }}{% endfor %}</td>
+                                    <td class="graphql-orm-number">{% if group.exceptions > 0 %}<strong class="graphql-orm-warning">{{ group.exceptions }}</strong> ({{ group.missing|join(', ') }}){% else %}0{% endif %}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+
             {% if serialization.identifiers + serialization.partial > 0 or serialization.lazy_loads is not empty %}
                 <div data-graphql-orm-view="serializer" id="graphql-orm-serializer" hidden>
                     <div class="metrics">
@@ -519,6 +551,7 @@
         .graphql-orm-alert a { color: inherit; text-decoration: underline; }
         .graphql-orm-tabs { margin: 0; }
         .graphql-orm-finding { border: 1px solid var(--table-border-color, #d4d4d4); border-left: 4px solid var(--color-warning, #785b02); border-radius: 0 6px 6px 0; padding: 4px 16px; margin-bottom: 12px; }
+        .graphql-orm-warning { color: var(--color-warning, #785b02); }
         .graphql-orm-finding h3 { margin: 10px 0 0; }
         .graphql-orm-entity { margin-bottom: 18px; }
         .graphql-orm-entity h3 { margin: 0 0 4px; display: flex; gap: 8px; align-items: center; }

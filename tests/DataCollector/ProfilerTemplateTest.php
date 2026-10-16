@@ -396,6 +396,24 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itListsThePartialEntitiesInATab(): void
+    {
+        $collector = $this->collector([]);
+        $collector->partialEntityHydrated('App\\Entity\\Label', ['name', 'position']);
+        $collector->partialEntityHydrated('App\\Entity\\Label', ['name', 'position']);
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { labels { code } }';
+        $collector->addQuery($trace);
+        $collector->partialEntityRead('App\\Entity\\Label', ['position']);
+
+        $html = $this->render($collector);
+        $text = self::text($html);
+
+        self::assertStringContainsString('data-graphql-orm-tab="partial-entities"', $html);
+        self::assertStringContainsString('Label name, position 2 #1 1 (position)', $text);
+    }
+
+    #[Test]
     public function itWarnsAboutRepeatedQueries(): void
     {
         $collector = $this->collector([

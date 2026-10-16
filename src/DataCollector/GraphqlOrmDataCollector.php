@@ -200,6 +200,56 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
         $this->data['ghosts'] = $ghosts;
     }
 
+    public function partialEntityHydrated(string $class, array $unselected): void
+    {
+        $partial = $this->partial();
+        $key = $class . '|' . implode(',', $unselected);
+        $group = $partial[$key] ?? ['class' => $class, 'unselected' => $unselected, 'hydrated' => 0, 'queries' => [], 'exceptions' => 0, 'missing' => []];
+        ++$group['hydrated'];
+        // The query hydrating the entity is recorded once hydrated
+        $group['queries'] = array_values(array_unique([...$group['queries'], $this->getQueryCount() + 1]));
+        $partial[$key] = $group;
+        $this->data['partial'] = $partial;
+    }
+
+    public function partialEntityRead(string $class, array $missing): void
+    {
+        $partial = $this->partial();
+
+        foreach ($partial as $key => $group) {
+            if ($group['class'] === $class && array_diff($missing, $group['unselected']) === []) {
+                ++$group['exceptions'];
+                $group['missing'] = array_values(array_unique([...$group['missing'], ...$missing]));
+                $partial[$key] = $group;
+                break;
+            }
+        }
+
+        $this->data['partial'] = $partial;
+    }
+
+    /**
+     * The entities hydrated from a selection of their fields, by class and fields not selected: how many, by which
+     * queries, and how many times a property not selected was read (a PartialEntityException).
+     *
+     * @return list<array{class: string, unselected: list<string>, hydrated: int, queries: list<int>, exceptions: int, missing: list<string>}>
+     */
+    public function getPartialEntities(): array
+    {
+        return array_values($this->partial());
+    }
+
+    /**
+     * @return array<string, array{class: string, unselected: list<string>, hydrated: int, queries: list<int>, exceptions: int, missing: list<string>}>
+     */
+    private function partial(): array
+    {
+        /** @var array<string, array{class: string, unselected: list<string>, hydrated: int, queries: list<int>, exceptions: int, missing: list<string>}> $partial */
+        $partial = $this->data['partial'] ?? [];
+
+        return $partial;
+    }
+
     /**
      * @return array<string, array{class: string, relation: string|null, loaded_by: int|null}> by class#identifier
      */

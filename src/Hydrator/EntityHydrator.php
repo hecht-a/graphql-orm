@@ -160,7 +160,7 @@ final class EntityHydrator
 
         $this->callBeforeHydrateMethods($entity, $data);
         $this->hydrateFields($entity, $metadata, $data, $context, $depth);
-        $this->guardUnselectedProperties($entity, $metadata, $data);
+        $this->guardUnselectedProperties($entity, $metadata, $data, $context);
         $this->callAfterHydrateMethods($entity, $metadata);
 
         return $this->markComplete($entity, $metadata, $data, $context);
@@ -249,7 +249,7 @@ final class EntityHydrator
      *
      * @param array<string|int, mixed> $data
      */
-    private function guardUnselectedProperties(object $entity, GraphqlEntityMetadata $metadata, array $data): void
+    private function guardUnselectedProperties(object $entity, GraphqlEntityMetadata $metadata, array $data, GraphqlExecutionContext $context): void
     {
         $unselected = [];
         $missing = [];
@@ -274,12 +274,14 @@ final class EntityHydrator
         }
 
         $this->partial[$entity] = $unselected;
+        $context->observer?->partialEntityHydrated($entity::class, $unselected);
 
         if ($missing === []) {
             return;
         }
 
         $reflection = $this->classReflection($entity::class);
+        $observer = $context->observer;
         $values = [];
 
         foreach ($reflection->getProperties() as $property) {
@@ -290,7 +292,11 @@ final class EntityHydrator
 
         $reflection->resetAsLazyGhost(
             $entity,
-            static fn (object $ghost) => throw PartialEntityException::forProperties($ghost::class, $missing),
+            static function (object $ghost) use ($missing, $observer): never {
+                $observer?->partialEntityRead($ghost::class, $missing);
+
+                throw PartialEntityException::forProperties($ghost::class, $missing);
+            },
             \ReflectionClass::SKIP_DESTRUCTOR,
         );
 
