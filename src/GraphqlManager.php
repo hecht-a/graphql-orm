@@ -132,20 +132,27 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
             throw new LogicException(\sprintf('"%s" belongs to the GraphQL ORM manager "%s", not "%s": get its repository from GraphqlManagerRegistry::getRepository(), or autowire GraphqlManagerInterface $%3$sManager.', $class, $owner, $this->name));
         }
 
+        // Marked before its relations, which may lead back to it; unmarked when one is refused, to refuse it every time.
         $this->managedClasses[$class] = true;
 
-        foreach ($this->metadataFactory->getMetadata($class)->fields as $field) {
-            if ($field->relation === null) {
-                continue;
+        try {
+            foreach ($this->metadataFactory->getMetadata($class)->fields as $field) {
+                if ($field->relation === null) {
+                    continue;
+                }
+
+                $targetOwner = $router->managerFor($field->relation);
+
+                if ($targetOwner !== $this->name) {
+                    throw new LogicException(\sprintf('%s::$%s targets "%s" of the manager "%s": the API of the manager "%s" cannot select its fields. Map its identifier instead, and load it from its own manager.', $class, $field->property, $field->relation, $targetOwner, $this->name));
+                }
+
+                $this->assertManages($field->relation);
             }
+        } catch (LogicException $exception) {
+            unset($this->managedClasses[$class]);
 
-            $targetOwner = $router->managerFor($field->relation);
-
-            if ($targetOwner !== $this->name) {
-                throw new LogicException(\sprintf('%s::$%s targets "%s" of the manager "%s": the API of the manager "%s" cannot select its fields. Map its identifier instead, and load it from its own manager.', $class, $field->property, $field->relation, $targetOwner, $this->name));
-            }
-
-            $this->assertManages($field->relation);
+            throw $exception;
         }
     }
 
@@ -397,6 +404,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
 
         if ($this->collector !== null) {
             $context->trace->manager = $this->name;
+            $context->trace->slowQueryThreshold = $this->slowQueryThreshold;
             [$context->trace->origin, $context->trace->entityClass] = $this->origin();
 
             // Lets the profiler suggest one findBy() for the entities found one by one in a loop.

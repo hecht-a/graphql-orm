@@ -119,6 +119,21 @@ final class GraphqlManagerRegistryTest extends TestCase
         $this->registry->getRepository(ContactWithTask::class);
     }
 
+    #[Test]
+    public function itRefusesARelationToAnEntityOfAnotherApiEveryTime(): void
+    {
+        foreach ([1, 2] as $attempt) {
+            try {
+                $this->registry->getRepository(ContactWithTask::class);
+                self::fail('Attempt ' . $attempt . ': the relation to another API was accepted.');
+            } catch (LogicException) {
+            }
+        }
+
+        $this->expectException(LogicException::class);
+        new GraphqlEntityRepository($this->crm, ContactWithTask::class);
+    }
+
     private function manager(string $name, FakeGraphqlClient $client, ManagerRouter $router): GraphqlManager
     {
         $metadataFactory = new GraphqlEntityMetadataFactory();
