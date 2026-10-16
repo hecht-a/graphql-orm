@@ -95,6 +95,11 @@ final class GraphqlEntityType extends AbstractType
             $parameters['label'] = $options['choice_label'];
         }
 
+        // The max_results option of Symfony UX Autocomplete, when it is installed.
+        if ($options->offsetExists('max_results') && \is_int($options['max_results'])) {
+            $parameters['max'] = $options['max_results'];
+        }
+
         return $this->uriSigner->sign(self::AUTOCOMPLETE_PATH . '?' . http_build_query($parameters));
     }
 

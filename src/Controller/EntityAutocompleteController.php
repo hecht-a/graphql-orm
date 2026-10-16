@@ -21,10 +21,12 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
  */
 final class EntityAutocompleteController
 {
-    private const MAX_RESULTS = 20;
+    /** The results without the max_results option of UX Autocomplete, and their ceiling whatever it says. */
+    private const DEFAULT_RESULTS = 20;
+    private const MAX_RESULTS = 100;
 
     /** The parameters the form signs; UX Autocomplete adds the query and the page. */
-    private const SIGNED_PARAMETERS = ['_hash', 'class', 'fields', 'label'];
+    private const SIGNED_PARAMETERS = ['_hash', 'class', 'fields', 'label', 'max'];
 
     public function __construct(
         private readonly GraphqlManager $manager,
@@ -61,7 +63,8 @@ final class EntityAutocompleteController
             $qb->where($qb->expr()->orX(...array_map(fn (string $field) => $qb->expr()->contains($field, $query), $fields)));
         }
 
-        $result = $qb->limit(self::MAX_RESULTS)->getQuery()->getResult();
+        $max = is_numeric($signed['max'] ?? null) ? (int) $signed['max'] : self::DEFAULT_RESULTS;
+        $result = $qb->limit(max(1, min($max, self::MAX_RESULTS)))->getQuery()->getResult();
         $results = [];
 
         foreach (\is_array($result) ? $result : $result->items as $entity) {

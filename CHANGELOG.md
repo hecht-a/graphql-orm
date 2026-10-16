@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `GraphqlEntityType` loads only the submitted entities on submission, by their identifier within the restriction of
   `query_builder`, and supports `choice_lazy`. With `autocomplete: true` and `search_fields`, it searches the entities as
-  the user types with Symfony UX Autocomplete, through a signed endpoint of the bundle (import
+  the user types with Symfony UX Autocomplete (as many results as its `max_results` option), through a signed endpoint
+  of the bundle (import
   `@GraphqlOrmBundle/Resources/config/routes.php`).
 - `GraphqlQueryBuilder::andWhere()`, adding a condition to those of `where()`.
 - `GraphqlEntityRepository::getReference()`, as Doctrine: the entity of an identifier without a query, loaded on first

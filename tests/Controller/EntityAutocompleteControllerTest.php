@@ -45,6 +45,16 @@ final class EntityAutocompleteControllerTest extends TestCase
     }
 
     #[Test]
+    public function itGivesTheNumberOfResultsTheFieldAsksFor(): void
+    {
+        $url = $this->signer()->sign(GraphqlEntityType::AUTOCOMPLETE_PATH . '?' . http_build_query(['class' => FakeTask::class, 'fields' => 'title', 'max' => 5]));
+
+        $this->controller()(Request::create($url . '&query=Fix'));
+
+        self::assertStringContainsString('first: 5', $this->client->lastQuery);
+    }
+
+    #[Test]
     public function itRefusesASearchItDidNotSign(): void
     {
         $url = GraphqlEntityType::AUTOCOMPLETE_PATH . '?' . http_build_query(['class' => FakeTask::class, 'fields' => 'id']);

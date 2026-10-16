@@ -76,6 +76,32 @@ final class GraphqlEntityAutocompleteTest extends TestCase
     }
 
     #[Test]
+    public function itSignsTheNumberOfResultsOfTheMaxResultsOption(): void
+    {
+        $factory = Forms::createFormFactoryBuilder()
+            ->addType(new GraphqlEntityType($this->manager(new FakeGraphqlClient()), new UriSigner('secret')))
+            ->addTypeExtension(new class extends \Symfony\Component\Form\AbstractTypeExtension {
+                public static function getExtendedTypes(): iterable
+                {
+                    return [\Symfony\Component\Form\Extension\Core\Type\ChoiceType::class];
+                }
+
+                public function configureOptions(\Symfony\Component\OptionsResolver\OptionsResolver $resolver): void
+                {
+                    // As Symfony UX Autocomplete does
+                    $resolver->setDefault('max_results', 10);
+                }
+            })
+            ->getFormFactory();
+
+        $form = $factory->create(GraphqlEntityType::class, null, ['class' => FakeTask::class, 'autocomplete' => true, 'search_fields' => ['title'], 'max_results' => 5]);
+
+        $url = $form->getConfig()->getOption('autocomplete_url');
+        self::assertIsString($url);
+        self::assertStringContainsString('max=5', $url);
+    }
+
+    #[Test]
     public function itNeedsTheFieldsToSearchForAnAutocompleteField(): void
     {
         $this->expectException(LogicException::class);
@@ -85,11 +111,15 @@ final class GraphqlEntityAutocompleteTest extends TestCase
 
     private function factory(FakeGraphqlClient $client): FormFactoryInterface
     {
-        $metadataFactory = new GraphqlEntityMetadataFactory();
-        $manager = new GraphqlManager($metadataFactory, $client, new EntityHydrator($metadataFactory), null, 2, new DataApiBuilderDialect());
-
         return Forms::createFormFactoryBuilder()
-            ->addType(new GraphqlEntityType($manager, new UriSigner('secret')))
+            ->addType(new GraphqlEntityType($this->manager($client), new UriSigner('secret')))
             ->getFormFactory();
+    }
+
+    private function manager(FakeGraphqlClient $client): GraphqlManager
+    {
+        $metadataFactory = new GraphqlEntityMetadataFactory();
+
+        return new GraphqlManager($metadataFactory, $client, new EntityHydrator($metadataFactory), null, 2, new DataApiBuilderDialect());
     }
 }

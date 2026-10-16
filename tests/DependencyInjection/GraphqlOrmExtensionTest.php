@@ -6,8 +6,8 @@ namespace GraphqlOrm\Tests\DependencyInjection;
 
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Command\FindCommand;
-use GraphqlOrm\Controller\EntityAutocompleteController;
 use GraphqlOrm\Command\MakeGraphqlEntityCommand;
+use GraphqlOrm\Controller\EntityAutocompleteController;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\DependencyInjection\GraphqlOrmExtension;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
