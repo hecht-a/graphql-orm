@@ -28,6 +28,39 @@ A property with a default value keeps it. The same goes for a relation reduced t
 When the shared identity map later meets the entity in full, it is completed. The [profiler](profiler.md) lists the
 partial entities of a request, with the fields not selected, and counts the exceptions thrown.
 
+## Loading relations
+
+`with()` names the relations a query loads, as a fetch join of Doctrine, in place of the global `max_depth`. The
+relations it does not name only get their identifier selected:
+
+```php
+$tasks = $repository->createQueryBuilder()
+    ->with('assignee.company', 'label')
+    ->getQuery()
+    ->getResult();
+```
+
+```graphql
+query {
+  tasks {
+    id
+    title
+    assignee { id name company { id name } }
+    label { id name }
+    reviewer { id }
+  }
+}
+```
+
+- A nested relation is named by its path, of GraphQL names or PHP properties, whatever `max_depth`: `assignee.company`
+  loads `assignee` too.
+- A relation mapped with `Fetch::Lazy` is loaded when named.
+- A relation not named is hydrated as a lazy ghost when it is mapped with `Fetch::Lazy` or `lazy_loading` is enabled,
+  as a [partial entity](#field-selection) otherwise.
+- Each call adds to the relations of the previous ones. Along with `select()`, the relations named are added to the
+  fields selected, with every field of their entity.
+- A name that is not a relation of its entity throws an `InvalidArgumentException`, which suggests the closest field.
+
 ## Filtering
 
 Use `ExpressionBuilder` to build type-safe filter expressions:

@@ -50,7 +50,7 @@ graphql_orm:
 | `endpoint`                        | *(required)*             | GraphQL API endpoint, at the root or for each manager |
 | `managers`                        | `[]`                     | One manager per GraphQL API, each with any option of this table (see [several APIs](multiple-apis.md)) |
 | `default_manager`                 | the first manager        | The manager autowired without a name, and of the entities no mapping claims |
-| `max_depth`                       | `1`                      | Relation levels loaded by the automatic selection; deeper relations only get their identifier (an explicit `select()` is not limited) |
+| `max_depth`                       | `1`                      | Relation levels loaded by the automatic selection; deeper relations only get their identifier (an explicit `select()` or `with()` is not limited) |
 | `lazy_loading`                    | `false`                  | Load the relations reduced to their identifier on first access (see [lazy loading](#lazy-loading)) |
 | `variables.enabled`               | `true`                   | Send root arguments as typed GraphQL variables |
 | `variables.cache_pool`            | `cache.app`              | Cache pool storing the introspected argument types |
@@ -99,8 +99,8 @@ $task->user->name;                  // users(...) { id name ... }: the user is l
 - With Data API Builder and Hasura, the first access loads every lazy entity of the same class met in the response,
   with one query filtering on their identifiers (`in`, 100 identifiers per query): reading `$task->user->name` for 100
   tasks sends one query, not 100. With the other dialects, which standardize no list filter, each entity is loaded by
-  a query of its own (the N+1 problem): raise `max_depth`, or select the fields you need, when you know they will be
-  read.
+  a query of its own (the N+1 problem): raise `max_depth`, name the relations with
+  [`with()`](query-builder.md#loading-relations), or select the fields you need, when you know they will be read.
 - Each load is shown in the profiler, the logs and the [events](events.md).
 - An entity whose complete row comes later in the same response is completed from it, without query.
 - An entity deleted in the meantime throws an `EntityNotFoundException` on first access.

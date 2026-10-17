@@ -90,7 +90,7 @@ public array $tasks = [];
 - The ghosts of a response are loaded together: one query for the users of all the tasks, when the dialect filters on
   a list (Data API Builder, Hasura).
 - A collection is selected by the identifiers of its items, each item being a ghost: a PHP array cannot be lazy itself.
-- An explicit `select('user.name')` still loads the relation with the query.
+- An explicit `select('user.name')`, or `with('user')`, still loads the relation with the query.
 - It needs no `lazy_loading`, which only applies to the relations beyond `max_depth`.
 
 ## Naming strategy
