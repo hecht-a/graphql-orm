@@ -30,6 +30,8 @@ final class GraphqlQueryStringBuilder
     private array $visited = [];
     private QueryOptions $options;
     private ?FilterExpressionInterface $filter = null;
+    /** @var array<string, mixed>|null */
+    private ?array $with = null;
 
     public function __construct(
         private readonly GraphqlManager $manager,
@@ -75,6 +77,18 @@ final class GraphqlQueryStringBuilder
         return $this;
     }
 
+    /**
+     * The relations to load in place of max_depth, as a tree of GraphQL names; null to follow max_depth.
+     *
+     * @param array<string, mixed>|null $with
+     */
+    public function with(?array $with): self
+    {
+        $this->with = $with;
+
+        return $this;
+    }
+
     public function options(QueryOptions $options): self
     {
         $this->options = $options;
@@ -108,6 +122,12 @@ final class GraphqlQueryStringBuilder
         if ($this->manualSelect) {
             $tree = $this->buildSelectionTree($this->fields);
             $selection = $this->buildFromTreeAst($this->entityClass, $tree);
+
+            if ($this->with !== null) {
+                $this->mergeAst($selection, $this->buildWithAst($this->entityClass, $this->with, relationsOnly: true));
+            }
+        } elseif ($this->with !== null) {
+            $selection = $this->buildWithAst($this->entityClass, $this->with);
         } else {
             $selection = $this->buildAllFieldsAst($this->entityClass);
         }
@@ -262,7 +282,9 @@ final class GraphqlQueryStringBuilder
             }
 
             if ($explicit) {
-                $nested = $this->buildAllFieldsAst($field->relation, depth: 1);
+                $nested = $this->with !== null
+                    ? $this->buildWithAst($field->relation, [])
+                    : $this->buildAllFieldsAst($field->relation, depth: 1);
 
                 if ($nested->fields === []) {
                     $selection->add($this->relationFallbackAst($field));
@@ -293,6 +315,72 @@ final class GraphqlQueryStringBuilder
         }
 
         return $selection;
+    }
+
+    /**
+     * The fields of an entity with the relations of with() loaded, whatever max_depth and Fetch::Lazy: the others only
+     * get their identifier selected.
+     *
+     * @param class-string         $entityClass
+     * @param array<string, mixed> $with
+     * @param bool                 $relationsOnly the relations of with() alone, to add to a selection of fields
+     */
+    private function buildWithAst(string $entityClass, array $with, bool $relationsOnly = false): SelectionSetNode
+    {
+        $selection = new SelectionSetNode();
+
+        $metadata = $this
+            ->manager
+            ->getMetadataFactory()
+            ->getMetadata($entityClass);
+
+        foreach ($metadata->fields as $field) {
+            if ($field->relation === null) {
+                if (!$relationsOnly) {
+                    $selection->add(new FieldNode($field->mappedFrom, isCollection: $field->isCollection));
+                }
+
+                continue;
+            }
+
+            if (!isset($with[$field->mappedFrom])) {
+                if (!$relationsOnly) {
+                    $selection->add($this->relationFallbackAst($field));
+                }
+
+                continue;
+            }
+
+            /** @var array<string, mixed> $relations */
+            $relations = $with[$field->mappedFrom];
+            $nested = $this->buildWithAst($field->relation, $relations);
+
+            $selection->add($nested->fields === []
+                ? $this->relationFallbackAst($field)
+                : new FieldNode($field->mappedFrom, [], $nested, $field->isCollection));
+        }
+
+        return $selection;
+    }
+
+    /**
+     * Adds the fields of a selection missing from another, merging the selections of the fields they share.
+     */
+    private function mergeAst(SelectionSetNode $selection, SelectionSetNode $other): void
+    {
+        foreach ($other->fields as $field) {
+            $same = array_find($selection->fields, static fn (FieldNode $known): bool => $known->name === $field->name);
+
+            if ($same === null) {
+                $selection->add($field);
+
+                continue;
+            }
+
+            if ($same->selectionSet !== null && $field->selectionSet !== null) {
+                $this->mergeAst($same->selectionSet, $field->selectionSet);
+            }
+        }
     }
 
     private function relationFallbackAst(GraphqlFieldMetadata $field): FieldNode
