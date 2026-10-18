@@ -72,6 +72,22 @@ final class TypeConverterRegistry
     }
 
     /**
+     * The GraphQL scalars a converter tells it converts with its #[AsTypeConverter], none when it tells none.
+     *
+     * @return list<string>
+     */
+    public function scalarsOf(TypeConverterInterface $converter): array
+    {
+        $scalars = [];
+
+        foreach ((new \ReflectionClass($converter))->getAttributes(AsTypeConverter::class) as $attribute) {
+            $scalars = [...$scalars, ...$attribute->newInstance()->scalars];
+        }
+
+        return array_values(array_unique($scalars));
+    }
+
+    /**
      * A converter without dependencies needs no registration.
      *
      * @throws InvalidArgumentException when the class is no converter, or needs arguments

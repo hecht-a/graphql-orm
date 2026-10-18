@@ -289,7 +289,7 @@ final class GraphqlOrmExtension extends Extension
         $container->register($id('schema_introspector'), SchemaIntrospector::class)
             ->setArguments([new Reference($id('client')), $collector]);
         $container->register($id('schema_validator'), SchemaValidator::class)
-            ->setArguments([new Reference($id('metadata_factory'))]);
+            ->setArguments([new Reference($id('metadata_factory')), new Reference(TypeConverterRegistry::class)]);
 
         $container->register($id('schema_validation_mode'), SchemaValidationMode::class)
             ->setFactory([SchemaValidationMode::class, 'from'])

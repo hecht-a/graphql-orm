@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Schema;
 
+use GraphqlOrm\Converter\TypeConverterRegistry;
 use GraphqlOrm\Exception\GraphqlOrmException;
+use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
@@ -16,6 +18,7 @@ final readonly class SchemaValidator
 {
     public function __construct(
         private GraphqlEntityMetadataFactory $metadataFactory,
+        private TypeConverterRegistry $typeConverters = new TypeConverterRegistry(),
     ) {
     }
 
@@ -102,6 +105,14 @@ final readonly class SchemaValidator
                 continue;
             }
 
+            $converted = $this->validateConverter($metadata->class, $field, $schemaField['name']);
+
+            if ($converted !== null) {
+                $violations = [...$violations, ...$converted];
+
+                continue;
+            }
+
             $violations = [
                 ...$violations,
                 ...$this->validateScalar($metadata->class, $field->property, $field->mappedFrom, $schemaField['name']),
@@ -109,6 +120,54 @@ final readonly class SchemaValidator
         }
 
         return $violations;
+    }
+
+    /**
+     * The type converter of a field, which must exist for a value object, and convert the scalar of the schema when it
+     * tells its scalars; null for a field without value object, checked as a scalar.
+     *
+     * @param class-string $entityClass
+     *
+     * @return string[]|null
+     */
+    private function validateConverter(string $entityClass, GraphqlFieldMetadata $field, ?string $graphqlScalar): ?array
+    {
+        try {
+            $converter = $this->typeConverters->converterFor($field->converter, $field->valueClass);
+        } catch (InvalidArgumentException $exception) {
+            return [\sprintf('[%s] Field "%s": %s', $entityClass, $field->mappedFrom, $exception->getMessage())];
+        }
+
+        if ($converter === null) {
+            $valueClass = $field->valueClass;
+
+            if ($valueClass === null || is_a($valueClass, \DateTimeInterface::class, true) || is_a($valueClass, \UnitEnum::class, true)) {
+                return null;
+            }
+
+            return [\sprintf(
+                '[%s] Field "%s" has PHP type "%s", which no type converter converts: register one with #[AsTypeConverter(%s::class)], or name it with #[Field(converter: ...)].',
+                $entityClass,
+                $field->mappedFrom,
+                $valueClass,
+                substr((string) strrchr('\\' . $valueClass, '\\'), 1),
+            )];
+        }
+
+        $scalars = $this->typeConverters->scalarsOf($converter);
+
+        if ($graphqlScalar === null || $scalars === [] || \in_array($graphqlScalar, $scalars, true)) {
+            return [];
+        }
+
+        return [\sprintf(
+            '[%s] Field "%s" is converted by %s from %s, but GraphQL scalar is "%s".',
+            $entityClass,
+            $field->mappedFrom,
+            $converter::class,
+            implode(', ', $scalars),
+            $graphqlScalar,
+        )];
     }
 
     /**

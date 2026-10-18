@@ -77,7 +77,7 @@ final readonly class SchemaValidateCommand
 
             yield $name => [
                 new SchemaIntrospector($graphqlManager->getClient()),
-                new SchemaValidator($graphqlManager->getMetadataFactory()),
+                new SchemaValidator($graphqlManager->getMetadataFactory(), $graphqlManager->getTypeConverters()),
                 $this->managerEntityClasses[$name] ?? [],
             ];
         }
