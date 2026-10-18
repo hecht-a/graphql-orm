@@ -213,7 +213,7 @@ final class GraphqlOrmExtension extends Extension
                 '$eventDispatcher' => new Reference('event_dispatcher', ContainerInterface::NULL_ON_INVALID_REFERENCE),
                 '$lazyLoading' => $config['lazy_loading'],
                 '$slowQueryThreshold' => self::slowQueryThreshold($config),
-                '$repositories' => new ServiceLocatorArgument(new TaggedIteratorArgument(self::REPOSITORY_TAG, null, null, true)),
+                '$repositories' => new ServiceLocatorArgument(new TaggedIteratorArgument(self::REPOSITORY_TAG, needsIndexes: true)),
                 '$cache' => new Reference($id('cache')),
                 '$typeConverters' => new Reference(TypeConverterRegistry::class),
             ])
