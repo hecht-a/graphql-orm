@@ -73,11 +73,7 @@ final class GraphqlQueryBuilder
      */
     public function with(string ...$relations): self
     {
-        $this->with ??= [];
-
-        foreach ($relations as $path) {
-            $this->with = $this->addRelationPath($this->with, $this->entityClass, explode('.', $path));
-        }
+        $this->with = (new RelationTree($this->manager->getMetadataFactory()))->add($this->with ?? [], $this->entityClass, array_values($relations));
 
         return $this;
     }
@@ -273,34 +269,5 @@ final class GraphqlQueryBuilder
         }
 
         return $selection;
-    }
-
-    /**
-     * @param array<string, mixed> $tree
-     * @param class-string         $entityClass
-     * @param string[]             $names
-     *
-     * @return array<string, mixed>
-     */
-    private function addRelationPath(array $tree, string $entityClass, array $names): array
-    {
-        $name = array_shift($names);
-
-        if ($name === null) {
-            return $tree;
-        }
-
-        $metadata = $this->manager->getMetadataFactory()->getMetadata($entityClass);
-        $field = $metadata->field($metadata->property($name));
-
-        if ($field?->relation === null) {
-            throw new InvalidArgumentException(\sprintf('"%s" is not a relation of "%s".', $name, $entityClass));
-        }
-
-        /** @var array<string, mixed> $relations */
-        $relations = $tree[$field->mappedFrom] ?? [];
-        $tree[$field->mappedFrom] = $this->addRelationPath($relations, $field->relation, $names);
-
-        return $tree;
     }
 }

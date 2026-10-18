@@ -201,6 +201,64 @@ final class WithRelationsTest extends TestCase
         $this->repository()->createQueryBuilder()->with('assignee.compagny');
     }
 
+    #[Test]
+    public function itLoadsTheRelationsNamedByWithInFindBy(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['tasks' => []]]);
+
+        $this->repository(client: $client)->with('assignee.company')->findBy(['title' => 'Task A']);
+
+        $query = self::flatten($client->lastQuery);
+        self::assertStringContainsString('assignee { id name company { id name } }', $query);
+        self::assertStringContainsString('tag { id }', $query);
+        self::assertStringContainsString('reviewer { id }', $query);
+    }
+
+    #[Test]
+    public function itLoadsTheRelationsNamedByWithInFindOneBy(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['tasks' => []]]);
+
+        $this->repository(client: $client)->with('reviewer')->findOneBy(['title' => 'Task A']);
+
+        self::assertStringContainsString('reviewer { id name company { id } }', self::flatten($client->lastQuery));
+    }
+
+    #[Test]
+    public function itLoadsTheRelationsNamedByWithInFind(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['tasks' => [[
+            'id' => 1, 'title' => 'Task A', 'assignee' => null, 'tag' => ['id' => 5, 'name' => 'Label A'], 'reviewer' => null,
+        ]]]]);
+
+        $task = $this->repository(client: $client)->with('label')->find(1);
+
+        self::assertStringContainsString('tag { id name }', self::flatten($client->lastQuery));
+        self::assertSame('Label A', $task?->label?->name);
+    }
+
+    #[Test]
+    public function itRejectsAFieldThatIsNotARelationInFindBy(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('"title" is not a relation of "GraphqlOrm\Tests\Fixtures\With\Task".');
+
+        $this->repository()->with('title');
+    }
+
+    #[Test]
+    public function itLeavesTheRepositoryAsItIs(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['tasks' => []]], ['data' => ['tasks' => []]]);
+        $repository = $this->repository(client: $client);
+
+        $repository->with('label', 'assignee.company')->findAll();
+        $repository->findAll();
+
+        self::assertStringContainsString('assignee { id name company { id name } }', self::flatten($client->queries[0]));
+        self::assertStringContainsString('assignee { id name company { id } }', self::flatten($client->queries[1]));
+    }
+
     private static function flatten(string $graphql): string
     {
         return (string) preg_replace('/\s+/', ' ', $graphql);

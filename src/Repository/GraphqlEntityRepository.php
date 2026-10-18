@@ -20,6 +20,7 @@ use GraphqlOrm\Query\GraphqlQueryBuilder;
 use GraphqlOrm\Query\GraphqlQueryCompiler;
 use GraphqlOrm\Query\GraphqlQueryStringBuilder;
 use GraphqlOrm\Query\QueryOptions;
+use GraphqlOrm\Query\RelationTree;
 use GraphqlOrm\Query\UnmappedFieldHints;
 use GraphqlOrm\Query\Walker\DefaultGraphqlWalker;
 
@@ -28,6 +29,9 @@ use GraphqlOrm\Query\Walker\DefaultGraphqlWalker;
  */
 class GraphqlEntityRepository
 {
+    /** @var array<string, mixed> the relations the find methods load, as a tree of GraphQL names */
+    private array $with = [];
+
     /**
      * @param class-string<T> $entityClass
      */
@@ -55,6 +59,24 @@ class GraphqlEntityRepository
             $this->entityClass,
             $this->manager
         );
+    }
+
+    /**
+     * A copy of this repository whose find methods load the relations named, nested ones by their path
+     * (assignee.company), in place of max_depth, as with() of the query builder: `$tasks->with('assignee')->findBy([])`.
+     * This repository is left as it is. An entity find() serves from the identity map or the second-level cache is
+     * given as it was loaded.
+     *
+     * @param string ...$relations paths of GraphQL field names or PHP properties
+     *
+     * @throws InvalidArgumentException when a name is not a relation of its entity
+     */
+    public function with(string ...$relations): static
+    {
+        $repository = clone $this;
+        $repository->with = (new RelationTree($this->manager->getMetadataFactory()))->add($this->with, $this->entityClass, array_values($relations));
+
+        return $repository;
     }
 
     /**
@@ -133,6 +155,7 @@ class GraphqlEntityRepository
             ->root($metadata->name)
             ->arguments($this->manager->getDialect()->applyCriteria($this->criteria($metadata, $criteria)))
             ->options($options)
+            ->with($this->with !== [] ? $this->with : null)
             ->build();
 
         $hints = (new UnmappedFieldHints($this->manager->getMetadataFactory()))->for($this->entityClass, [...array_keys($criteria), ...array_keys($orderBy ?? [])]);
