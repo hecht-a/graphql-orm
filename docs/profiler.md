@@ -60,8 +60,10 @@ For each request, the panel shows:
   the violations found on the first request. The caches of the introspection results (the types of the variables, the
   countable fields of `count()`, the schema validation) tell whether they served the request or introspected the
   schema, with the time spent.
-- **A timeline** of the queries during the request: overlapping bars are queries sent together, e.g. by
-  `GraphqlQuery::concurrently()`.
+- **A timeline** of the queries during the request, counted from its start: each query with its origin, its entity and
+  its duration, a bar for the network and one for the hydration, on a graduated axis. A hatched area shows the time
+  before the first query (the kernel, the routing, the controller...); overlapping bars are queries sent together, e.g.
+  by `GraphqlQuery::concurrently()`.
 
 Besides the metrics and the alerts, each part is a tab of the panel: "Queries", "Timeline", "Configuration", and, when
 they have something to show, "Entities", "Lazy loading", "Partial entities", "Serializer", "Cache", "Autocomplete",
