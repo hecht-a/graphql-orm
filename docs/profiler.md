@@ -70,6 +70,9 @@ The origin is the method of the bundle the application called: `findBy`, `count`
 the query builder, the method of a custom repository calling the bundle, or `lazy` for a relation loaded on first
 access (see [lazy loading](configuration.md#lazy-loading)).
 
+A query hydrated as DTOs with [`hydrateAs()`](query-builder.md#dto-results) carries a "DTO" badge naming the DTO, next
+to its entity, and its "Entities" column counts the DTOs created instead (`8 DTOs`): it hydrates no entity.
+
 Click a query to see its detail:
 
 - **GraphQL**: the query sent, highlighted (keywords, fields, arguments, types, variables, values), values masked by
@@ -77,7 +80,7 @@ Click a query to see its detail:
 - **Variables**
 - **Response**: the first 2 KB of the response, indented, values masked unless `redact_query_values` is false
 - **AST**: an interactive viewer of the query built by the ORM
-- **Hydration**: entities, relations, collections, root result count (and the field indexing it, with `indexBy`) and
+- **Hydration**: hydrated as entities or as a DTO, entities, relations, collections, root result count (and the field indexing it, with `indexBy`) and
   depth used; the collections by relation, with their type (`array` or `ArrayCollection`), how many and their items
 - The "Copy" and "Copy as cURL" buttons (see [below](#copy-as-curl)), the caller (file and line that triggered the
   query) and the endpoint

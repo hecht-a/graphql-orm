@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   than entities: the query selects their fields only. A parameter maps the field of its name, or another one with
   `#[MapFrom('assignee.name')]`; one typed with a class maps a relation to a nested DTO, an array typed `list<Dto>` a
   collection. Neither identity map nor second-level cache; pagination, `indexBy()` and the result cache work as with
-  entities.
+  entities. The profiler tells the queries hydrated as DTOs, with the DTO and the number created.
 
 ## [5.6.0] — 2026-10-16
 
