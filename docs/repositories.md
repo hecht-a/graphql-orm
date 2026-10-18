@@ -109,7 +109,8 @@ be a `Direction`, an `InvalidArgumentException` telling otherwise. Ordering is s
 
 ## Counting
 
-`count()` sends a query of its own, with the same criteria as `findBy()`:
+`count()` sends a query of its own, with the same criteria as `findBy()`; `countMatching()` counts with a filter of the
+query builder, as [`count()` of the query builder](query-builder.md#ordering-and-limit):
 
 | Dialect                 | Count query                                                                 |
 |-------------------------|-----------------------------------------------------------------------------|
