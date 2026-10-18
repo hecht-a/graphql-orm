@@ -72,6 +72,9 @@ graphql_orm:
 | `http_client_options.verify_host` | `true`                   | TLS host verification                   |
 | `http_client_options.verify_peer` | `true`                   | TLS peer verification                   |
 | `schema_validation.mode`          | `warning` in the dev environment, `disabled` otherwise | `exception`, `warning`, or `disabled` |
+| `profiler.max_queries`            | `50`                     | Queries of a request beyond which the profiler toolbar turns yellow; `null` reports none; root only (see [profiler.md](profiler.md)) |
+| `profiler.max_query_time`         | `null`                   | Milliseconds waited for GraphQL beyond which the profiler toolbar turns yellow; root only |
+| `profiler.repeated_queries`       | `3`                      | Times from which the profiler reports repeated queries, lazy loads of a relation and entities worth the second-level cache; root only |
 | `mapping.entity.dir`              | `%kernel.project_dir%/src/GraphQL/Entity` | Directory where entities are stored     |
 | `mapping.entity.namespace`        | `App\GraphQL\Entity`     | Namespace for entities                  |
 | `mapping.repository.dir`          | `%kernel.project_dir%/src/GraphQL/Repository` | Directory where repositories are stored |

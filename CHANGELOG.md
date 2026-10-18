@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A "Replay" button of the profiler sends a query of the profile again and shows its response, in debug mode, for a
   query whose values are not masked (`redact_query_values: false`) and which is not a mutation. It needs the routes of
   the bundle.
+- The `profiler` options set the alerts of the profiler: `max_queries`, the queries of a request beyond which its
+  toolbar turns yellow (50 by default, as Doctrine), `max_query_time`, the milliseconds waited for GraphQL beyond which
+  it does, and `repeated_queries`, the times from which repeated queries, lazy loads and entities worth the
+  second-level cache are reported (3 by default).
 
 ### Changed
 

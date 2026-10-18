@@ -9,6 +9,20 @@ entities hydrated (and those served from the identity map), and the hits of the 
 cache with the adapter of their pools (`Redis`, `Filesystem`...), or `disabled`. When there are any, it also counts the
 cache warnings, the slow queries, the N+1 relations and the repeated queries, in yellow; an error turns it red.
 
+It also turns yellow beyond 50 queries, as Doctrine, or beyond a time in GraphQL, as set under `profiler`:
+
+```yaml
+# config/packages/dev/graphql_orm.yaml
+graphql_orm:
+    profiler:
+        max_queries: 30       # default: 50; null reports none
+        max_query_time: 500   # milliseconds waited for GraphQL; default: null, none reported
+        repeated_queries: 2   # default: 3, see N+1 and repeated queries below
+```
+
+These options are those of the request, whatever the manager sending the queries: they are set at the root, not for
+each manager.
+
 For each request, the panel shows:
 
 - **Metrics**: number of queries, time spent in GraphQL (measured via Symfony Stopwatch), the queries sent together
@@ -162,11 +176,12 @@ request.
 A loop sending one query per entity is the classic N+1 problem. The "N+1 & repeated" tab of the panel shows two cases,
 and the entities worth the second-level cache.
 
-**A relation loaded on first access** (`GraphqlOrm\Fetch::Lazy`, or `lazy_loading`) 3 times or more, one query each: the
-panel names the relation, such as `Task::$assignee`, with its queries, their total duration and the lines reading it,
-and suggests loading it with the query of its entities: `->with('assignee')` on the query builder, or
-`$repository->with('assignee')->findBy(...)` (see [loading relations](query-builder.md#loading-relations)). A dialect
-implementing `BatchLoadingDialect` loads the relations met in a same response with one query.
+**A relation loaded on first access** (`GraphqlOrm\Fetch::Lazy`, or `lazy_loading`) 3 times or more
+(`profiler.repeated_queries`), one query each: the panel names the relation, such as `Task::$assignee`, with its
+queries, their total duration and the lines reading it, and suggests loading it with the query of its entities:
+`->with('assignee')` on the query builder, or `$repository->with('assignee')->findBy(...)` (see
+[loading relations](query-builder.md#loading-relations)). A dialect implementing `BatchLoadingDialect` loads the
+relations met in a same response with one query.
 
 **Repeated queries**, such as a `find()` in a `foreach`: the panel groups the queries whose shape is the same once their
 values are masked, and lists those sent 3 times or more, with links opening them. When they are all a `find()` of the
