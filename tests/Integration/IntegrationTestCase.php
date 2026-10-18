@@ -6,6 +6,7 @@ namespace GraphqlOrm\Tests\Integration;
 
 use GraphqlOrm\Cache\GraphqlCache;
 use GraphqlOrm\Client\GraphqlClient;
+use GraphqlOrm\Converter\TypeConverterRegistry;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\Execution\IdentityMap;
@@ -61,9 +62,30 @@ abstract class IntegrationTestCase extends TestCase
         NamingStrategy $namingStrategy = new DefaultNamingStrategy(),
         ?IdentityMap $identityMap = null,
         GraphqlCache $cache = new GraphqlCache(),
+        TypeConverterRegistry $typeConverters = new TypeConverterRegistry(),
     ): GraphqlEntityRepository {
+        return new GraphqlEntityRepository(
+            $this->manager($collector, $argumentTypeResolver, $maxDepth, $lazyLoading, $namingStrategy, $identityMap, $cache, $typeConverters),
+            $entityClass,
+        );
+    }
+
+    /**
+     * A manager of the API under test, to share between repositories as the bundle does.
+     */
+    protected function manager(
+        ?GraphqlOrmDataCollector $collector = null,
+        ?RootArgumentTypeResolver $argumentTypeResolver = null,
+        int $maxDepth = 2,
+        bool $lazyLoading = false,
+        NamingStrategy $namingStrategy = new DefaultNamingStrategy(),
+        ?IdentityMap $identityMap = null,
+        GraphqlCache $cache = new GraphqlCache(),
+        TypeConverterRegistry $typeConverters = new TypeConverterRegistry(),
+    ): GraphqlManager {
         $metadataFactory = new GraphqlEntityMetadataFactory(namingStrategy: $namingStrategy);
-        $manager = new GraphqlManager(
+
+        return new GraphqlManager(
             $metadataFactory,
             $this->client,
             new EntityHydrator($metadataFactory),
@@ -74,19 +96,8 @@ abstract class IntegrationTestCase extends TestCase
             lazyLoading: $lazyLoading,
             identityMap: $identityMap,
             cache: $cache,
+            typeConverters: $typeConverters,
         );
-
-        return new GraphqlEntityRepository($manager, $entityClass);
-    }
-
-    /**
-     * A manager of the API under test, to share between repositories as the bundle does.
-     */
-    protected function manager(?GraphqlOrmDataCollector $collector = null): GraphqlManager
-    {
-        $metadataFactory = new GraphqlEntityMetadataFactory();
-
-        return new GraphqlManager($metadataFactory, $this->client, new EntityHydrator($metadataFactory), $collector, 2, $this->dialect());
     }
 
     protected function schema(): GraphqlSchema

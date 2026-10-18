@@ -14,6 +14,9 @@ use GraphqlOrm\Query\GraphqlQuery;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
+use GraphqlOrm\Tests\Integration\Dto\TaskSummary;
+use GraphqlOrm\Tests\Integration\Dto\TaskTitle;
+use GraphqlOrm\Tests\Integration\Dto\UserWithTaskTitles;
 use GraphqlOrm\Tests\Integration\IntegrationTestCase;
 use GraphqlOrm\Tests\Integration\PostGraphile\Entity\RelayTask;
 use GraphqlOrm\Tests\Integration\PostGraphile\Entity\RelayUser;
@@ -43,6 +46,42 @@ final class PostGraphileTest extends IntegrationTestCase
         self::assertSame(4, $this->repository(RelayTask::class)->count());
         self::assertSame(3, $this->repository(RelayTask::class)->count(['done' => false]));
         self::assertSame(1, $this->repository(RelayTask::class)->count(['done' => true]));
+    }
+
+    #[Test]
+    public function itLoadsTheRelationsNamedByWithBeyondTheMaxDepth(): void
+    {
+        $task = $this->repository(RelayTask::class, maxDepth: 1)->createQueryBuilder()
+            ->with('user.tasks')
+            ->orderBy('id', Direction::Asc)
+            ->limit(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        self::assertInstanceOf(RelayTask::class, $task);
+        $titles = array_map(static fn (RelayTask $task) => $task->title, $task->user->tasks ?? []);
+        sort($titles);
+        self::assertSame(['Review the tests', 'Write the docs'], $titles);
+    }
+
+    #[Test]
+    public function itHydratesDtosThroughTheConnections(): void
+    {
+        $summaries = $this->repository(RelayTask::class)->createQueryBuilder()
+            ->orderBy('id', Direction::Asc)
+            ->hydrateAs(TaskSummary::class)
+            ->getQuery()
+            ->getResult();
+        $user = $this->repository(RelayUser::class)->createQueryBuilder()
+            ->orderBy('id', Direction::Asc)
+            ->hydrateAs(UserWithTaskTitles::class)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        self::assertIsArray($summaries);
+        self::assertEquals(new TaskSummary(3, 'Release the bundle', new \DateTimeImmutable('2026-02-01T09:00:00Z'), 'User B'), $summaries[2]);
+        self::assertInstanceOf(UserWithTaskTitles::class, $user);
+        self::assertEqualsCanonicalizing([new TaskTitle('Write the docs', false), new TaskTitle('Review the tests', true)], $user->tasks);
     }
 
     #[Test]

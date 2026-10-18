@@ -6,6 +6,10 @@ namespace GraphqlOrm\Tests\Integration\DataApiBuilder;
 
 use GraphqlOrm\Cache\GraphqlCache;
 use GraphqlOrm\Codegen\SchemaPropertyMapper;
+use GraphqlOrm\Command\CachedEntities;
+use GraphqlOrm\Command\CacheWarmupCommand;
+use GraphqlOrm\Command\EntityClassLocator;
+use GraphqlOrm\Converter\TypeConverterRegistry;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
@@ -17,24 +21,33 @@ use GraphqlOrm\Metadata\Naming\SnakeCaseNamingStrategy;
 use GraphqlOrm\Query\Direction;
 use GraphqlOrm\Query\GraphqlQuery;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
+use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Schema\CountableFieldResolver;
 use GraphqlOrm\Schema\GraphqlSchema;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Schema\SchemaIntrospector;
 use GraphqlOrm\Schema\SchemaValidator;
+use GraphqlOrm\Tests\Integration\Dto\TaskSummary;
+use GraphqlOrm\Tests\Integration\Dto\TaskTitle;
+use GraphqlOrm\Tests\Integration\Dto\UserWithTaskTitles;
 use GraphqlOrm\Tests\Integration\Entity\BrokenTask;
 use GraphqlOrm\Tests\Integration\Entity\CachedTask;
 use GraphqlOrm\Tests\Integration\Entity\Label;
 use GraphqlOrm\Tests\Integration\Entity\LazyTask;
 use GraphqlOrm\Tests\Integration\Entity\SnakeCaseTask;
 use GraphqlOrm\Tests\Integration\Entity\Task;
+use GraphqlOrm\Tests\Integration\Entity\Title;
+use GraphqlOrm\Tests\Integration\Entity\TitleConverter;
+use GraphqlOrm\Tests\Integration\Entity\TitledTask;
 use GraphqlOrm\Tests\Integration\Entity\User;
 use GraphqlOrm\Tests\Integration\Entity\UserWithLazyTasks;
 use GraphqlOrm\Tests\Integration\IntegrationTestCase;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Tester\CommandTester;
 
 #[Group('integration')]
 final class DataApiBuilderTest extends IntegrationTestCase
@@ -469,6 +482,87 @@ final class DataApiBuilderTest extends IntegrationTestCase
         self::assertSame(['int', false, true, false], $properties['id']);
         self::assertSame(['string', false, false, false], $properties['name']);
         self::assertSame(['array', false, false, true], $properties['tasks']);
+    }
+
+    #[Test]
+    public function itLoadsTheRelationsNamedByWithBeyondTheMaxDepth(): void
+    {
+        $qb = $this->repository(Task::class, maxDepth: 1)->createQueryBuilder();
+
+        $task = $qb->with('user.tasks')->where($qb->expr()->eq('id', 1))->getQuery()->getOneOrNullResult();
+
+        self::assertInstanceOf(Task::class, $task);
+        $titles = array_map(static fn (Task $task) => $task->title, $task->user->tasks ?? []);
+        sort($titles);
+        self::assertSame(['Review the tests', 'Write the docs'], $titles);
+    }
+
+    #[Test]
+    public function itLoadsALazyRelationNamedByWithInTheQuery(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $qb = $this->repository(LazyTask::class, collector: $collector)->createQueryBuilder();
+
+        $task = $qb->with('user')->where($qb->expr()->eq('id', 3))->getQuery()->getOneOrNullResult();
+
+        self::assertSame('User B', $task?->user?->name);
+        self::assertCount(1, $collector->getQueries());
+    }
+
+    #[Test]
+    public function itHydratesDtosFromTheFieldsTheyMap(): void
+    {
+        $summaries = $this->tasks()->createQueryBuilder()
+            ->orderBy('id', Direction::Asc)
+            ->hydrateAs(TaskSummary::class)
+            ->getQuery()
+            ->getResult();
+
+        self::assertIsArray($summaries);
+        self::assertEquals(new TaskSummary(1, 'Write the docs', new \DateTimeImmutable('2026-01-15T10:00:00Z'), 'User A'), $summaries[0]);
+        self::assertEquals(new TaskSummary(4, 'Plan the next release', null, null), $summaries[3]);
+    }
+
+    #[Test]
+    public function itHydratesADtoWithACollectionOfDtos(): void
+    {
+        $user = $this->users()->createQueryBuilder()
+            ->where($this->users()->createQueryBuilder()->expr()->eq('id', 1))
+            ->hydrateAs(UserWithTaskTitles::class)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        self::assertInstanceOf(UserWithTaskTitles::class, $user);
+        self::assertSame('User A', $user->name);
+        self::assertEqualsCanonicalizing([new TaskTitle('Write the docs', false), new TaskTitle('Review the tests', true)], $user->tasks);
+    }
+
+    #[Test]
+    public function itConvertsAValueObjectFromAndToTheApi(): void
+    {
+        $qb = $this->repository(TitledTask::class, typeConverters: new TypeConverterRegistry([new TitleConverter()]))->createQueryBuilder();
+
+        $task = $qb->where($qb->expr()->eq('title', new Title('Release the bundle')))->getQuery()->getOneOrNullResult();
+
+        self::assertInstanceOf(TitledTask::class, $task);
+        self::assertSame(3, $task->id);
+        self::assertEquals(new Title('Release the bundle'), $task->title);
+    }
+
+    #[Test]
+    public function itWarmsUpTheSecondLevelCachePageByPage(): void
+    {
+        $cache = new GraphqlCache(entities: new ArrayAdapter(), defaultLifetime: 60);
+        $collector = new GraphqlOrmDataCollector();
+        $managers = GraphqlManagerRegistry::forManager($this->manager($collector, cache: $cache));
+        $command = new CacheWarmupCommand($managers, new CachedEntities($managers, new EntityClassLocator(\dirname(__DIR__) . '/Entity', 'GraphqlOrm\\Tests\\Integration\\Entity'), []));
+        $tester = new CommandTester((new Command('graphqlorm:cache:warmup'))->setCode($command));
+
+        self::assertSame(Command::SUCCESS, $tester->execute(['entity' => 'CachedTask', '--batch-size' => '2']));
+        self::assertCount(2, $collector->getQueries());
+        foreach ([1, 2, 3, 4] as $id) {
+            self::assertTrue($cache->containsEntity(CachedTask::class, $id));
+        }
     }
 
     /**
