@@ -196,9 +196,8 @@ class GraphqlEntityRepository
     }
 
     /**
-     * Counts the entities a filter of the query builder matches, with a query of its own.
-     *
-     * @internal see GraphqlQueryBuilder::count()
+     * Counts the entities a filter of the query builder matches, with a query of its own, as count() with criteria:
+     * GraphqlQueryBuilder::count() counts with the filter of where().
      *
      * @throws LogicException          when the dialect cannot count
      * @throws GraphqlRequestException when the query fails
