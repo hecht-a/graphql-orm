@@ -207,6 +207,31 @@ final class GraphqlOrmDataCollectorTest extends TestCase
     }
 
     #[Test]
+    public function itEndsTheTimelineAfterTheHydrationOfTheLastQuery(): void
+    {
+        $trace = self::trace(duration: 20.0, errors: null);
+        $trace->startedAt = 100.050;
+        $trace->hydrationDuration = 5.0;
+        $this->collector->addQuery($trace);
+
+        $this->collector->collect(new Request(server: ['REQUEST_TIME_FLOAT' => 100.0]), new Response());
+
+        self::assertEqualsWithDelta(75.0, $this->collector->getTimelineSpan(), 0.001);
+    }
+
+    #[Test]
+    public function itGradesTheTimelineWithRoundSteps(): void
+    {
+        $trace = self::trace(duration: 900.0, errors: null);
+        $trace->startedAt = 100.044;
+        $this->collector->addQuery($trace);
+
+        $this->collector->collect(new Request(server: ['REQUEST_TIME_FLOAT' => 100.0]), new Response());
+
+        self::assertSame([0.0, 250.0, 500.0, 750.0], $this->collector->getTimelineTicks());
+    }
+
+    #[Test]
     public function itPlacesTheQueriesFromTheFirstOneWithoutRequest(): void
     {
         foreach ([100.010, 100.050] as $startedAt) {

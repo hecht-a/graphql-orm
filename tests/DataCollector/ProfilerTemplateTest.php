@@ -231,6 +231,54 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itShowsTheTimeBeforeTheFirstQuery(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { tasks { id } }';
+        $trace->startedAt = 100.07;
+        $trace->duration = 30.0;
+        $collector->addQuery($trace);
+        $collector->collect(new Request(server: ['REQUEST_TIME_FLOAT' => 100.0]), new Response());
+
+        $html = $this->render($collector);
+
+        self::assertStringContainsString('the first one sent 70.0 ms after the start of the request', self::text($html));
+        self::assertStringContainsString('class="graphql-orm-timeline-before" style="width: 70%"', $html);
+        self::assertStringContainsString('Before the first query', self::text($html));
+    }
+
+    #[Test]
+    public function itDetailsEachQueryOfTheTimeline(): void
+    {
+        $collector = new GraphqlOrmDataCollector(slowQueryThreshold: 200.0);
+        $slow = new GraphqlQueryTrace();
+        $slow->graphql = 'query { tasks { id } }';
+        $slow->startedAt = 100.0;
+        $slow->duration = 812.3;
+        $slow->hydrationDuration = 4.0;
+        $slow->origin = 'find';
+        $slow->entityClass = Task::class;
+        $collector->addQuery($slow);
+        $lazy = new GraphqlQueryTrace();
+        $lazy->graphql = 'query { users { id } }';
+        $lazy->startedAt = 100.9;
+        $lazy->duration = 6.5;
+        $lazy->origin = 'lazy';
+        $collector->addQuery($lazy);
+
+        $html = $this->render($collector);
+        $text = self::text($html);
+
+        self::assertStringContainsString('2 queries over 907 ms, 818.8 ms in GraphQL', $text);
+        self::assertStringContainsString('#1 find Task 816.3 ms', $text);
+        self::assertStringContainsString('#2 lazy 6.5 ms', $text);
+        self::assertStringContainsString('0 ms 250 ms 500 ms 750 ms', $text);
+        self::assertStringContainsString('graphql-orm-timeline-bar graphql-orm-fill-hydration', $html);
+        self::assertStringContainsString('Network Hydration Slow Error Lazy load Aggregate Introspection', $text);
+    }
+
+    #[Test]
     public function itWarnsAboutARelationLoadedOneEntityAtATime(): void
     {
         $collector = new GraphqlOrmDataCollector();

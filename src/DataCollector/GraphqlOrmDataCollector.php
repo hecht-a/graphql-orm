@@ -32,6 +32,9 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     /** The entities of the second-level cache detailed by a profile, which a page reading thousands would bloat. */
     private const MAX_CACHE_ENTRIES = 500;
 
+    /** The graduations the timeline is divided in, roughly. */
+    private const TIMELINE_TICKS = 4;
+
     /** The adapter of CachePoolDescriber keeping its values in the memory of the process. */
     private const ARRAY_ADAPTER = 'Array';
 
@@ -830,18 +833,51 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     }
 
     /**
-     * @return float the milliseconds from the start of the timeline to the end of the last query
+     * @return float the milliseconds from the start of the timeline to the end of the last query, its hydration included
      */
     public function getTimelineSpan(): float
     {
         $span = 0.0;
+        $queries = $this->getQueries();
 
         foreach ($this->getQueryOffsets() as $index => $offset) {
-            $duration = $this->getQueries()[$index]['duration'] ?? 0;
-            $span = max($span, $offset + (\is_int($duration) || \is_float($duration) ? $duration : 0));
+            $duration = $queries[$index]['duration'] ?? 0;
+            $hydration = $queries[$index]['hydration_duration'] ?? 0;
+            $span = max($span, $offset + (\is_int($duration) || \is_float($duration) ? $duration : 0) + (\is_int($hydration) || \is_float($hydration) ? $hydration : 0));
         }
 
         return $span;
+    }
+
+    /**
+     * The graduations of the timeline, in milliseconds: about four, a step of 1, 2, 2.5 or 5 times a power of ten.
+     *
+     * @return list<float>
+     */
+    public function getTimelineTicks(): array
+    {
+        $span = $this->getTimelineSpan();
+
+        if ($span <= 0) {
+            return [0.0];
+        }
+
+        $rough = $span / self::TIMELINE_TICKS;
+        $power = 10 ** floor(log10($rough));
+        $step = $power * match (true) {
+            $rough / $power <= 1 => 1,
+            $rough / $power <= 2 => 2,
+            $rough / $power <= 2.5 => 2.5,
+            $rough / $power <= 5 => 5,
+            default => 10,
+        };
+        $ticks = [];
+
+        for ($tick = 0.0; $tick <= $span; $tick += $step) {
+            $ticks[] = round($tick, 6);
+        }
+
+        return $ticks;
     }
 
     /**
