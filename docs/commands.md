@@ -159,6 +159,17 @@ entity, page by page: see [caching](caching.md#warming-up).
 php bin/console graphqlorm:cache:warmup Label --manager=main --batch-size=500
 ```
 
+## Clear and describe the caches
+
+`graphqlorm:cache:clear` evicts the result cache and the second-level cache, both by default, or `--results`,
+`--key=...`, `--entities`, `--class=...`, of a manager (`--manager`) or all; `graphqlorm:cache:stats` describes their
+pools, regions, entities and evictions: see [caching](caching.md#from-the-console).
+
+```bash
+php bin/console graphqlorm:cache:clear --class=Label
+php bin/console graphqlorm:cache:stats --manager=main
+```
+
 ## Validate the schema
 
 ```bash

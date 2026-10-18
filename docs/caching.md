@@ -127,11 +127,47 @@ public function __construct(private GraphqlCache $cache) {}
 $this->cache->evictEntity(Label::class, 'bug');     // one entity
 $this->cache->evictEntityRegion(Label::class);      // every entity of the class
 $this->cache->evictQueryResult('tasks.open');       // a result kept under this key (its first page)
+$this->cache->evictQueryResults();                  // every result of the manager
 $this->cache->containsEntity(Label::class, 'bug');  // false
 ```
 
-`evictEntityRegion()` works with any pool: the entities of the class get a new key, and the old ones expire. Another
-process sees it from its next request. A result kept by the result cache is not evicted with its entities.
+`evictEntityRegion()` and `evictQueryResults()` work with any pool, even shared with the application: the entities of
+the class, or the results of the manager, get a new key, and the old ones expire. Another process sees it from its next
+request. A result kept by the result cache is not evicted with its entities.
+
+### From the console
+
+```bash
+php bin/console graphqlorm:cache:clear                      # the results and the entities, of every manager
+php bin/console graphqlorm:cache:clear --results            # every result
+php bin/console graphqlorm:cache:clear --key=tasks.open     # the result kept under this key
+php bin/console graphqlorm:cache:clear --entities           # the entities of every class marked #[Cache]
+php bin/console graphqlorm:cache:clear --class=Label        # the entities of a class
+php bin/console graphqlorm:cache:clear --manager=crm        # the caches of one manager
+```
+
+`graphqlorm:cache:stats` describes the caches of each manager, without reading their values: the pool, adapter and
+lifetime of the result cache and of each region, the entities marked `#[Cache]` with their region and lifetime, and
+how many times the results and the entities of each class were evicted.
+
+```
+Manager "main"
+--------------
+
+ ---------------- --------------- ------------ -------------- -----------
+  Cache            Pool            Adapter      Lifetime       Evictions
+ ---------------- --------------- ------------ -------------- -----------
+  result cache     cache.graphql   Redis        pool default   1
+  default region   cache.app       Filesystem   3600 s
+  reference_data   cache.graphql   Redis        86400 s
+ ---------------- --------------- ------------ -------------- -----------
+
+ -------- ---------------- ---------- -----------
+  Entity   Region           Lifetime   Evictions
+ -------- ---------------- ---------- -----------
+  Label    reference_data   86400 s    2
+ -------- ---------------- ---------- -----------
+```
 
 ## Profiler
 

@@ -29,6 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `graphqlorm:cache:warmup [entity]` loads the entities marked `#[Cache]` into the second-level cache, page by page
   (`--batch-size`, 100 by default), those of an entity or every one, of a manager (`--manager`) or all, and tells how
   many were hydrated and kept.
+- `GraphqlCache::evictQueryResults()` evicts every result of a manager, with any pool, even shared: the results get a new
+  key, as the entities with `evictEntityRegion()`. The results kept before stay valid until a first eviction.
+- `graphqlorm:cache:clear` evicts the result cache and the second-level cache: both by default, or `--results`,
+  `--key=...`, `--entities`, `--class=...`, of a manager (`--manager`) or all.
+- `graphqlorm:cache:stats` describes the caches of each manager: the pool, adapter and lifetime of the result cache and
+  of each region, the entities marked `#[Cache]`, and how many times they were evicted.
 
 ## [5.6.0] — 2026-10-16
 
