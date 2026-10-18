@@ -133,7 +133,8 @@
         {% set offsets = collector.queryOffsets %}
         {% set span = max(collector.timelineSpan, 0.001) %}
         {% set lazyLoads = collector.lazyLoadsByRelation %}
-        {% set findingCount = lazyLoads|length + collector.repeatedQueries|length %}
+        {% set cacheCandidates = collector.cacheCandidates %}
+        {% set findingCount = lazyLoads|length + collector.repeatedQueries|length + cacheCandidates|length %}
         <div id="graphql-orm-panel">
             <div class="metrics">
                 <div class="metric">
@@ -827,10 +828,26 @@
                             {{ load.duration|number_format(1) }} ms in all{% if load.callers is not empty %}, read in
                             {% for caller in load.callers %}<code>{{ caller }}</code>{{ loop.last ? '' : ', ' }}{% endfor %}{% endif %}.
                         </p>
+                        {% set property = load.relation|split('::$')|last %}
+                        <p class="graphql-orm-suggestion">
+                            Load the relation with the query of its entities: <code>->with('{{ property }}')</code> on the
+                            query builder, or <code>$repository->with('{{ property }}')->findBy(...)</code>; raising
+                            <code>max_depth</code> or selecting its fields works too. A dialect implementing
+                            <code>BatchLoadingDialect</code> loads the relations met in a same response with one query.
+                        </p>
+                    </div>
+                {% endfor %}
+                {% for candidate in cacheCandidates %}
+                    <div class="graphql-orm-finding">
+                        <h3>Cache: <code title="{{ candidate.class }}">{{ candidate.class|split('\\')|last }}</code> read by {{ candidate.count }} queries</h3>
                         <p>
-                            Select the relation with the entities holding it: raise <code>max_depth</code>, or select its
-                            fields with the query builder. A dialect implementing <code>BatchLoadingDialect</code> loads the
-                            relations met in a same response with one query.
+                            Found by identifier or loaded on first access by
+                            {% for number in candidate.queries %}<a href="#graphql-orm-query-{{ number }}" data-graphql-orm-open="{{ number }}">#{{ number }}</a>{{ loop.last ? '' : ', ' }}{% endfor %}.
+                        </p>
+                        <p class="graphql-orm-suggestion">
+                            If it rarely changes, mark it #[GraphqlOrm\Cache] to keep it in the second-level cache: <code>find()</code>,
+                            the references and the lazy loads then read it without a query
+                            (<code>graphql_orm.second_level_cache.enabled</code>).
                         </p>
                     </div>
                 {% endfor %}
@@ -1154,6 +1171,13 @@
 
 {% macro renderDetail(query, number, resultCachePool) %}
     <div class="graphql-orm-detail-box">
+        {# A query the application wrote: not a lazy load, a count or an introspection #}
+        {% if ((query.slow ?? false) or query.response_size > 102400) and _self.originKind(query.origin ?? null)|trim == 'query' %}
+            <p class="graphql-orm-suggestion">
+                {{ (query.slow ?? false) ? 'Slow query' : 'Large response' }}. Select only the fields used with
+                <code>select()</code> or <code>hydrateAs()</code>, or keep the result with <code>enableResultCache()</code>.
+            </p>
+        {% endif %}
         {% for error in query.errors ?? [] %}
             <div class="graphql-orm-error">
                 <strong>{{ error.message }}</strong>

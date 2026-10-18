@@ -14,6 +14,7 @@ use GraphqlOrm\Tests\Fixtures\Converter\Product;
 use GraphqlOrm\Tests\Fixtures\Dto\Task;
 use GraphqlOrm\Tests\Fixtures\Dto\TaskSummary;
 use GraphqlOrm\Tests\Fixtures\Embedded\Order;
+use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeLabel;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use GraphqlOrm\Twig\GraphqlOrmTwigExtension;
 use PHPUnit\Framework\Attributes\Test;
@@ -295,6 +296,54 @@ final class ProfilerTemplateTest extends TestCase
         $collector->addQuery($trace);
 
         self::assertStringContainsString('findBy after the response', self::text($this->render($collector)));
+    }
+
+    #[Test]
+    public function itSuggestsLoadingARelationLoadedOneByOneWithWith(): void
+    {
+        $collector = $this->collector(['query { tasks { id } }']);
+        foreach ([1, 2, 3] as $id) {
+            $trace = new GraphqlQueryTrace();
+            $trace->graphql = \sprintf('query { users(id: %d) { id } }', $id);
+            $trace->origin = 'lazy';
+            $trace->lazyRelation = 'App\\Entity\\Task::$assignee';
+            $collector->addQuery($trace);
+        }
+
+        $text = self::text($this->render($collector));
+
+        self::assertStringContainsString("Load the relation with the query of its entities: ->with('assignee') on the query builder, or \$repository->with('assignee')->findBy(...)", $text);
+    }
+
+    #[Test]
+    public function itSuggestsSelectingLessForASlowQuery(): void
+    {
+        $collector = new GraphqlOrmDataCollector(slowQueryThreshold: 100.0);
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { tasks { id } }';
+        $trace->origin = 'findBy';
+        $trace->duration = 250.0;
+        $collector->addQuery($trace);
+
+        self::assertStringContainsString('Select only the fields used with select() or hydrateAs(), or keep the result with enableResultCache().', self::text($this->render($collector)));
+    }
+
+    #[Test]
+    public function itSuggestsTheSecondLevelCacheForAnEntityReadAgainAndAgain(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        foreach ([1, 2, 3] as $id) {
+            $trace = new GraphqlQueryTrace();
+            $trace->graphql = \sprintf('query { labels(code: "%d") { code } }', $id);
+            $trace->origin = 'find';
+            $trace->entityClass = FakeLabel::class;
+            $collector->addQuery($trace);
+        }
+
+        $text = self::text($this->render($collector));
+
+        self::assertStringContainsString('FakeLabel read by 3 queries', $text);
+        self::assertStringContainsString('mark it #[GraphqlOrm\\Cache] to keep it in the second-level cache', $text);
     }
 
     #[Test]

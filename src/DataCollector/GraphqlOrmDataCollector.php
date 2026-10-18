@@ -31,6 +31,9 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
 
     private const LAZY_ORIGIN = 'lazy';
 
+    /** The origins reading one entity of a class by its identifier: what the second-level cache serves. */
+    private const ENTITY_ORIGINS = ['find', 'lazy'];
+
     /** The entities of the second-level cache detailed by a profile, which a page reading thousands would bloat. */
     private const MAX_CACHE_ENTRIES = 500;
 
@@ -1111,6 +1114,32 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
         }
 
         return array_values(array_filter($byRelation, fn (array $group): bool => $group['count'] >= self::REPEATED_QUERY_THRESHOLD));
+    }
+
+    /**
+     * The entities not marked #[GraphqlOrm\Cache] found by identifier or loaded on first access at least
+     * REPEATED_QUERY_THRESHOLD times: the second-level cache would read them without a query, if they rarely change.
+     *
+     * @return list<array{class: string, count: int, queries: list<int>}>
+     */
+    public function getCacheCandidates(): array
+    {
+        $byClass = [];
+
+        foreach ($this->getQueries() as $index => $query) {
+            $class = $query['entity_class'] ?? null;
+
+            if (!\in_array($query['origin'] ?? null, self::ENTITY_ORIGINS, true) || !\is_string($class) || !class_exists($class)
+                || (new \ReflectionClass($class))->getAttributes(Cache::class) !== []) {
+                continue;
+            }
+
+            $byClass[$class] ??= ['class' => $class, 'count' => 0, 'queries' => []];
+            ++$byClass[$class]['count'];
+            $byClass[$class]['queries'][] = $index + 1;
+        }
+
+        return array_values(array_filter($byClass, static fn (array $candidate): bool => $candidate['count'] >= self::REPEATED_QUERY_THRESHOLD));
     }
 
     public function getErrorCount(): int

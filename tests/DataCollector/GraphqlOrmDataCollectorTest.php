@@ -8,6 +8,7 @@ use GraphqlOrm\Converter\TypeConverterRegistry;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Query\GraphqlQueryTrace;
+use GraphqlOrm\Tests\Fixtures\Cache\CachedTask;
 use GraphqlOrm\Tests\Fixtures\Converter\DecimalMoneyConverter;
 use GraphqlOrm\Tests\Fixtures\Converter\MoneyConverter;
 use GraphqlOrm\Tests\Fixtures\Converter\Product;
@@ -15,6 +16,7 @@ use GraphqlOrm\Tests\Fixtures\Depth\ChainA;
 use GraphqlOrm\Tests\Fixtures\Depth\ChainB;
 use GraphqlOrm\Tests\Fixtures\Embedded\Money;
 use GraphqlOrm\Tests\Fixtures\Embedded\Order;
+use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeLabel;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -266,6 +268,19 @@ final class GraphqlOrmDataCollectorTest extends TestCase
         }
 
         self::assertEqualsWithDelta([0.0, 40.0], $this->collector->getQueryOffsets(), 0.001);
+    }
+
+    #[Test]
+    public function itSuggestsTheSecondLevelCacheForAnEntityReadAgainAndAgain(): void
+    {
+        foreach ([['find', FakeLabel::class], ['lazy', FakeLabel::class], ['find', FakeLabel::class], ['findBy', FakeTask::class], ['find', CachedTask::class], ['find', CachedTask::class], ['find', CachedTask::class]] as [$origin, $class]) {
+            $trace = self::traceOf('query { labels { code } }');
+            $trace->origin = $origin;
+            $trace->entityClass = $class;
+            $this->collector->addQuery($trace);
+        }
+
+        self::assertSame([['class' => FakeLabel::class, 'count' => 3, 'queries' => [1, 2, 3]]], $this->collector->getCacheCandidates());
     }
 
     #[Test]
