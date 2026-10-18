@@ -42,6 +42,7 @@ export default defineConfig({
                     { text: 'Repositories', link: '/repositories' },
                     { text: 'Query Builder', link: '/query-builder' },
                     { text: 'Pagination', link: '/pagination' },
+                    { text: 'Writing entities', link: '/writing' },
                     { text: 'Dialects', link: '/dialects' },
                 ],
             },

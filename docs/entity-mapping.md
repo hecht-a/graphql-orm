@@ -33,6 +33,7 @@ mapped with Doctrine too can hold both `Entity` attributes.
 | `name`            | `string`             | GraphQL root query field name (e.g. `tasks`) |
 | `repositoryClass` | `class-string\|null` | Associated repository class                  |
 | `manager`         | `string\|null`       | The manager of its API, when not the one whose entity namespace holds it, see [several APIs](multiple-apis.md#the-manager-of-an-entity) |
+| `type`            | `string\|null`       | The GraphQL type of the entity (e.g. `Task`), naming its [mutations](writing.md#the-mutations-of-each-dialect); the short name of the class by default |
 
 `#[GraphqlOrm\Cache]` on the class keeps its entities in the [second-level cache](caching.md#second-level-cache).
 
@@ -70,6 +71,7 @@ A relation to another entity, or a collection of them, as Doctrine `#[ManyToOne]
 | `targetEntity`     | `class-string\|null` | The related entity, when the type of the property does not tell it |
 | `fetch`            | `Fetch`              | `GraphqlOrm\Fetch::Eager` (default) or `GraphqlOrm\Fetch::Lazy`, see [lazy relations](#lazy-relations) |
 | `ignoreValidation` | `bool`               | Ignore the schema validation                           |
+| `joinField`        | `string\|null`       | The field of the mutations holding the identifier of the related entity (e.g. `user_id`), see [writing relations](writing.md#relations) |
 
 A property mapped with both `#[GraphqlOrm\Field]` and `#[GraphqlOrm\Relation]`, a `#[GraphqlOrm\Relation]` whose type is
 no entity, or a `#[GraphqlOrm\Field]` holding an entity, throws an `InvalidArgumentException`.

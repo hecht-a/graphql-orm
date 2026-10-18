@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- The manager writes the entities as Doctrine: `persist()` a new entity, `remove()` one, change an entity read by a
+  query, and `flush()` sends the mutations in one document, an entity created whose identifier another needs being
+  created by a document of its own first. Only the fields changed since a query read them are sent, never a field the
+  query did not select. A relation is written through its `joinField` (`#[GraphqlOrm\Relation(joinField: 'user_id')]`),
+  the mutations are named after the `type` of `#[GraphqlOrm\Entity]` (the short name of the class by default). A failed
+  mutation throws a `FlushException` telling those applied; the next `flush()` sends again those that failed.
+  `DataApiBuilderDialect`, `PostGraphileDialect` and `HasuraDialect` implement the new `MutationDialect`.
+- The profiler shows the mutations of `flush()` in their own color.
+
+### Changed
+
+- `GraphqlManagerInterface` declares `persist()`, `remove()` and `flush()`: a class implementing it must add them.
+
 ## [5.9.0] — 2026-10-18
 
 ### Added

@@ -105,8 +105,9 @@ A query sent after the response, by a `kernel.terminate` listener or while a str
 profile, with the entities it read, and marked "after the response".
 
 The origin is the method of the bundle the application called: `findBy`, `count`, `getResult` on a query built with
-the query builder, the method of a custom repository calling the bundle, or `lazy` for a relation loaded on first
-access (see [lazy loading](configuration.md#lazy-loading)).
+the query builder, the method of a custom repository calling the bundle, `lazy` for a relation loaded on first
+access (see [lazy loading](configuration.md#lazy-loading)), or `flush` for the mutations
+[writing the entities](writing.md), in their own color on the timeline.
 
 A query hydrated as DTOs with [`hydrateAs()`](query-builder.md#dto-results) carries a "DTO" badge naming the DTO, next
 to its entity, and its "Entities" column counts the DTOs created instead (`8 DTOs`): it hydrates no entity.

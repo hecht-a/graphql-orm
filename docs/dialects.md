@@ -12,6 +12,9 @@ Dialects adapt query generation and response parsing to a specific GraphQL API f
 | Hasura           | `HasuraDialect`         | Hasura and APIs following its `where` / `order_by` conventions |
 | PostGraphile     | `PostGraphileDialect`   | PostGraphile: Relay connections, `condition`, `orderBy` enums |
 
+`DataApiBuilderDialect`, `HasuraDialect` and `PostGraphileDialect` also [write the entities](writing.md) with their
+mutations.
+
 Standard GraphQL defines no ordering nor pagination arguments: `DefaultDialect` throws a `LogicException` when a query
 uses `orderBy()` or `paginate()`, instead of silently ignoring it. Use a dialect matching your API, or write one
 (see below). `limit()` is sent as a `first` argument.
@@ -180,6 +183,11 @@ lazy relations of a response are then loaded with one query per class instead of
 
 An enum value built at runtime, such as an ordering, is given as an `EnumLiteral`: walkers print it without quotes, and
 variables send it as a string.
+
+To write the entities with `flush()`, implement `MutationDialect`: `createField()`, `updateField()` and `deleteField()`
+build the mutation fields of an entity, named by its `MutationTarget` (root field, GraphQL type, identifier field), its
+values keyed by GraphQL names; `mutatedRow()` reads the entity the mutation answered with, `null` when it wrote none.
+See [writing entities](writing.md).
 
 For an offset pagination, implement the `OffsetPaginationDialect` marker interface: send `limit()` + 1 rows and the
 cursor as offset, as `HasuraDialect::withPagination()` does; the extra row tells a next page exists and is dropped.
