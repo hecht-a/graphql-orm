@@ -560,7 +560,9 @@ final class EntityHydrator
                 continue;
             }
 
-            if (!$property->isInitialized($entity)) {
+            // A property left to a lazy initializer is not set: asking isInitialized() would run the initializer with
+            // PHP 8.4, which throws for a partial entity.
+            if ($property->isLazy($entity) || !$property->isInitialized($entity)) {
                 return false;
             }
         }
