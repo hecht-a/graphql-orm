@@ -6,7 +6,7 @@ use {{ repo_namespace }}\{{ repo_short }};
 {{ attribute_imports }}
 {{ relation_imports }}
 
-#[Entity('{{ root }}', {{ repo_short }}::class)]
+#[GraphqlOrm\Entity(name: '{{ root }}', repositoryClass: {{ repo_short }}::class)]
 class {{ class_name }}
 {
 {{ properties }}

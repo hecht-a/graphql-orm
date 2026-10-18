@@ -119,7 +119,7 @@ final readonly class MakeGraphqlEntityCommand
             'repo_short' => $repoClassName,
             'properties' => $propertiesCode,
             'relation_imports' => $relationImports,
-            'attribute_imports' => $this->attributeImports($properties),
+            'attribute_imports' => $this->attributeImports(),
         ]);
 
         $repoCode = $this->stubRenderer->render('repository.stub.php', [
@@ -340,9 +340,9 @@ final readonly class MakeGraphqlEntityCommand
 
         foreach ($properties as $property) {
             $attribute = match (true) {
-                $property->relation => "#[Relation(mappedFrom: '{$property->mappedFrom}')]",
-                $property->identifier => "#[Field(mappedFrom: '{$property->mappedFrom}')]\n    #[Identifier]",
-                default => "#[Field(mappedFrom: '{$property->mappedFrom}')]",
+                $property->relation => "#[GraphqlOrm\\Relation(mappedFrom: '{$property->mappedFrom}')]",
+                $property->identifier => "#[GraphqlOrm\\Field(mappedFrom: '{$property->mappedFrom}')]\n    #[GraphqlOrm\\Identifier]",
+                default => "#[GraphqlOrm\\Field(mappedFrom: '{$property->mappedFrom}')]",
             };
 
             if ($property->relation) {
@@ -385,26 +385,11 @@ PHP;
     }
 
     /**
-     * The mapping attributes the entity uses, and only those.
-     *
-     * @param PropertyDefinition[] $properties
+     * The mapping attributes, imported through a namespace alias as those of Doctrine: #[GraphqlOrm\Entity].
      */
-    private function attributeImports(array $properties): string
+    private function attributeImports(): string
     {
-        $attributes = ['Entity'];
-
-        foreach ($properties as $property) {
-            $attributes[] = $property->relation ? 'Relation' : 'Field';
-
-            if ($property->identifier && !$property->relation) {
-                $attributes[] = 'Identifier';
-            }
-        }
-
-        $attributes = array_unique($attributes);
-        sort($attributes);
-
-        return implode("\n", array_map(fn (string $attribute) => 'use GraphqlOrm\\Mapping\\' . $attribute . ';', $attributes));
+        return 'use GraphqlOrm\\Mapping as GraphqlOrm;';
     }
 
     /**
