@@ -14,6 +14,8 @@ use GraphqlOrm\Exception\NonUniqueResultException;
 use GraphqlOrm\Exception\NoResultException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\GraphqlManager;
+use GraphqlOrm\Hydrator\DtoHydrator;
+use GraphqlOrm\Metadata\DtoMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Ast\QueryNode;
@@ -25,8 +27,9 @@ use GraphqlOrm\Query\Pagination\PaginatedResult;
 final readonly class GraphqlQuery
 {
     /**
-     * @param class-string<T> $entityClass
-     * @param list<string>    $unmappedFieldHints appended to the message of a failure
+     * @param class-string<T>  $entityClass        the entity queried; with a DTO, T is the DTO
+     * @param list<string>     $unmappedFieldHints appended to the message of a failure
+     * @param DtoMetadata|null $dto                the DTO the rows are hydrated as, rather than entities
      */
     public function __construct(
         private QueryNode|string $graphql,
@@ -34,11 +37,12 @@ final readonly class GraphqlQuery
         private GraphqlManager $manager,
         private QueryOptions $options,
         private array $unmappedFieldHints = [],
+        private ?DtoMetadata $dto = null,
     ) {
     }
 
     /**
-     * @return class-string<T> the class of the entities this query returns
+     * @return class-string the class of the entity queried
      */
     public function getEntityClass(): string
     {
@@ -71,7 +75,7 @@ final readonly class GraphqlQuery
         $options->resultCacheLifetime = $lifetime;
         $options->resultCacheKey = $key;
 
-        return new self($this->graphql, $this->entityClass, $this->manager, $options, $this->unmappedFieldHints);
+        return new self($this->graphql, $this->entityClass, $this->manager, $options, $this->unmappedFieldHints, $this->dto);
     }
 
     /**
@@ -82,7 +86,7 @@ final readonly class GraphqlQuery
         $options = clone $this->options;
         $options->resultCache = false;
 
-        return new self($this->graphql, $this->entityClass, $this->manager, $options, $this->unmappedFieldHints);
+        return new self($this->graphql, $this->entityClass, $this->manager, $options, $this->unmappedFieldHints, $this->dto);
     }
 
     /**
@@ -264,17 +268,22 @@ final readonly class GraphqlQuery
             $rows = $this->rows($root);
             $hasNextPage = $this->trimExtraRow($rows);
 
-            /** @var T[] $items the rows are hydrated as instances of the queried entity */
-            $items = array_map(
-                fn (array $row) => $this->manager
-                    ->getHydrator()
-                    ->hydrate($metadata, $row, $context),
-                $rows
-            );
+            if ($this->dto !== null) {
+                $items = $this->dtos($metadata, $rows);
+            } else {
+                /** @var T[] $items the rows are hydrated as instances of the queried entity */
+                $items = array_map(
+                    fn (array $row) => $this->manager
+                        ->getHydrator()
+                        ->hydrate($metadata, $row, $context),
+                    $rows
+                );
+            }
 
             if ($this->options->indexBy !== null) {
                 $context->trace->indexBy = $this->options->indexBy;
-                $items = self::indexed($items, $this->options->indexBy);
+                // DTOs are keyed by their row, as they may not hold the field.
+                $items = $this->dto === null ? self::indexed($items, $this->options->indexBy) : $items;
             }
 
             if (!$this->options->paginate) {
@@ -321,7 +330,7 @@ final readonly class GraphqlQuery
 
         $options = clone $this->options;
         $options->detached = true;
-        $page = (new self($this->graphql, $this->entityClass, $this->manager, $options, $this->unmappedFieldHints))->getResult();
+        $page = (new self($this->graphql, $this->entityClass, $this->manager, $options, $this->unmappedFieldHints, $this->dto))->getResult();
 
         while ($page instanceof PaginatedResult) {
             // Not "yield from": each page would restart the keys at 0.
@@ -413,6 +422,43 @@ final readonly class GraphqlQuery
     }
 
     /**
+     * The rows hydrated as DTOs, keyed by the field of indexBy() when set.
+     *
+     * @param list<array<mixed>> $rows
+     *
+     * @return T[]
+     *
+     * @throws InvalidArgumentException when a row has no value usable as a key
+     */
+    private function dtos(GraphqlEntityMetadata $metadata, array $rows): array
+    {
+        \assert($this->dto !== null);
+        $key = $this->options->indexBy !== null ? $metadata->graphqlName($this->options->indexBy) : null;
+        $dtos = [];
+
+        foreach ($rows as $row) {
+            /** @var T $dto the rows are hydrated as instances of the DTO */
+            $dto = DtoHydrator::hydrate($this->dto, $this->withoutEnvelopes($metadata, $row));
+
+            if ($key === null) {
+                $dtos[] = $dto;
+
+                continue;
+            }
+
+            $value = $row[$key] ?? null;
+
+            if (!\is_int($value) && !\is_string($value)) {
+                throw new InvalidArgumentException(\sprintf('"%s" holds no value usable as a key of the result.', $key));
+            }
+
+            $dtos[$value] = $dto;
+        }
+
+        return $dtos;
+    }
+
+    /**
      * With an offset pagination, one row more than the page size is requested: it tells a next page exists, and is
      * dropped.
      *
@@ -470,7 +516,7 @@ final readonly class GraphqlQuery
         $options->cursor = $cursor;
         $options->cursorStack = $cursorStack;
 
-        $page = (new self($this->graphql, $this->entityClass, $this->manager, $options, $this->unmappedFieldHints))->getResult();
+        $page = (new self($this->graphql, $this->entityClass, $this->manager, $options, $this->unmappedFieldHints, $this->dto))->getResult();
 
         return $page instanceof PaginatedResult ? $page : null;
     }
@@ -580,6 +626,6 @@ final readonly class GraphqlQuery
             );
         }
 
-        return new self($query, $this->entityClass, $this->manager, $options, $this->unmappedFieldHints);
+        return new self($query, $this->entityClass, $this->manager, $options, $this->unmappedFieldHints, $this->dto);
     }
 }

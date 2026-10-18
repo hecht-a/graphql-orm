@@ -7,7 +7,6 @@ namespace GraphqlOrm\Hydrator;
 use Doctrine\Common\Collections\ArrayCollection;
 use GraphqlOrm\Attribute\AfterHydrate;
 use GraphqlOrm\Attribute\BeforeHydrate;
-use GraphqlOrm\Exception\CastException;
 use GraphqlOrm\Exception\EntityNotFoundException;
 use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\Exception\LogicException;
@@ -23,9 +22,6 @@ use GraphqlOrm\Metadata\GraphqlFieldMetadata;
  */
 final class EntityHydrator
 {
-    private const DATE_CLASSES = [\DateTimeImmutable::class, \DateTimeInterface::class, \DateTime::class];
-    private const MILLISECONDS_PER_SECOND = 1000;
-
     /**
      * Field GraphQL servers may add to any object, ignored when telling whether a row holds more than the identifier.
      */
@@ -607,101 +603,8 @@ final class EntityHydrator
         return false;
     }
 
-    private function normalizeValue(
-        mixed $value,
-        \ReflectionProperty $property,
-    ): mixed {
-        if ($value === null) {
-            return null;
-        }
-
-        $type = $property->getType();
-
-        if (!$type instanceof \ReflectionNamedType) {
-            return $value;
-        }
-
-        $typeName = $type->getName();
-
-        if ($type->isBuiltin()) {
-            return $this->castBuiltin($value, $typeName);
-        }
-
-        if (\in_array($typeName, self::DATE_CLASSES, true)) {
-            return $this->castDate($value, $typeName);
-        }
-
-        if (is_subclass_of($typeName, \BackedEnum::class)) {
-            return $this->castEnum($value, $typeName);
-        }
-
-        return $value;
-    }
-
-    private function castBuiltin(mixed $value, string $typeName): mixed
+    private function normalizeValue(mixed $value, \ReflectionProperty $property): mixed
     {
-        return match ($typeName) {
-            'int' => \is_float($value)
-                ? $value
-                : (is_numeric($value)
-                    ? (int) $value
-                    : throw CastException::cannotCast($value, 'int')
-                ),
-            'float' => \is_float($value)
-                ? $value
-                : (is_numeric($value)
-                    ? (float) $value
-                    : throw CastException::cannotCast($value, 'float')
-                ),
-            'bool' => match (true) {
-                \is_bool($value) => $value,
-                $value === 1,
-                $value === '1',
-                $value === 'true' => true,
-                $value === 0,
-                $value === '0',
-                $value === 'false' => false,
-                default => throw CastException::cannotCast($value, 'bool'),
-            },
-            'string' => \is_scalar($value)
-                ? (string) $value
-                : throw CastException::cannotCast($value, 'string'),
-            'array' => (array) $value,
-            default => $value,
-        };
-    }
-
-    /**
-     * Numeric values are Unix timestamps in milliseconds.
-     */
-    private function castDate(mixed $value, string $typeName): \DateTimeInterface
-    {
-        try {
-            $date = match (true) {
-                is_numeric($value) => new \DateTimeImmutable('@' . ((int) $value / self::MILLISECONDS_PER_SECOND)),
-                \is_string($value) => new \DateTimeImmutable($value),
-                default => throw CastException::invalidDateTime($value),
-            };
-        } catch (\Exception $e) {
-            throw $e instanceof CastException ? $e : CastException::invalidDateTime($value);
-        }
-
-        return $typeName === \DateTime::class ? \DateTime::createFromImmutable($date) : $date;
-    }
-
-    /**
-     * @param class-string<\BackedEnum> $enumClass
-     */
-    private function castEnum(mixed $value, string $enumClass): \BackedEnum
-    {
-        if (!\is_int($value) && !\is_string($value)) {
-            throw CastException::cannotCast($value, $enumClass);
-        }
-
-        try {
-            return $enumClass::from($value);
-        } catch (\ValueError|\TypeError) {
-            throw CastException::cannotCast($value, $enumClass);
-        }
+        return ValueCaster::cast($value, $property->getType());
     }
 }

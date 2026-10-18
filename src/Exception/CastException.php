@@ -25,4 +25,9 @@ final class CastException extends \UnexpectedValueException implements GraphqlOr
             \is_scalar($value) ? (string) $value : get_debug_type($value),
         ));
     }
+
+    public static function nullForParameter(string $class, string $parameter, string $field): self
+    {
+        return new self(\sprintf('"%s::$%s" cannot be null: the response holds no value for "%s".', $class, $parameter, $field));
+    }
 }
