@@ -1,12 +1,10 @@
 name: Documentation
 on:
-  push:
-    # Each version is published from its branch: a change to either rebuilds both.
-    branches: [ main, 4.x ]
-    paths:
-      - 'docs/**'
-      - 'CHANGELOG.md'
-      - '.github/workflows/docs.yml'
+  # Published once the CI of main passes, from the commit it checked; the 4.x branch publishes its own version.
+  workflow_run:
+    workflows: [ CI ]
+    types: [ completed ]
+    branches: [ main ]
   workflow_dispatch:
 permissions:
   contents: read
@@ -18,13 +16,14 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       # The whole history, for the "last updated" date of each page.
       - name: checkout
         uses: actions/checkout@v5
         with:
-          ref: main
+          ref: ${{ github.event.workflow_run.head_sha || 'main' }}
           fetch-depth: 0
       - name: setup node
         uses: actions/setup-node@v7.0.0

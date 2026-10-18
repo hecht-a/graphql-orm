@@ -3,6 +3,8 @@ on:
   push:
     branches: [ "main" ]
   pull_request: ~
+  # Run by the Release workflow before releasing a tag
+  workflow_call: ~
 jobs:
   cs-check:
     runs-on: ubuntu-latest

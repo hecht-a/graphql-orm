@@ -5,7 +5,11 @@ on:
 permissions:
   contents: write
 jobs:
+  # The tagged commit passes the CI before being released.
+  ci:
+    uses: ./.github/workflows/tests.yml
   release:
+    needs: ci
     runs-on: ubuntu-latest
     env:
       TAG: ${{ github.ref_name }}
