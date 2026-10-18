@@ -1203,6 +1203,88 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     }
 
     /**
+     * The profile of the queries as JSON data, for a ticket or to compare two versions of a page: the metrics, the
+     * thresholds, each query detailed by the profile (its values masked unless redact_query_values is false, without
+     * its AST nor its response) and the findings.
+     *
+     * @return array{
+     *   format: string,
+     *   version: int,
+     *   summary: array<string, int|float>,
+     *   thresholds: array<string, int|float|null>,
+     *   queries: list<array<string, mixed>>,
+     *   findings: array<string, list<array<string, mixed>>>
+     * }
+     */
+    public function getExport(): array
+    {
+        $offsets = $this->getQueryOffsets();
+        $queries = [];
+
+        foreach (\array_slice($this->getQueries(), 0, self::MAX_DETAILED_QUERIES) as $index => $query) {
+            $caller = $query['caller'] ?? null;
+            $queries[] = [
+                'number' => $index + 1,
+                'manager' => $query['manager'] ?? null,
+                'origin' => $query['origin'] ?? null,
+                'entity' => $query['entity_class'] ?? null,
+                'root_field' => $query['root_field'] ?? null,
+                'graphql' => $query['graphql'] ?? null,
+                'variables' => $query['variables'] ?? [],
+                'values_masked' => $query['redacted'] ?? true,
+                'caller' => \is_array($caller) && \is_string($caller['file'] ?? null)
+                    ? $caller['file'] . (\is_int($caller['line'] ?? null) ? ':' . $caller['line'] : '')
+                    : null,
+                'started_ms' => $offsets[$index] ?? 0.0,
+                'duration_ms' => $query['duration'] ?? 0,
+                'hydration_ms' => $query['hydration_duration'] ?? 0.0,
+                'response_bytes' => $query['response_size'] ?? 0,
+                'entities_hydrated' => $query['hydrated_entities'] ?? 0,
+                'result_cache' => $query['result_cache'] ?? null,
+                'slow' => $query['slow'] ?? false,
+                'errors' => $query['errors'] ?? [],
+                'sub_request' => $query['sub_request'] ?? null,
+                'after_response' => $query['after_response'] ?? false,
+            ];
+        }
+
+        return [
+            'format' => 'graphql-orm-profile',
+            'version' => 1,
+            'summary' => [
+                'queries' => $this->getQueryCount(),
+                'sent' => $this->getQueryCount() - $this->getResultCacheHitCount(),
+                'distinct' => $this->getDistinctQueryCount(),
+                'waited_ms' => $this->getWaitedDuration(),
+                'summed_ms' => $this->getTotalDuration(),
+                'hydration_ms' => $this->getHydrationDuration(),
+                'errors' => $this->getErrorCount(),
+                'slow' => $this->getSlowQueryCount(),
+                'entities_hydrated' => $this->getHydratedEntityCount(),
+                'response_bytes' => $this->getResponseSize(),
+            ],
+            'thresholds' => [
+                'slow_query_ms' => $this->getSlowQueryThreshold(),
+                'max_queries' => $this->getMaxQueries(),
+                'max_query_time_ms' => $this->getMaxQueryTime(),
+                'repeated_queries' => $this->getRepeatedQueryThreshold(),
+            ],
+            'queries' => $queries,
+            'findings' => [
+                'lazy_loads' => array_map(
+                    static fn (array $load): array => ['relation' => $load['relation'], 'count' => $load['count'], 'queries' => $load['queries'], 'duration_ms' => $load['duration'], 'callers' => $load['callers']],
+                    $this->getLazyLoadsByRelation(),
+                ),
+                'repeated_queries' => array_map(
+                    static fn (array $repeated): array => ['shape' => $repeated['shape'], 'count' => $repeated['count'], 'queries' => $repeated['queries']],
+                    $this->getRepeatedQueries(),
+                ),
+                'cache_candidates' => $this->getCacheCandidates(),
+            ],
+        ];
+    }
+
+    /**
      * The entities not marked #[GraphqlOrm\Cache] found by identifier or loaded on first access at least
      * profiler.repeated_queries times: the second-level cache would read them without a query, if they rarely change.
      *

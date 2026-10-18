@@ -338,6 +338,64 @@ final class GraphqlOrmDataCollectorTest extends TestCase
     }
 
     #[Test]
+    public function itExportsTheProfileOfTheQueries(): void
+    {
+        $collector = new GraphqlOrmDataCollector(slowQueryThreshold: 50.0, maxQueries: 10, repeatedQueryThreshold: 2);
+
+        foreach ([[100.0, 60.0, 1], [100.01, 20.0, 2]] as [$startedAt, $duration, $id]) {
+            $trace = self::traceOf('query { task(id: ' . $id . ') { id } }');
+            $trace->startedAt = $startedAt;
+            $trace->duration = $duration;
+            $trace->hydrationDuration = 1.5;
+            $trace->origin = 'find';
+            $trace->entityClass = FakeTask::class;
+            $trace->manager = 'default';
+            $trace->caller = ['file' => 'TaskController.php', 'line' => 18, 'class' => null, 'function' => null];
+            $trace->responseSize = 120;
+            $trace->hydratedEntities = 1;
+            $trace->ast = ['operation' => 'query'];
+            $collector->addQuery($trace);
+        }
+
+        $collector->collect(new Request(server: ['REQUEST_TIME_FLOAT' => 99.9]), new Response());
+        $export = $collector->getExport();
+
+        self::assertSame('graphql-orm-profile', $export['format']);
+        self::assertSame(1, $export['version']);
+        self::assertEqualsWithDelta(
+            ['queries' => 2, 'sent' => 2, 'distinct' => 1, 'waited_ms' => 60.0, 'summed_ms' => 80.0, 'hydration_ms' => 3.0, 'errors' => 0, 'slow' => 1, 'entities_hydrated' => 2, 'response_bytes' => 240],
+            $export['summary'],
+            0.001,
+        );
+        self::assertSame(['slow_query_ms' => 50.0, 'max_queries' => 10, 'max_query_time_ms' => null, 'repeated_queries' => 2], $export['thresholds']);
+        self::assertCount(2, $export['queries']);
+        self::assertEqualsWithDelta([
+            'number' => 1,
+            'manager' => 'default',
+            'origin' => 'find',
+            'entity' => FakeTask::class,
+            'root_field' => 'task',
+            'graphql' => 'query { task(id: 1) { id } }',
+            'variables' => [],
+            'values_masked' => false,
+            'caller' => 'TaskController.php:18',
+            'started_ms' => 100.0,
+            'duration_ms' => 60.0,
+            'hydration_ms' => 1.5,
+            'response_bytes' => 120,
+            'entities_hydrated' => 1,
+            'result_cache' => null,
+            'slow' => true,
+            'errors' => [],
+            'sub_request' => null,
+            'after_response' => false,
+        ], $export['queries'][0], 0.001);
+        self::assertSame([['shape' => 'query { task(id: ***) { id } }', 'count' => 2, 'queries' => [1, 2]]], $export['findings']['repeated_queries']);
+        self::assertSame([['class' => FakeTask::class, 'count' => 2, 'queries' => [1, 2]]], $export['findings']['cache_candidates']);
+        self::assertSame([], $export['findings']['lazy_loads']);
+    }
+
+    #[Test]
     public function itSuggestsTheSecondLevelCacheForAnEntityReadAgainAndAgain(): void
     {
         foreach ([['find', FakeLabel::class], ['lazy', FakeLabel::class], ['find', FakeLabel::class], ['findBy', FakeTask::class], ['find', CachedTask::class], ['find', CachedTask::class], ['find', CachedTask::class]] as [$origin, $class]) {

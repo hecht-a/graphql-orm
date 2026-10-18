@@ -274,6 +274,17 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itOffersToDownloadTheProfileAsJson(): void
+    {
+        $collector = $this->collector(['query { tasks { id } }']);
+
+        $html = $this->render($collector);
+
+        self::assertMatchesRegularExpression('/data-graphql-orm-export="graphql-orm-abc.json"\s+data-graphql-orm-json="[^"]*&quot;format&quot;:&quot;graphql-orm-profile&quot;/', $html);
+        self::assertStringContainsString('Export JSON', self::text($html));
+    }
+
+    #[Test]
     public function itListsTheDetailedQueriesAndCountsTheOthers(): void
     {
         $collector = new GraphqlOrmDataCollector();

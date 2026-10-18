@@ -296,6 +296,11 @@
                         <button type="button" class="graphql-orm-chip" aria-pressed="false" data-graphql-orm-filter="error">Errors {{ collector.errorCount }}</button>
                     {% endif %}
                     <input type="search" class="graphql-orm-search" placeholder="Search the queries" aria-label="Search the queries">
+                    <button type="button" class="btn btn-sm" data-graphql-orm-export="graphql-orm-{{ token ?? 'profile' }}.json"
+                            data-graphql-orm-json="{{ collector.export|json_encode }}"
+                            title="The metrics, the queries and the findings of this profile as JSON; values masked unless redact_query_values is false">
+                        Export JSON
+                    </button>
                 </div>
 
                 <table class="graphql-orm-queries">
@@ -1127,6 +1132,7 @@
                 const subtab = event.target.closest("[data-graphql-orm-subtab]");
                 const row = event.target.closest("[data-graphql-orm-row]");
                 const replay = event.target.closest("[data-graphql-orm-replay]");
+                const exported = event.target.closest("[data-graphql-orm-export]");
 
                 if (tab || goto) {
                     event.preventDefault();
@@ -1136,6 +1142,12 @@
                     openQuery(open.dataset.graphqlOrmOpen);
                 } else if (replay) {
                     replayQuery(replay);
+                } else if (exported) {
+                    const link = document.createElement("a");
+                    link.href = URL.createObjectURL(new Blob([exported.dataset.graphqlOrmJson], { type: "application/json" }));
+                    link.download = exported.dataset.graphqlOrmExport;
+                    link.click();
+                    URL.revokeObjectURL(link.href);
                 } else if (chip) {
                     panel.querySelectorAll("[data-graphql-orm-filter]").forEach((other) => other.setAttribute("aria-pressed", String(other === chip)));
                     applyFilter();
