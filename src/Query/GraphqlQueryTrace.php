@@ -66,6 +66,8 @@ final class GraphqlQueryTrace
     public bool $duringSerialization = false;
     /** The beginning of the response, its values masked unless redact_query_values is false; profiler only. */
     public ?string $responsePreview = null;
+    /** "hit" for a persisted query the server knew by its hash, "miss" for one it asked the text of; null otherwise. */
+    public ?string $persistedQuery = null;
     /** Its values masked by redact_query_values: a profile cannot send it again; profiler only. */
     public bool $redacted = false;
 

@@ -369,6 +369,19 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itTellsAPersistedQuery(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { tasks { id } }';
+        $trace->origin = 'findAll';
+        $trace->persistedQuery = 'miss';
+        $collector->addQuery($trace);
+
+        self::assertStringContainsString('findAll persisted miss', self::text($this->render($collector)));
+    }
+
+    #[Test]
     public function itTellsTheMutationsOfAFlush(): void
     {
         $collector = new GraphqlOrmDataCollector();

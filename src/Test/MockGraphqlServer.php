@@ -117,6 +117,13 @@ final class MockGraphqlServer implements HttpClientInterface
         $query = \is_array($body) && \is_string($body['query'] ?? null) ? $body['query'] : '';
         $variables = \is_array($body) && \is_array($body['variables'] ?? null) ? $body['variables'] : [];
 
+        // A persisted query sent as its hash: the server asks for its text, as for a query it does not know yet.
+        $extensions = \is_array($body) ? $body['extensions'] ?? null : null;
+
+        if ($query === '' && \is_array($extensions) && \is_array($extensions['persistedQuery'] ?? null)) {
+            return new MockResponse(json_encode(['errors' => [['message' => 'PersistedQueryNotFound', 'extensions' => ['code' => 'PERSISTED_QUERY_NOT_FOUND']]]], JSON_THROW_ON_ERROR));
+        }
+
         // The introspection of the bundle (typed variables, schema validation) gets an empty schema, so that the values
         // are sent inline; it is not recorded, nor does it consume the responses queued for the queries under test.
         if (preg_match('/\b__schema\b/', $query) === 1) {

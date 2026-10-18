@@ -8,6 +8,7 @@ use GraphqlOrm\Cache\CachePoolDescriber;
 use GraphqlOrm\Cache\GraphqlCache;
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Client\GraphqlClientInterface;
+use GraphqlOrm\Client\PersistedQueries;
 use GraphqlOrm\Command\CacheStatsCommand;
 use GraphqlOrm\Converter\TypeConverterInterface;
 use GraphqlOrm\Converter\TypeConverterRegistry;
@@ -276,6 +277,10 @@ final class GraphqlOrmExtension extends Extension
             $client->setArgument('$httpClient', new Reference($config['http_client']));
         }
 
+        if ($config['persisted_queries']) {
+            $client->setArgument('$persistedQueries', new Definition(PersistedQueries::class));
+        }
+
         if ($config['headers_provider'] !== null) {
             $client->setArgument('$headersProvider', new Reference($config['headers_provider']));
         }
@@ -402,6 +407,7 @@ final class GraphqlOrmExtension extends Extension
             'http_client' => $config['http_client'],
             'max_depth' => $config['max_depth'],
             'identity_map' => $config['identity_map'],
+            'persisted_queries' => $config['persisted_queries'],
             'lazy_loading' => $config['lazy_loading'],
             'variables' => $config['variables'],
             'naming_strategy' => $config['naming_strategy'],

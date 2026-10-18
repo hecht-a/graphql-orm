@@ -33,6 +33,7 @@ final readonly class GraphqlClient implements ConcurrentGraphqlClientInterface
         private ?Stopwatch $stopwatch = null,
         private ?string $projectDir = null,
         private ?HeadersProviderInterface $headersProvider = null,
+        private ?PersistedQueries $persistedQueries = null,
     ) {
     }
 
@@ -56,42 +57,72 @@ final readonly class GraphqlClient implements ConcurrentGraphqlClientInterface
         );
 
         $context->trace->endpoint = $this->endpoint;
-
-        $this->stopwatch?->start($eventName, 'graphql_orm');
+        // An empty PHP array is encoded as a JSON list, which servers such as Hot Chocolate (Data API Builder) reject:
+        // variables must be a JSON object.
+        $variables = $variables === [] ? new \stdClass() : $variables;
+        $persisted = $this->persistedQueries?->isSupported() === true ? $this->persistedQueries : null;
         // Measured without the stopwatch too, which the application may not provide.
         $startedAt = hrtime(true);
+        $response = $this->post($persisted !== null ? ['variables' => $variables, 'extensions' => $persisted->extensions($query)] : ['query' => $query, 'variables' => $variables], $eventName, $startedAt, $context);
+
+        return function () use ($response, $eventName, $startedAt, $context, $persisted, $query, $variables): array {
+            $result = $this->receive($response, $eventName, $startedAt, $context, $persisted !== null);
+
+            if (\is_array($result)) {
+                $context->trace->persistedQuery = $persisted !== null ? 'hit' : null;
+
+                return $result;
+            }
+
+            // The server asks for the text of the query, or does not support the persisted queries.
+            if ($result) {
+                $json = ['query' => $query, 'variables' => $variables, 'extensions' => $persisted?->extensions($query)];
+                $context->trace->persistedQuery = 'miss';
+            } else {
+                $persisted?->unsupported();
+                $json = ['query' => $query, 'variables' => $variables];
+            }
+
+            $waited = $context->trace->duration;
+            $startedAt = hrtime(true);
+            $answer = $this->receive($this->post($json, $eventName, $startedAt, $context), $eventName, $startedAt, $context);
+            $context->trace->duration += $waited;
+
+            return \is_array($answer) ? $answer : throw GraphqlRequestException::graphqlErrors([['message' => 'The server did not accept the query sent in full.']]);
+        };
+    }
+
+    /**
+     * Sends a request: reading its response, later, is what waits for it.
+     *
+     * @param array<string, mixed> $json
+     *
+     * @throws GraphqlRequestException when it cannot be sent
+     */
+    private function post(array $json, string $eventName, int|float $startedAt, GraphqlExecutionContext $context): ResponseInterface
+    {
+        $this->stopwatch?->start($eventName, 'graphql_orm');
 
         try {
-            // The request is sent here; reading its response, later, is what waits for it.
-            $response = $this
-                ->httpClient
-                ->request(
-                    'POST',
-                    $this->endpoint,
-                    [
-                        'headers' => $this->headers(),
-                        'json' => [
-                            'query' => $query,
-                            // An empty PHP array is encoded as a JSON list, which servers such as Hot Chocolate
-                            // (Data API Builder) reject: variables must be a JSON object.
-                            'variables' => $variables === [] ? new \stdClass() : $variables,
-                        ],
-                        ...$this->httpClientOptions,
-                    ]
-                );
+            return $this->httpClient->request('POST', $this->endpoint, [
+                'headers' => $this->headers(),
+                'json' => $json,
+                ...$this->httpClientOptions,
+            ]);
         } catch (TransportExceptionInterface $e) {
             $this->stopTimer($eventName, $startedAt, $context);
 
             throw GraphqlRequestException::transportFailed($this->endpoint, $e);
         }
-
-        return fn (): array => $this->receive($response, $eventName, $startedAt, $context);
     }
 
     /**
-     * @return array<string, mixed>
+     * @param bool $persisted whether the request sent the hash of the query instead of its text
+     *
+     * @return array<string, mixed>|bool the response, or whether the server asks for the text of the query (true) or
+     *                                   does not support the persisted queries (false)
      */
-    private function receive(ResponseInterface $response, string $eventName, int|float $startedAt, GraphqlExecutionContext $context): array
+    private function receive(ResponseInterface $response, string $eventName, int|float $startedAt, GraphqlExecutionContext $context, bool $persisted = false): array|bool
     {
         try {
             $statusCode = $response->getStatusCode();
@@ -103,6 +134,11 @@ final readonly class GraphqlClient implements ConcurrentGraphqlClientInterface
         }
 
         $context->trace->responseSize = \strlen($content);
+
+        // Answered with a 200 by Apollo, with a 400 by other servers.
+        if ($persisted && null !== $failure = PersistedQueries::failureOf($this->errorsOf($content))) {
+            return $failure;
+        }
 
         if ($statusCode >= self::FIRST_HTTP_ERROR_STATUS) {
             // Servers such as Data API Builder and PostGraphile answer an invalid query with a 400 holding its errors.

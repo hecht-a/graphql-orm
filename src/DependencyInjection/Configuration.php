@@ -88,6 +88,9 @@ final class Configuration implements ConfigurationInterface
             ->defaultValue([])
             ->end();
 
+        $children->append($this->boolean('persisted_queries', false, $defaults)
+            ->info('Send the queries as the SHA-256 hash of their text, as the automatic persisted queries of Apollo: the text is sent once the server asks for it.'));
+
         $children->append($this->boolean('identity_map', true, $defaults)
             ->info('Share the entities between the queries of a request: an entity is one instance, and find() serves one known in full without a query. Reset between requests and messages.'));
 

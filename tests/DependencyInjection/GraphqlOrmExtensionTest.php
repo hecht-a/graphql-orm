@@ -7,6 +7,7 @@ namespace GraphqlOrm\Tests\DependencyInjection;
 use GraphqlOrm\Cache\CachePoolDescriber;
 use GraphqlOrm\Cache\GraphqlCache;
 use GraphqlOrm\Client\GraphqlClient;
+use GraphqlOrm\Client\PersistedQueries;
 use GraphqlOrm\Command\FindCommand;
 use GraphqlOrm\Command\MakeGraphqlEntityCommand;
 use GraphqlOrm\Controller\EntityAutocompleteController;
@@ -49,6 +50,7 @@ use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpFoundation\Request;
@@ -448,6 +450,20 @@ final class GraphqlOrmExtensionTest extends TestCase
         $container->compile();
 
         self::assertInstanceOf(QueryRedactor::class, $this->managerRedactor($container));
+    }
+
+    #[Test]
+    public function itSendsThePersistedQueriesOfAManagerAskingForThem(): void
+    {
+        $container = $this->createContainer(debug: false, config: [
+            'managers' => ['main' => [], 'crm' => ['endpoint' => 'https://crm.example.com/graphql', 'persisted_queries' => true]],
+        ]);
+
+        $crm = $container->getDefinition('graphql_orm.crm.client')->getArguments()['$persistedQueries'] ?? null;
+
+        self::assertInstanceOf(Definition::class, $crm);
+        self::assertSame(PersistedQueries::class, $crm->getClass());
+        self::assertArrayNotHasKey('$persistedQueries', $container->getDefinition('graphql_orm.main.client')->getArguments());
     }
 
     #[Test]

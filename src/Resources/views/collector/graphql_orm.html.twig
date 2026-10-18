@@ -1238,6 +1238,7 @@
     {% if query.origin ?? null %}
         <span class="graphql-orm-origin graphql-orm-origin-{{ _self.originKind(query.origin)|trim }}">{{ query.origin }}</span>
         {% if (query.result_cache ?? null) == 'hit' %}<span class="graphql-orm-origin graphql-orm-origin-count" title="Answered by the result cache, without being sent">result cache</span>{% endif %}
+        {% if query.persisted_query ?? null %}<span class="graphql-orm-origin graphql-orm-origin-introspection" title="{{ query.persisted_query == 'hit' ? 'Sent as the hash of its text, which the server knew' : 'Sent as its hash, then in full as the server asked for its text' }}">persisted {{ query.persisted_query }}</span>{% endif %}
         {% if query.from_cached_entity ?? false %}<span class="graphql-orm-origin graphql-orm-origin-lazy" title="A relation of an entity read from the second-level cache">from cached entity</span>{% endif %}
         {% if query.during_serialization ?? false %}<span class="graphql-orm-origin graphql-orm-origin-lazy" title="Sent while the serializer was writing an entity">serializer</span>{% endif %}
         {% if query.sub_request ?? null %}<span class="graphql-orm-origin graphql-orm-origin-introspection" title="Sent by a sub-request (a fragment, a forward), whose own profile holds it as well">sub-request {{ query.sub_request }}</span>{% endif %}

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GraphqlOrm\Tests\Test;
 
 use GraphqlOrm\Client\GraphqlClient;
+use GraphqlOrm\Client\PersistedQueries;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\Exception\GraphqlRequestException;
 use GraphqlOrm\Exception\LogicException;
@@ -138,6 +139,19 @@ final class MockGraphqlServerTest extends TestCase
         self::assertSame(1, $tasks[0]->id);
         self::assertCount(1, $server->requests());
         self::assertStringContainsString('filter: { title: { eq: "A" } }', $server->requests()[0]->query);
+    }
+
+    #[Test]
+    public function itAsksForTheTextOfAPersistedQuery(): void
+    {
+        $server = (new MockGraphqlServer())->respond(['tasks' => [['id' => 1]]]);
+        $client = new GraphqlClient($server, 'https://graphql.example.com/graphql', persistedQueries: new PersistedQueries());
+
+        $result = $client->query(self::QUERY, new GraphqlExecutionContext());
+
+        self::assertSame(['data' => ['tasks' => [['id' => 1]]]], $result);
+        self::assertCount(1, $server->requests());
+        self::assertSame(self::QUERY, $server->requests()[0]->query);
     }
 
     private static function client(MockGraphqlServer $server): GraphqlClient
