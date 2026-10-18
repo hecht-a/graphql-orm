@@ -223,6 +223,7 @@ final class GraphqlOrmExtension extends Extension
                 '$repositories' => new ServiceLocatorArgument(new TaggedIteratorArgument(self::REPOSITORY_TAG, needsIndexes: true)),
                 '$cache' => new Reference($id('cache')),
                 '$typeConverters' => new Reference(TypeConverterRegistry::class),
+                '$readOnly' => $config['read_only'],
             ])
             ->setArgument('$name', $name)
             ->setArgument('$router', new Reference(ManagerRouter::class))
@@ -408,6 +409,7 @@ final class GraphqlOrmExtension extends Extension
             'max_depth' => $config['max_depth'],
             'identity_map' => $config['identity_map'],
             'persisted_queries' => $config['persisted_queries'],
+            'read_only' => $config['read_only'],
             'lazy_loading' => $config['lazy_loading'],
             'variables' => $config['variables'],
             'naming_strategy' => $config['naming_strategy'],

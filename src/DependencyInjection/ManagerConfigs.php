@@ -25,6 +25,7 @@ use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
  *   slow_query_threshold: int|float|null,
  *   identity_map: bool,
  *   persisted_queries: bool,
+ *   read_only: bool,
  *   headers_provider: string|null,
  *   lazy_loading: bool,
  *   max_depth: int,

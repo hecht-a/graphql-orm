@@ -454,6 +454,17 @@ final class GraphqlOrmExtensionTest extends TestCase
     }
 
     #[Test]
+    public function itMakesAManagerReadOnly(): void
+    {
+        $container = $this->createContainer(debug: false, config: [
+            'managers' => ['main' => [], 'crm' => ['endpoint' => 'https://crm.example.com/graphql', 'read_only' => true]],
+        ]);
+
+        self::assertTrue($container->getDefinition('graphql_orm.crm.manager')->getArgument('$readOnly'));
+        self::assertFalse($container->getDefinition('graphql_orm.main.manager')->getArgument('$readOnly'));
+    }
+
+    #[Test]
     public function itLetsKnpPaginatorPaginateTheQueryBuilders(): void
     {
         $container = $this->createContainer(debug: false);

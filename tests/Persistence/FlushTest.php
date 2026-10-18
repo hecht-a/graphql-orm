@@ -309,6 +309,28 @@ final class FlushTest extends TestCase
         self::assertSame(0, $client->callCount);
     }
 
+    #[Test]
+    public function itRefusesToWriteWithAReadOnlyManager(): void
+    {
+        $metadataFactory = new GraphqlEntityMetadataFactory();
+        $client = new FakeGraphqlClient(['data' => ['notes' => ['items' => [self::NOTE]]]]);
+        $manager = new GraphqlManager($metadataFactory, $client, new EntityHydrator($metadataFactory), null, 1, new DataApiBuilderDialect(), identityMap: new IdentityMap(), readOnly: true, name: 'crm');
+        $note = $manager->getRepository(Note::class)->find(3);
+        self::assertInstanceOf(Note::class, $note);
+        $message = 'The GraphQL ORM manager "crm" is read-only (read_only: true): it does not write the entities.';
+
+        foreach ([static fn () => $manager->persist(new Note()), static fn () => $manager->remove($note), $manager->flush(...)] as $write) {
+            try {
+                $write();
+                self::fail('A read-only manager should refuse to write.');
+            } catch (LogicException $exception) {
+                self::assertSame($message, $exception->getMessage());
+            }
+        }
+
+        self::assertSame(1, $client->callCount);
+    }
+
     private static function flatten(string $graphql): string
     {
         return (string) preg_replace('/\s+/', ' ', $graphql);

@@ -119,6 +119,8 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         private string $name = self::DEFAULT_NAME,
         private ?ManagerRouter $router = null,
         private TypeConverterRegistry $typeConverters = new TypeConverterRegistry(),
+        // Neither writes nor tracks the entities read: no snapshot is taken for flush()
+        private bool $readOnly = false,
     ) {
     }
 
@@ -282,7 +284,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
 
         $context->lazyLoader = $this->loadCachedEntityRelationLazily(...);
         $context->observer = $this->collector;
-        $context->unitOfWork = $this->unitOfWork();
+        $context->unitOfWork = $this->readOnly ? null : $this->unitOfWork();
         $context->lazyLoading = true;
         $context->typeConverters = $this->typeConverters;
         $metadata = $this->metadataFactory->getMetadata($class);
@@ -355,9 +357,11 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
      * read by a query needs no persist(), its changes being written by flush().
      *
      * @throws InvalidArgumentException when the object is no entity
+     * @throws LogicException           when the manager is read-only
      */
     public function persist(object $entity): void
     {
+        $this->assertWritable();
         $this->assertManages($entity::class);
         $this->unitOfWork()->persist($entity);
     }
@@ -366,9 +370,11 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
      * Makes an entity deleted by the next flush(); a new entity is only forgotten.
      *
      * @throws InvalidArgumentException when the object is no entity, or one no query read
+     * @throws LogicException           when the manager is read-only
      */
     public function remove(object $entity): void
     {
+        $this->assertWritable();
         $this->assertManages($entity::class);
         $this->unitOfWork()->remove($entity);
     }
@@ -377,11 +383,12 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
      * Writes the entities persisted, changed since a query read them, and removed: one mutation document, and one more
      * for an entity created whose identifier another needs. Only the fields changed are sent.
      *
-     * @throws LogicException when the dialect cannot write, or an entity cannot be written
+     * @throws LogicException when the manager is read-only, the dialect cannot write, or an entity cannot be written
      * @throws FlushException when a mutation fails: those before were applied
      */
     public function flush(): void
     {
+        $this->assertWritable();
         $dialect = $this->dialect;
         $this->eventDispatcher?->dispatch(new PreFlushEvent($this));
 
@@ -394,6 +401,16 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         }
 
         $this->eventDispatcher?->dispatch(new PostFlushEvent($this));
+    }
+
+    /**
+     * @throws LogicException when the manager is read-only
+     */
+    private function assertWritable(): void
+    {
+        if ($this->readOnly) {
+            throw new LogicException(\sprintf('The GraphQL ORM manager "%s" is read-only (read_only: true): it does not write the entities.', $this->name));
+        }
     }
 
     private function unitOfWork(): UnitOfWork
@@ -457,7 +474,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         $context->lazyLoader = $this->loadLazily(...);
         $context->identityMap = $this->identityMap?->entities() ?? [];
         $context->observer = $this->collector;
-        $context->unitOfWork = $this->unitOfWork();
+        $context->unitOfWork = $this->readOnly ? null : $this->unitOfWork();
         $context->typeConverters = $this->typeConverters;
 
         return $this->identityMap !== null ? $this->referenceContext = $context : $context;
@@ -500,7 +517,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         // Always set: a relation mapped with GraphqlOrm\Fetch::Lazy is a lazy ghost even without lazy_loading.
         $context->lazyLoader = $this->loadLazily(...);
         $context->observer = $this->collector;
-        $context->unitOfWork = $this->unitOfWork();
+        $context->unitOfWork = $this->readOnly ? null : $this->unitOfWork();
         $context->lazyLoading = $this->lazyLoading;
         $context->entityCache = $this->cache;
         $context->typeConverters = $this->typeConverters;
