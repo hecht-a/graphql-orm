@@ -23,8 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `#[PostPersist]`, `#[PreUpdate]`, `#[PostUpdate]`, `#[PreRemove]` and `#[PostRemove]`. What a pre event sets is
   written. An entity updated or deleted leaves the second-level cache.
 - `persisted_queries: true` sends the queries of a manager as the SHA-256 hash of their text, as the automatic persisted
-  queries of Apollo, and their text once the server asks for it; a server not supporting them is sent the queries in
-  full from then on. The profiler marks the queries "persisted hit" or "persisted miss", and `MockGraphqlServer` asks
+  queries of Apollo, and their text once the server asks for it; a server refusing the hash otherwise, as Data API
+  Builder, is sent the queries in full from then on. The profiler marks the queries "persisted hit" or "persisted miss", and `MockGraphqlServer` asks
   for the text of every persisted query.
 - `GraphqlOrmAdapter` paginates a query builder with Pagerfanta, and KnpPaginator paginates one once
   `knplabs/knp-components` is installed: a count, then the rows of the page by offset. They need a dialect paginating

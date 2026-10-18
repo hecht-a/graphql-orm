@@ -262,8 +262,10 @@ graphql_orm:
             persisted_queries: true
 ```
 
-Enable it for a server supporting them: Apollo Server, Hot Chocolate, GraphQL Yoga with its plugin... A server telling
-it does not (`PersistedQueryNotSupported`) is sent the queries in full from then on; another error fails the query.
+Enable it for a server supporting them: Apollo Server, GraphQL Yoga with its plugin... A server refusing the hash
+otherwise, telling it does not support them (`PersistedQueryNotSupported`) or not knowing them, as Data API Builder
+answering a request without query, is sent the query in full, and the queries in full from then on: a request is lost
+on the first query.
 The requests are sent with `POST`, the variables apart from the hash. With [typed variables](#variables), the text of a
 query does not change with its values, and is asked for once; with values inline, once per value.
 
