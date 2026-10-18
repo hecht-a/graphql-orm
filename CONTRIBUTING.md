@@ -2,13 +2,20 @@
 
 ## Quality checks
 
-The Castor tasks need Castor 1.8 or later, whose embedded PHP (8.5) satisfies the PHP 8.4 requirement of the bundle.
+The Castor tasks need Castor 1.8 or later, whose embedded PHP (8.5) satisfies the PHP 8.4 requirement of the bundle,
+and Docker for the tests: they run in containers built from `.docker/qa/Dockerfile`, one per supported PHP version,
+whatever PHP the host has.
 
 ```bash
-vendor/bin/phpunit          # unit tests
+castor qa:all               # everything below
 castor qa:cs:check          # coding standards (castor qa:cs:fix to fix them)
 castor qa:phpstan           # static analysis, level max on src/ and tests/
+castor qa:tests             # unit tests with PHP 8.4 and 8.5 (--php=8.4 for one, --filter=... for some tests)
+castor qa:integration       # integration tests, see below (--keep leaves the servers running)
 ```
+
+The tests of a PHP version installed on the host run as well with `vendor/bin/phpunit`. Test both versions before
+pushing: PHP 8.4 and 8.5 differ, on the lazy objects for instance.
 
 ## Benchmarks
 
@@ -35,6 +42,11 @@ dedicated CI job.
 | `PostGraphileDialect`   | PostGraphile                              | `GRAPHQL_ORM_POSTGRAPHILE_ENDPOINT`  | `http://127.0.0.1:5001/graphql`     |
 | `RelayDialect`          | PostGraphile (connections)                | `GRAPHQL_ORM_POSTGRAPHILE_ENDPOINT`  | `http://127.0.0.1:5001/graphql`     |
 | `DefaultDialect`        | PostGraphile (simple collections)         | `GRAPHQL_ORM_POSTGRAPHILE_ENDPOINT`  | `http://127.0.0.1:5001/graphql`     |
+
+`castor qa:integration` starts the servers, waits until they answer, runs the tests from the network of the servers
+and stops them. Hasura is left out on an ARM host (Apple Silicon), where its engine does not start emulated: the CI
+runs its tests. By hand, the ports published on the host are set by `GRAPHQL_ORM_DAB_PORT`, `GRAPHQL_ORM_HASURA_PORT`
+and `GRAPHQL_ORM_POSTGRAPHILE_PORT` when the default ones are taken:
 
 ```bash
 docker compose -f tests/Integration/compose.yaml up -d
