@@ -121,6 +121,12 @@ its default mutations (without `--disable-default-mutations`).
 
 Another API is written with a dialect implementing `MutationDialect`, see [custom dialect](dialects.md#custom-dialect).
 
+## Events
+
+`flush()` dispatches the lifecycle events of the entities, `PrePersistEvent` to `PostFlushEvent`, and calls their
+lifecycle callbacks (`#[PrePersist]`, `#[PreUpdate]`...): see [events](events.md#writing-entities). An entity updated or
+deleted leaves the [second-level cache](caching.md#eviction).
+
 ## Profiler
 
 The profiler lists the mutations as the other queries, their origin `flush`, in their own color on the timeline.

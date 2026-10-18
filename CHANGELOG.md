@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mutation throws a `FlushException` telling those applied; the next `flush()` sends again those that failed.
   `DataApiBuilderDialect`, `PostGraphileDialect` and `HasuraDialect` implement the new `MutationDialect`.
 - The profiler shows the mutations of `flush()` in their own color.
+- `flush()` dispatches the lifecycle events of the entities, as Doctrine: `PrePersistEvent`, `PreRemoveEvent`,
+  `PreFlushEvent`, `PreUpdateEvent` (with the `changedProperties`), `PostPersistEvent`, `PostUpdateEvent`,
+  `PostRemoveEvent` and `PostFlushEvent`, and calls the lifecycle callbacks of the entities, `#[PrePersist]`,
+  `#[PostPersist]`, `#[PreUpdate]`, `#[PostUpdate]`, `#[PreRemove]` and `#[PostRemove]`. What a pre event sets is
+  written. An entity updated or deleted leaves the second-level cache.
 
 ### Changed
 

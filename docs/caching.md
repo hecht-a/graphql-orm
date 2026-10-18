@@ -119,8 +119,12 @@ the command only warns when no entity is kept in the second-level cache.
 
 ## Eviction
 
-The bundle does not know when the API changes: the values expire after their lifetime, unless they are evicted. Inject
-`GraphqlCache`, or call `$manager->getCache()`:
+The bundle does not know when the API changes: the values expire after their lifetime, unless they are evicted. The
+entities [written](writing.md) by `flush()` are: an entity updated or deleted leaves the second-level cache, read again
+by the next `find()`. The results of the result cache stay: evict them with `evictQueryResult()` or
+`evictQueryResults()`, e.g. from a `PostFlushEvent` listener (see [events](events.md#writing-entities)).
+
+To evict the changes made elsewhere, inject `GraphqlCache`, or call `$manager->getCache()`:
 
 ```php
 use GraphqlOrm\Cache\GraphqlCache;
