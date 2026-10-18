@@ -85,9 +85,11 @@ changes are recorded in `CHANGELOG.md`, under `[Unreleased]`.
 
 ## Releasing
 
-1. Rename the `[Unreleased]` section of `CHANGELOG.md` to the version and the date, e.g. `## [4.2.0] — 2026-10-13`,
-   with an `Upgrading from x.y` section for a major version, and commit it as `chore: release 4.2.0`.
-2. Tag the commit and push the tag:
+1. Run the quality checks (`castor qa:all`), then `castor release 4.2.0` (`--dry-run` to check first): from a clean
+   branch, it renames the `[Unreleased]` section of `CHANGELOG.md` to the version and the date, e.g.
+   `## [4.2.0] — 2026-10-13`, checks the release notes can be read from it, and commits it as `chore: release 4.2.0`.
+   Write the `Upgrading from x.y` section of a major version before.
+2. Tag the commit and push the tag, as the task tells:
 
    ```bash
    git tag -a v4.2.0 -m "4.2.0"
