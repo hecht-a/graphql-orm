@@ -61,6 +61,17 @@ query {
   fields selected, with every field of their entity.
 - A name that is not a relation of its entity throws an `InvalidArgumentException`, which suggests the closest field.
 
+The find methods of a repository take them the same way: `with()` gives a copy of the repository loading these
+relations, the repository itself, a shared service, being left as it is.
+
+```php
+$tasks = $taskRepository->with('assignee.company', 'label')->findBy(['done' => false]);
+$task = $taskRepository->with('assignee')->find(3);
+```
+
+`find()` still serves an entity the identity map or the second-level cache knows as it was loaded, its relations
+loaded on first access.
+
 ## Filtering
 
 Use `ExpressionBuilder` to build type-safe filter expressions:
