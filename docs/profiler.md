@@ -21,7 +21,8 @@ For each request, the panel shows:
   error is shown open.
 - **The entities**: those of the mapping directory and those read by the queries of the request (first), as the bundle
   maps them: root field, identifier, repository, and for each property its GraphQL field, the target of a relation
-  (`[]` for a collection) and its fetch mode. An entity whose mapping fails shows the error.
+  (`[]` for a collection), its fetch mode and its [type converter](entity-mapping.md#type-converters), named by its
+  `#[Field]` or found by type. An entity whose mapping fails shows the error.
 - **The lazy loading**: the entities left to be loaded on first access (`Fetch::Lazy`, `lazy_loading`, the references
   of Doctrine entities), by relation: how many, how many were loaded and by which queries, how many were never read and
   so cost no query.
