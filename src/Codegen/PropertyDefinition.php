@@ -18,6 +18,8 @@ final class PropertyDefinition
         public bool $relation = false,
         public bool $collection = false,
         public ?string $targetEntity = null,
+        /** @var class-string|null the value object of a custom scalar, imported by the entity */
+        public ?string $valueClass = null,
     ) {
     }
 }

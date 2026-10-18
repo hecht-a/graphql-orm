@@ -7,6 +7,7 @@ namespace GraphqlOrm\Command;
 use GraphqlOrm\Codegen\PropertyDefinition;
 use GraphqlOrm\Codegen\SchemaPropertyMapper;
 use GraphqlOrm\Codegen\StubRenderer;
+use GraphqlOrm\Converter\TypeConverterRegistry;
 use GraphqlOrm\Exception\GraphqlOrmException;
 use GraphqlOrm\Query\GraphqlName;
 use GraphqlOrm\Registry\GraphqlManagerRegistry;
@@ -51,6 +52,8 @@ final readonly class MakeGraphqlEntityCommand
         /** @var array<string, array{entity: array{dir: string, namespace: string}, repository: array{dir: string, namespace: string}}> */
         #[Autowire('%graphql_orm.manager_mappings%')]
         private array $mappings = [],
+        // The value objects of the custom scalars its converters tell, given to the properties from the schema
+        private ?TypeConverterRegistry $typeConverters = null,
     ) {
     }
 
@@ -81,6 +84,7 @@ final readonly class MakeGraphqlEntityCommand
                 $this->stubRenderer,
                 new SchemaIntrospector($this->managers->getManager($manager)->getClient()),
                 $this->schemaPropertyMapper,
+                typeConverters: $this->typeConverters,
             );
 
             return $command($input, $output, $name, $root, $force, $fromSchema);
@@ -178,7 +182,9 @@ final readonly class MakeGraphqlEntityCommand
 
         $io->note(\sprintf('Properties generated from the GraphQL type "%s".', $typeName));
 
-        return $this->schemaPropertyMapper->map($schema, $typeName);
+        $mapper = $this->typeConverters !== null ? new SchemaPropertyMapper($this->typeConverters->valueClassesByScalar()) : $this->schemaPropertyMapper;
+
+        return $mapper->map($schema, $typeName);
     }
 
     /**
@@ -409,6 +415,10 @@ PHP;
         $imports = [];
 
         foreach ($properties as $property) {
+            if ($property->valueClass !== null) {
+                $imports[] = 'use ' . $property->valueClass . ';';
+            }
+
             if (!$property->relation) {
                 continue;
             }

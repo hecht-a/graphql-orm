@@ -7,7 +7,10 @@ namespace GraphqlOrm\Tests\Command;
 use GraphqlOrm\Codegen\SchemaPropertyMapper;
 use GraphqlOrm\Codegen\StubRenderer;
 use GraphqlOrm\Command\MakeGraphqlEntityCommand;
+use GraphqlOrm\Converter\TypeConverterRegistry;
 use GraphqlOrm\Schema\SchemaIntrospector;
+use GraphqlOrm\Tests\Fixtures\Converter\CentsConverter;
+use GraphqlOrm\Tests\Fixtures\Converter\SiretConverter;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -100,6 +103,22 @@ final class MakeGraphqlEntityCommandTest extends TestCase
     }
 
     #[Test]
+    public function itTypesTheCustomScalarsOfAConverterWithItsValueObject(): void
+    {
+        $tester = $this->createTester(new FakeGraphqlClient(self::taskSchema([
+            ['name' => 'siret', 'type' => ['kind' => 'SCALAR', 'name' => 'Siret', 'ofType' => null]],
+            ['name' => 'amount', 'type' => ['kind' => 'SCALAR', 'name' => 'Int', 'ofType' => null]],
+        ])), new TypeConverterRegistry([new SiretConverter(), new CentsConverter()]));
+
+        self::assertSame(Command::SUCCESS, $tester->execute(['name' => 'Task', '--from-schema' => true]));
+
+        $code = $this->entityCode();
+        self::assertStringContainsString("#[Field(mappedFrom: 'siret')]\n    private ?Siret \$siret = null;", $code);
+        self::assertStringContainsString('use GraphqlOrm\Tests\Fixtures\Converter\Siret;', $code);
+        self::assertStringContainsString("#[Field(mappedFrom: 'amount')]\n    private ?int \$amount = null;", $code);
+    }
+
+    #[Test]
     public function itFailsWhenTheSchemaHasNoTypeForTheRoot(): void
     {
         $tester = $this->createTester(new FakeGraphqlClient(self::taskSchema()));
@@ -112,9 +131,11 @@ final class MakeGraphqlEntityCommandTest extends TestCase
     }
 
     /**
+     * @param list<array<string, mixed>> $taskFields fields added to Task
+     *
      * @return array<string, mixed>
      */
-    private static function taskSchema(): array
+    private static function taskSchema(array $taskFields = []): array
     {
         $named = fn (string $kind, string $name) => ['kind' => $kind, 'name' => $name, 'ofType' => null];
         $wrapped = fn (string $kind, array $ofType) => ['kind' => $kind, 'name' => null, 'ofType' => $ofType];
@@ -128,12 +149,13 @@ final class MakeGraphqlEntityCommandTest extends TestCase
                 ['name' => 'id', 'type' => $wrapped('NON_NULL', $named('SCALAR', 'Int'))],
                 ['name' => 'title', 'type' => $named('SCALAR', 'String')],
                 ['name' => 'owner', 'type' => $named('OBJECT', 'User')],
+                ...$taskFields,
             ]],
             ['name' => 'User', 'kind' => 'OBJECT', 'fields' => [['name' => 'id', 'type' => $wrapped('NON_NULL', $named('SCALAR', 'Int'))]]],
         ]]]];
     }
 
-    private function createTester(?FakeGraphqlClient $schemaClient = null): CommandTester
+    private function createTester(?FakeGraphqlClient $schemaClient = null, TypeConverterRegistry $typeConverters = new TypeConverterRegistry()): CommandTester
     {
         $command = new MakeGraphqlEntityCommand(
             $this->outputDir . '/Entity',
@@ -144,6 +166,7 @@ final class MakeGraphqlEntityCommandTest extends TestCase
             new StubRenderer(\dirname(__DIR__, 2) . '/src/Resources/stubs'),
             new SchemaIntrospector($schemaClient ?? new FakeGraphqlClient()),
             new SchemaPropertyMapper(),
+            typeConverters: $typeConverters,
         );
 
         // Same wrapping as the console DI pass, available since symfony/console 7.3.

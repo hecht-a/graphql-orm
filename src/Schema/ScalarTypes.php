@@ -36,6 +36,14 @@ final class ScalarTypes
     }
 
     /**
+     * Whether the scalar is a standard one or one of the servers the bundle knows, rather than a custom scalar of an API.
+     */
+    public static function isKnown(?string $scalar): bool
+    {
+        return \in_array($scalar, [...self::INT_SCALARS, ...self::FLOAT_SCALARS, ...self::STRING_SCALARS, ...self::DATE_SCALARS, 'Boolean'], true);
+    }
+
+    /**
      * The scalars a property of a PHP type can be hydrated from, or null when the PHP type is not checked.
      *
      * @param string $phpType a builtin type or a short class name (`DateTimeImmutable`)

@@ -22,6 +22,14 @@ final readonly class SchemaPropertyMapper
     private const IDENTIFIER_SCALAR = 'ID';
 
     /**
+     * @param array<string, class-string> $scalarClasses the value object of the custom scalars a type converter converts
+     */
+    public function __construct(
+        private array $scalarClasses = [],
+    ) {
+    }
+
+    /**
      * @return PropertyDefinition[] in the order of the schema; interface and union fields are skipped
      */
     public function map(GraphqlSchema $schema, string $typeName): array
@@ -73,13 +81,20 @@ final readonly class SchemaPropertyMapper
     private function scalar(string $name, array $field, bool $identifier): PropertyDefinition
     {
         $list = $field['list'] ?? false;
+        // A standard scalar keeps its PHP type, whichever converter tells it: Int stays int.
+        $valueClass = !$list && !ScalarTypes::isKnown($field['name']) ? $this->scalarClasses[$field['name'] ?? ''] ?? null : null;
 
         return new PropertyDefinition(
             name: $name,
-            phpType: $list ? 'array' : ScalarTypes::phpTypeOf($field['name']),
+            phpType: match (true) {
+                $list => 'array',
+                $valueClass !== null => substr((string) strrchr('\\' . $valueClass, '\\'), 1),
+                default => ScalarTypes::phpTypeOf($field['name']),
+            },
             mappedFrom: $name,
             nullable: !$identifier && ($field['nullable'] ?? true),
             identifier: $identifier,
+            valueClass: $valueClass,
         );
     }
 

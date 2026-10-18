@@ -88,6 +88,34 @@ final class TypeConverterRegistry
     }
 
     /**
+     * The value object of each GraphQL scalar a converter tells with #[AsTypeConverter(Siret::class, scalars: ['Siret'])],
+     * a scalar told for two classes left out.
+     *
+     * @return array<string, class-string>
+     */
+    public function valueClassesByScalar(): array
+    {
+        $classes = [];
+        $ambiguous = [];
+
+        foreach ($this->load() as $converter) {
+            foreach ((new \ReflectionClass($converter))->getAttributes(AsTypeConverter::class) as $attribute) {
+                $type = $attribute->newInstance();
+
+                foreach ($type->scalars as $scalar) {
+                    if (isset($classes[$scalar]) && $classes[$scalar] !== $type->class) {
+                        $ambiguous[$scalar] = true;
+                    }
+
+                    $classes[$scalar] = $type->class;
+                }
+            }
+        }
+
+        return array_diff_key($classes, $ambiguous);
+    }
+
+    /**
      * A converter without dependencies needs no registration.
      *
      * @throws InvalidArgumentException when the class is no converter, or needs arguments
