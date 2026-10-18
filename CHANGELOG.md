@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   queries of Apollo, and their text once the server asks for it; a server not supporting them is sent the queries in
   full from then on. The profiler marks the queries "persisted hit" or "persisted miss", and `MockGraphqlServer` asks
   for the text of every persisted query.
+- `GraphqlOrmAdapter` paginates a query builder with Pagerfanta, and KnpPaginator paginates one once
+  `knplabs/knp-components` is installed: a count, then the rows of the page by offset. They need a dialect paginating
+  with an offset and counting the entities, as `HasuraDialect`; with a dialect paginating with cursors, they throw a
+  `LogicException`.
+- `count()` on the query builder counts the entities the filter of `where()` matches.
 
 ### Changed
 

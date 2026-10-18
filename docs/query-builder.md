@@ -155,6 +155,13 @@ The field is a GraphQL name or a PHP property; each call adds an ordering to tho
 requires a dialect that supports it (`DefaultDialect` and `RelayDialect` throw a `LogicException`), see
 [dialects.md](dialects.md).
 
+`count()` counts the entities the filter of `where()` matches, with a query of its own, as `count()` of the repository
+(see [counting](repositories.md)):
+
+```php
+$open = $queryBuilder->where($queryBuilder->expr()->eq('done', false))->count();
+```
+
 ## Keyed result
 
 `indexBy()` keys the result by a field of its entities, a GraphQL name or a PHP property, as Doctrine `indexBy`:
