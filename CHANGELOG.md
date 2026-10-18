@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- `graphqlorm:make:entity` generates the mapping attributes through a namespace alias, as Doctrine:
+  `use GraphqlOrm\Mapping as GraphqlOrm;` and `#[GraphqlOrm\Entity(name: 'tasks', repositoryClass: ...)]`. The
+  documentation maps the entities the same way.
+
 ## [5.8.0] — 2026-10-18
 
 ### Added
