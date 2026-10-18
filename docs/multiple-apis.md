@@ -127,6 +127,7 @@ The commands take the manager of the API to work with:
 php bin/console graphqlorm:make:entity Contact --from-schema --manager=crm   # the mapping and the schema of the CRM
 php bin/console graphqlorm:schema:validate                                   # every API
 php bin/console graphqlorm:schema:validate --manager=crm                     # the CRM only
+php bin/console graphqlorm:query '{ contacts { items { id } } }' --manager=crm  # a raw query to the CRM
 ```
 
 The [profiler](profiler.md) lists the APIs in the toolbar, tells the API of each query (slow by the

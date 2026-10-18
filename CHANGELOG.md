@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`with('assignee.company', 'label')`), in place of `max_depth`: the relations not named only get their identifier
   selected. A relation mapped with `Fetch::Lazy` is loaded when named, and the relations named are added to the fields
   of `select()`.
+- `graphqlorm:query` sends a raw GraphQL query to the API of a manager (`--manager`), with its variables
+  (`--variables='{"id": 1}'`) or from the standard input, and prints the JSON response. A response holding errors fails
+  the command; the query is logged and profiled, its values masked there as any other.
 
 ## [5.6.0] — 2026-10-16
 

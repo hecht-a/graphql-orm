@@ -113,6 +113,43 @@ php bin/console graphqlorm:find Task --criteria done=false --order-by dueDate=de
 Fields are GraphQL names or PHP properties. A relation is shown by its identifier, a collection by its size (its
 identifiers in JSON). The errors of the server are shown, with the unmapped fields pointed out.
 
+## Send a raw query
+
+`graphqlorm:query` sends a GraphQL query as written to the API, and prints its response as JSON: to try a query, an
+argument or a field of the schema without writing code.
+
+```bash
+php bin/console graphqlorm:query 'query ($id: Int) { tasks(filter: { id: { eq: $id } }) { items { id title } } }' \
+    --variables='{"id": 3}'
+
+# From a file or a pipe, on the standard input; the API of another manager
+php bin/console graphqlorm:query --manager=crm < contacts.graphql
+```
+
+```json
+{
+    "data": {
+        "tasks": {
+            "items": [
+                { "id": 3, "title": "Release the bundle" }
+            ]
+        }
+    }
+}
+```
+
+| Option          | Description                                                       |
+|-----------------|-------------------------------------------------------------------|
+| `--variables`   | the variables of the query, as a JSON object: `'{"id": 3}'`       |
+| `--manager`     | the manager whose API is queried, the default one when unset      |
+
+- The JSON goes to the standard output alone, the errors of the command to the error output: it can be piped to `jq`.
+- A response holding errors fails the command (exit code 1), its partial data printed with the errors; errors without
+  data, an HTTP error or an unknown manager are shown as an error.
+- The query goes through the manager: it is logged, and shown in the profiler of the command, its values masked there
+  when `redact_query_values` is on. The response printed keeps its values.
+- Nothing is hydrated: neither identity map, nor cache.
+
 ## Validate the schema
 
 ```bash
