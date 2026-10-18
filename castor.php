@@ -29,6 +29,9 @@ const INTEGRATION_ENDPOINTS = [
     'postgraphile' => ['GRAPHQL_ORM_POSTGRAPHILE_ENDPOINT', 'http://postgraphile:5000/graphql'],
 ];
 
+/** The version of Infection installed by qa:infection. */
+const INFECTION_VERSION = '^0.35';
+
 /** Seconds the servers are given to answer a query once started. */
 const INTEGRATION_READY_TIMEOUT = 180;
 
@@ -152,6 +155,48 @@ function qa_integration(
     }
 }
 
+#[AsTask('infection', namespace: 'qa', description: 'Run the mutation tests with Infection: the changes of src/ that no unit test notices')]
+function qa_infection(
+    #[AsOption(description: 'The PHP version of the tests')]
+    string $php = '8.5',
+    #[AsOption(description: 'Only the mutations of the files matching this filter, e.g. src/Query')]
+    ?string $filter = null,
+): int {
+    // Installed with the Composer of the tests, apart from the dependencies of the bundle: the PHP of Castor lacks ext-dom.
+    $tool = '.castor/vendor/.tools/infection';
+    $install = ['composer', 'update', '--working-dir=' . $tool, '--no-interaction', '--no-progress'];
+    $command = [
+        'php', $tool . '/vendor/bin/infection',
+        '--threads=max',
+        '--no-progress',
+        // pcov is installed but disabled, as it slows the other tests down
+        '--initial-tests-php-options=-dpcov.enabled=1',
+        ...($filter !== null ? ['--filter=' . $filter] : []),
+    ];
+    // The CI runs it with the PHP of the runner, pcov installed by setup-php.
+    $ci = getenv('CI') === 'true';
+    $execute = static fn (array $command): bool => $ci
+        ? run($command, context: context()->withTimeout(null)->withAllowFailure())->isSuccessful()
+        : qa_run($php, $command);
+
+    if (!is_file(__DIR__ . '/' . $tool . '/vendor/bin/infection')) {
+        if (!is_dir(__DIR__ . '/' . $tool)) {
+            mkdir(__DIR__ . '/' . $tool, 0o755, true);
+        }
+
+        file_put_contents(__DIR__ . '/' . $tool . '/composer.json', json_encode([
+            'require' => ['infection/infection' => INFECTION_VERSION],
+            'config' => ['allow-plugins' => ['infection/extension-installer' => true]],
+        ], \JSON_PRETTY_PRINT));
+
+        if (!$execute($install)) {
+            return 1;
+        }
+    }
+
+    return $execute($command) ? 0 : 1;
+}
+
 #[AsTask('all', namespace: 'qa', description: 'Run every quality check: coding standards, PHPStan, unit tests with each PHP version, integration tests')]
 function qa_all(): int
 {
@@ -187,7 +232,8 @@ function qa_all(): int
  */
 function qa_run(string $php, array $command, ?string $network = null, array $environment = []): bool
 {
-    $image = 'graphql-orm-qa:php' . $php;
+    // The image is built again whenever its Dockerfile changes.
+    $image = 'graphql-orm-qa:php' . $php . '-' . substr((string) md5_file(__DIR__ . '/.docker/qa/Dockerfile'), 0, 8);
     $quiet = context()->withQuiet()->withAllowFailure();
 
     if (!run(['docker', 'image', 'inspect', $image], context: $quiet)->isSuccessful()) {

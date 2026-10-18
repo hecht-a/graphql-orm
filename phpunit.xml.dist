@@ -31,6 +31,10 @@
         <include>
             <directory>src</directory>
         </include>
+        <!-- Templates and configuration, not code: the stubs of make:entity are not valid PHP -->
+        <exclude>
+            <directory>src/Resources</directory>
+        </exclude>
     </source>
 
     <extensions>

@@ -1,0 +1,20 @@
+{
+    // Mutation tests (castor qa:infection): changes the code of src/ and tells the changes no unit test notices.
+    "source": {
+        "directories": ["src"],
+        "excludes": ["Resources"]
+    },
+    "phpUnit": {
+        "configDir": "."
+    },
+    "timeout": 30,
+    "tmpDir": "cache/infection",
+    "logs": {
+        "text": "cache/infection/infection.log",
+        "summary": "cache/infection/summary.log",
+        "github": true
+    },
+    "mutators": {
+        "@default": true
+    }
+}

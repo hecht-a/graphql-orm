@@ -121,6 +121,34 @@ jobs:
       - name: GraphQL servers logs
         if: failure()
         run: docker compose -f tests/Integration/compose.yaml logs
+  # How much of the code the tests check: reported, not yet a gate. Half an hour: on main only, not on each pull request.
+  infection:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: checkout
+        uses: actions/checkout@v5
+      - name: setup
+        uses: shivammathur/setup-php@2.37.2
+        with:
+          php-version: 8.5
+          coverage: pcov
+      - name: composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+      - name: composer cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-infection-${{ hashFiles('composer.json') }}
+          restore-keys: composer-infection-
+      - name: composer install
+        run: composer update --prefer-stable
+      - name: setup
+        uses: castor-php/setup-castor@v1.1.0
+      - name: 'Infection'
+        run: 'castor qa:infection'
   # The site is published from main by the Documentation workflow: building it here tells a broken page before.
   docs:
     runs-on: ubuntu-latest
