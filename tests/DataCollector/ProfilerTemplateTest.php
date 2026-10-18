@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace GraphqlOrm\Tests\DataCollector;
 
 use GraphqlOrm\Cache\CachePoolDescriber;
+use GraphqlOrm\Converter\TypeConverterRegistry;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Query\GraphqlQueryTrace;
+use GraphqlOrm\Tests\Fixtures\Converter\MoneyConverter;
+use GraphqlOrm\Tests\Fixtures\Converter\Product;
 use GraphqlOrm\Tests\Fixtures\Dto\Task;
 use GraphqlOrm\Tests\Fixtures\Dto\TaskSummary;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
@@ -363,6 +366,25 @@ final class ProfilerTemplateTest extends TestCase
         self::assertStringContainsString('data-graphql-orm-tab="entities"', $html);
         self::assertStringContainsString('FakeTask', $text);
         self::assertStringContainsString('title title', $text);
+    }
+
+    #[Test]
+    public function itShowsTheTypeConverterOfEachField(): void
+    {
+        $collector = new GraphqlOrmDataCollector(
+            metadataFactory: new GraphqlEntityMetadataFactory(),
+            entityClasses: [Product::class],
+            typeConverters: new TypeConverterRegistry([new MoneyConverter()]),
+        );
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { products { id } }';
+        $collector->addQuery($trace);
+        $collector->collect(new Request(), new Response());
+
+        $text = self::text($this->render($collector));
+
+        self::assertStringContainsString('price price - - MoneyConverter by type', $text);
+        self::assertStringContainsString('discount discount - - DecimalMoneyConverter by #[Field]', $text);
     }
 
     #[Test]

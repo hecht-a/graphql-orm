@@ -454,7 +454,7 @@
                                 </p>
                                 <table>
                                     <thead>
-                                        <tr><th>Property</th><th>GraphQL field</th><th>Relation</th><th>Fetch</th></tr>
+                                        <tr><th>Property</th><th>GraphQL field</th><th>Relation</th><th>Fetch</th><th>Converter</th></tr>
                                     </thead>
                                     <tbody>
                                         {% for field in entity.fields %}
@@ -463,6 +463,14 @@
                                                 <td><code>{{ field.field }}</code></td>
                                                 <td>{% if field.relation %}<span title="{{ field.relation }}">{{ field.relation|split('\\')|last }}{{ field.collection ? '[]' }}</span>{% else %}<span class="graphql-orm-muted">-</span>{% endif %}</td>
                                                 <td>{{ field.fetch ?? '-' }}</td>
+                                                <td>
+                                                    {% if field.converter ?? null %}
+                                                        <span title="{{ field.converter }}">{{ field.converter|split('\\')|last }}</span>
+                                                        <span class="graphql-orm-muted">{{ field.converter_source == 'field' ? 'by #[Field]' : 'by type' }}</span>
+                                                    {% else %}
+                                                        <span class="graphql-orm-muted">-</span>
+                                                    {% endif %}
+                                                </td>
                                             </tr>
                                         {% endfor %}
                                     </tbody>

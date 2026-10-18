@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\DataCollector;
 
+use GraphqlOrm\Converter\TypeConverterRegistry;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Query\GraphqlQueryTrace;
+use GraphqlOrm\Tests\Fixtures\Converter\DecimalMoneyConverter;
+use GraphqlOrm\Tests\Fixtures\Converter\MoneyConverter;
+use GraphqlOrm\Tests\Fixtures\Converter\Product;
 use GraphqlOrm\Tests\Fixtures\Depth\ChainA;
 use GraphqlOrm\Tests\Fixtures\Depth\ChainB;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
@@ -358,9 +362,31 @@ final class GraphqlOrmDataCollectorTest extends TestCase
         self::assertSame([ChainA::class, 'chainAs', 1, 'id'], [$entity['class'], $entity['name'], $entity['queries'], $entity['identifier']]);
         self::assertIsArray($entity['fields']);
         self::assertSame(
-            ['property' => 'next', 'field' => 'next', 'relation' => ChainB::class, 'collection' => false, 'fetch' => 'Eager'],
+            ['property' => 'next', 'field' => 'next', 'relation' => ChainB::class, 'collection' => false, 'fetch' => 'Eager', 'converter' => null, 'converter_source' => null],
             $entity['fields'][2] ?? null,
         );
+    }
+
+    #[Test]
+    public function itDescribesTheTypeConverterOfEachField(): void
+    {
+        $collector = new GraphqlOrmDataCollector(
+            metadataFactory: new GraphqlEntityMetadataFactory(),
+            entityClasses: [Product::class],
+            typeConverters: new TypeConverterRegistry([new MoneyConverter()]),
+        );
+
+        $collector->collect(new Request(), new Response());
+
+        $fields = $collector->getEntities()[0]['fields'] ?? null;
+        self::assertIsArray($fields);
+        $converters = array_column($fields, 'converter', 'property');
+        $sources = array_column($fields, 'converter_source', 'property');
+
+        self::assertSame([MoneyConverter::class, 'type'], [$converters['price'], $sources['price']]);
+        self::assertSame([DecimalMoneyConverter::class, 'field'], [$converters['discount'], $sources['discount']]);
+        self::assertNull($converters['contact']);
+        self::assertNull($converters['name']);
     }
 
     #[Test]

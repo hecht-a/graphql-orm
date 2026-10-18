@@ -6,6 +6,7 @@ namespace GraphqlOrm\DataCollector;
 
 use GraphqlOrm\Cache\CachePoolDescriber;
 use GraphqlOrm\Cache\GraphqlCache;
+use GraphqlOrm\Converter\TypeConverterRegistry;
 use GraphqlOrm\Execution\HydrationObserver;
 use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Mapping\Cache;
@@ -46,6 +47,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
         private readonly ?GraphqlEntityMetadataFactory $metadataFactory = null,
         private readonly array $entityClasses = [],
         private readonly ?CachePoolDescriber $cachePools = null,
+        private readonly ?TypeConverterRegistry $typeConverters = null,
     ) {
     }
 
@@ -163,9 +165,28 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
                 'relation' => $field->relation,
                 'collection' => $field->isCollection,
                 'fetch' => $field->relation !== null ? $field->fetch->name : null,
+                ...$this->describeConverter($field),
             ], array_values($metadata->fields)),
             'error' => null,
         ];
+    }
+
+    /**
+     * The type converter of a field: the one its #[Field] names, or the one registered for the class of its property.
+     *
+     * @return array{converter: string|null, converter_source: 'field'|'type'|null}
+     */
+    private function describeConverter(GraphqlFieldMetadata $field): array
+    {
+        if ($field->converter !== null) {
+            return ['converter' => $field->converter, 'converter_source' => 'field'];
+        }
+
+        $converter = $field->relation === null ? $this->typeConverters?->converterFor(null, $field->valueClass) : null;
+
+        return $converter !== null
+            ? ['converter' => $converter::class, 'converter_source' => 'type']
+            : ['converter' => null, 'converter_source' => null];
     }
 
     /**
