@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The time in GraphQL of the profiler and of its toolbar counts once the queries sent together, which the request
   waited for at the same time; their sum is shown apart.
+- The profiler describes the entities read by the queries sent after the response (a `kernel.terminate` listener, a
+  streamed response), and marks these queries "after the response".
 
 ## [5.8.1] — 2026-10-18
 

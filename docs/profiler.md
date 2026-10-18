@@ -77,6 +77,9 @@ The caller is the first line of the application on the way to the query. The met
 that a relation loaded on first access from `__toString()` or a getter points to the code reading it; a line of a
 compiled Twig template is given as the line of the template itself, e.g. `task/index.html.twig:25`.
 
+A query sent after the response, by a `kernel.terminate` listener or while a streamed response is sent, is kept in the
+profile, with the entities it read, and marked "after the response".
+
 The origin is the method of the bundle the application called: `findBy`, `count`, `getResult` on a query built with
 the query builder, the method of a custom repository calling the bundle, or `lazy` for a relation loaded on first
 access (see [lazy loading](configuration.md#lazy-loading)).
