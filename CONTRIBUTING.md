@@ -80,7 +80,8 @@ docker compose -f tests/Integration/compose.yaml down
 ## Documentation site
 
 The pages of `docs/` are published on GitHub Pages with [VitePress](https://vitepress.dev) by the `Documentation`
-workflow, on each push to `main` touching them or `CHANGELOG.md`. To preview the site locally (Node 22):
+workflow, once the CI of a push to `main` passes, from the commit it checked: a failing build publishes nothing. The
+CI builds the site of each pull request as well. To preview the site locally (Node 22):
 
 ```bash
 cd docs
@@ -108,6 +109,6 @@ changes are recorded in `CHANGELOG.md`, under `[Unreleased]`.
    git push origin main v4.2.0
    ```
 
-The `Release` workflow then creates the GitHub release, named after the tag, with the changelog section of the
+The `Release` workflow then runs the CI on the tagged commit and, once it passes, creates the GitHub release, named after the tag, with the changelog section of the
 version as notes (`.github/scripts/changelog-section.sh`). It fails when the version has no section, and leaves a
 release already created by hand untouched.
