@@ -26,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `#[AsTypeConverter]`, or those whose `#[Field(converter: ...)]` names it. The values of the entities and of the DTOs
   are converted, and the value objects of the filters, criteria and `indexBy` sent back. The "Entities" tab of the
   profiler tells the converter of each field.
+- `graphqlorm:cache:warmup [entity]` loads the entities marked `#[Cache]` into the second-level cache, page by page
+  (`--batch-size`, 100 by default), those of an entity or every one, of a manager (`--manager`) or all, and tells how
+  many were hydrated and kept.
 
 ## [5.6.0] — 2026-10-16
 

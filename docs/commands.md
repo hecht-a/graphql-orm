@@ -150,6 +150,15 @@ php bin/console graphqlorm:query --manager=crm < contacts.graphql
   when `redact_query_values` is on. The response printed keeps its values.
 - Nothing is hydrated: neither identity map, nor cache.
 
+## Warm up the second-level cache
+
+`graphqlorm:cache:warmup` loads the entities marked `#[Cache]` into the second-level cache, every one or those of an
+entity, page by page: see [caching](caching.md#warming-up).
+
+```bash
+php bin/console graphqlorm:cache:warmup Label --manager=main --batch-size=500
+```
+
 ## Validate the schema
 
 ```bash

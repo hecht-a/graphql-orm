@@ -88,6 +88,32 @@ Reading an entity from the cache does not prolong it.
 
 The queries of `findBy()`, `findAll()` or the query builder are still sent: cache their result with the result cache.
 
+### Warming up
+
+`graphqlorm:cache:warmup` loads the entities marked `#[Cache]` from the API, so that the first requests after a
+deployment or a clear read them from the cache:
+
+```bash
+php bin/console graphqlorm:cache:warmup                  # every entity marked #[Cache], of every manager
+php bin/console graphqlorm:cache:warmup Label            # one entity (short name or FQCN)
+php bin/console graphqlorm:cache:warmup --manager=crm --batch-size=500
+```
+
+```
+ -------- --------- ---------------- ---------- ------ --------
+  Entity   Manager   Region           Hydrated   Kept   Time
+ -------- --------- ---------------- ---------- ------ --------
+  Label    main      reference_data   4          4      121 ms
+ -------- --------- ---------------- ---------- ------ --------
+
+ [OK] 4 entities kept in the second-level cache.
+```
+
+The entities are loaded page by page, `--batch-size` (100 by default) a query, with the memory of a single page; with a
+dialect that cannot paginate, they are loaded by one query, which the command tells. "Kept" counts those now in the
+cache: an entity hydrated in part, or whose relation has no identifier, is not kept. An entity not marked `#[Cache]`, or
+a second-level cache disabled, fails the command.
+
 ## Eviction
 
 The bundle does not know when the API changes: the values expire after their lifetime, unless they are evicted. Inject
