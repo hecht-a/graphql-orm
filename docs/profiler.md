@@ -109,8 +109,8 @@ Click a query to see its detail:
   entities, relations, collections, root result count (and the field indexing it, with `indexBy`) and depth used; the
   collections by relation, with their type (`array` or `ArrayCollection`), how many and their items
 - **Cache**, for a query going through the result cache: hit or miss, its key, its lifetime and the pool
-- The "Copy" and "Copy as cURL" buttons (see [below](#copy-as-curl)), the caller (file and line that triggered the
-  query) and the endpoint
+- The "Copy", "Copy as cURL" and "Replay" buttons (see [below](#copy-as-curl)), the caller (file and line that
+  triggered the query) and the endpoint
 
 No additional configuration is needed — the collector is registered automatically in debug mode (`kernel.debug`). It
 is not registered otherwise, so queries are not kept in memory in production.
@@ -126,6 +126,36 @@ curl -X POST 'https://api.example.com/graphql' -H 'Content-Type: application/jso
 Headers are not recorded: add yours, such as `-H 'Authorization: Bearer ...'`, so that no token ends up in the
 profiler. The values are those shown by the profiler, masked by default: to replay the query as sent, disable
 `redact_query_values` in the development environment only.
+
+## Replay
+
+"Replay" sends the query again, with its variables, through the manager that sent it, and shows its response and its
+duration under the detail: to check a query once the API or its data changed, without loading the whole page again. It
+needs the routes of the bundle:
+
+```yaml
+# config/routes/graphql_orm.yaml
+graphql_orm:
+    resource: '@GraphqlOrmBundle/Resources/config/routes.php'
+```
+
+The button is offered only when:
+
+- the values of the query are not masked: with `redact_query_values` (the default), the profile only keeps
+  `title: { eq: "***" }`, which cannot be sent again. Disable it in the development environment only:
+
+  ```yaml
+  # config/packages/dev/graphql_orm.yaml
+  graphql_orm:
+      redact_query_values: false
+  ```
+
+- the query is not a mutation, which would change the data again;
+- the profile details the query (the first 500 of a request).
+
+The route answers in debug mode only (`kernel.debug`), with the profiler enabled, and to the profiler only: it returns
+a 404 otherwise. Headers are those of the manager now, given by its `headers_provider`, not those of the profiled
+request.
 
 ## N+1 and repeated queries
 

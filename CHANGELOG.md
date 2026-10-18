@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   3 times or more.
 - A "Callers" tab of the profiler groups the queries by the line of the application sending them, the costliest
   first.
+- A "Replay" button of the profiler sends a query of the profile again and shows its response, in debug mode, for a
+  query whose values are not masked (`redact_query_values: false`) and which is not a mutation. It needs the routes of
+  the bundle.
 
 ### Changed
 
