@@ -269,6 +269,7 @@ final readonly class GraphqlQuery
             $hasNextPage = $this->trimExtraRow($rows);
 
             if ($this->dto !== null) {
+                $context->trace->hydratedAs = $this->dto->class;
                 $items = $this->dtos($metadata, $rows);
             } else {
                 /** @var T[] $items the rows are hydrated as instances of the queried entity */

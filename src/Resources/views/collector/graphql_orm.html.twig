@@ -308,6 +308,9 @@
                                     {% if query.entity_class ?? null %}
                                         <span class="graphql-orm-muted" title="{{ query.entity_class }}">{{ query.entity_class|split('\\')|last }}</span>
                                     {% endif %}
+                                    {% if query.hydrated_as ?? null %}
+                                        <span class="badge" title="Hydrated as the DTO {{ query.hydrated_as }} with hydrateAs(): no entity">DTO {{ query.hydrated_as|split('\\')|last }}</span>
+                                    {% endif %}
                                     {% if query.caller %}
                                         <div class="graphql-orm-muted">{{ query.caller.file|split('/')|last }}:{{ query.caller.line }}</div>
                                     {% endif %}
@@ -323,7 +326,13 @@
                                     </div>
                                 </td>
                                 <td class="graphql-orm-number">{{ (query.response_size / 1024)|number_format(1) }} KB</td>
-                                <td class="graphql-orm-number">{{ query.hydrated_entities }}</td>
+                                <td class="graphql-orm-number">
+                                    {% if query.hydrated_as ?? null %}
+                                        <span class="graphql-orm-muted" title="Hydrated as {{ query.hydrated_as }}: no entity">{{ query.hydrated_count }} DTO{{ query.hydrated_count == 1 ? '' : 's' }}</span>
+                                    {% else %}
+                                        {{ query.hydrated_entities }}
+                                    {% endif %}
+                                </td>
                                 <td>
                                     {% if status == 'error' %}
                                         <span class="badge badge-danger">Error</span>
@@ -1147,6 +1156,16 @@
         <div data-graphql-orm-pane="hydration" hidden>
             <table>
                 <tbody>
+                    <tr>
+                        <th>Hydrated as</th>
+                        <td>
+                            {% if query.hydrated_as ?? null %}
+                                DTO <code>{{ query.hydrated_as }}</code>, created through its constructor with <code>hydrateAs()</code>: neither identity map, nor second-level cache, nor lazy loading
+                            {% else %}
+                                entities
+                            {% endif %}
+                        </td>
+                    </tr>
                     <tr><th>Time</th><td>{{ (query.hydration_duration ?? 0)|number_format(1) }} ms, apart from the {{ query.duration|number_format(1) }} ms of the network</td></tr>
                     <tr><th>Entities</th><td>{{ query.hydrated_entities }}</td></tr>
                     <tr><th>Relations</th><td>{{ query.hydrated_relations }}</td></tr>

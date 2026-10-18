@@ -8,6 +8,8 @@ use GraphqlOrm\Cache\CachePoolDescriber;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Query\GraphqlQueryTrace;
+use GraphqlOrm\Tests\Fixtures\Dto\Task;
+use GraphqlOrm\Tests\Fixtures\Dto\TaskSummary;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use GraphqlOrm\Twig\GraphqlOrmTwigExtension;
 use PHPUnit\Framework\Attributes\Test;
@@ -444,6 +446,35 @@ final class ProfilerTemplateTest extends TestCase
 
         self::assertStringContainsString('indexed by id', $text);
         self::assertStringContainsString('User::$tasks ArrayCollection 3 12', $text);
+    }
+
+    #[Test]
+    public function itTellsTheQueriesHydratedAsDtos(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { tasks { id title } }';
+        $trace->entityClass = Task::class;
+        $trace->hydratedAs = TaskSummary::class;
+        $trace->hydratedCount = 8;
+        $collector->addQuery($trace);
+
+        $text = self::text($this->render($collector));
+
+        self::assertStringContainsString('tasks Task DTO TaskSummary', $text);
+        self::assertStringContainsString('8 DTOs', $text);
+        self::assertStringContainsString('Hydrated as DTO GraphqlOrm\\Tests\\Fixtures\\Dto\\TaskSummary, created through its constructor', $text);
+    }
+
+    #[Test]
+    public function itTellsTheQueriesHydratedAsEntities(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { tasks { id title } }';
+        $collector->addQuery($trace);
+
+        self::assertStringContainsString('Hydrated as entities', self::text($this->render($collector)));
     }
 
     #[Test]

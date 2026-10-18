@@ -17,6 +17,8 @@ use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Tests\Fixtures\Depth\ChainA;
 use GraphqlOrm\Tests\Fixtures\Depth\ChainB;
+use GraphqlOrm\Tests\Fixtures\Dto\Task;
+use GraphqlOrm\Tests\Fixtures\Dto\TaskLine;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeLabel;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeUserWithTaskCollection;
@@ -139,6 +141,20 @@ final class QueryOriginTest extends TestCase
             ->getResult();
 
         self::assertSame('code', $this->collector->getQueries()[0]['index_by'] ?? null);
+    }
+
+    #[Test]
+    public function itRecordsTheDtoTheResultIsHydratedAs(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['tasks' => [['id' => 1, 'title' => 'Task A', 'done' => true]]]], ['data' => ['tasks' => []]]);
+        $repository = $this->repository($client, Task::class);
+
+        $repository->createQueryBuilder()->hydrateAs(TaskLine::class)->getQuery()->getResult();
+        $repository->createQueryBuilder()->getQuery()->getResult();
+
+        self::assertSame(TaskLine::class, $this->collector->getQueries()[0]['hydrated_as'] ?? null);
+        self::assertSame(1, $this->collector->getQueries()[0]['hydrated_count']);
+        self::assertNull($this->collector->getQueries()[1]['hydrated_as']);
     }
 
     #[Test]
