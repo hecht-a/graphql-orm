@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `graphqlorm:query --hydrate=Task` hydrates the response as the entity and prints the entities as `graphqlorm:find`,
   as a table or JSON (`--format=json`).
 - The profiler tells the relations a query loads: those named by `with()`, or up to `max_depth`.
+- The schema validation reports a property typed with a value object that no type converter converts, and checks the
+  fields a converter converts use one of the scalars of its `#[AsTypeConverter(..., scalars: ['Int'])]`.
 
 ## [5.7.1] — 2026-10-18
 

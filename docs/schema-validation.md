@@ -20,6 +20,9 @@ match or when the schema cannot be introspected. Run it in CI against an environ
 - Every mapped field exists on that type
 - Scalar types are compatible between PHP and GraphQL (e.g. `int` ↔ `Int`, `string` ↔ `String`, `\DateTimeImmutable`
   ↔ `DateTime` or `timestamptz`)
+- A property typed with a value object has a [type converter](entity-mapping.md#type-converters), and the field uses
+  one of the scalars the converter tells with `#[AsTypeConverter(Money::class, scalars: ['Int'])]`, if it tells them;
+  a converted field skips the comparison of the PHP and GraphQL types
 - A field the schema declares nullable is mapped on a property accepting `null`: hydrating `null` into a `string`
   property fails with a `TypeError`, as soon as the API returns it
 - A relation returns the GraphQL type of its target entity, as a list or connection for a collection (`array`

@@ -238,6 +238,9 @@ public ?Money $discount = null;       // a Float of the API, as 12.5
   or as variables, lists of `in()` included: `$qb->expr()->eq('price', Money::ofCents(1250))` sends `price: { eq: 1250 }`.
   So is the value keying a result with `indexBy`.
 - `null` is never given to a converter: it stays `null`.
+- `#[AsTypeConverter(Money::class, scalars: ['Int'])]` tells the GraphQL scalars the converter reads and writes: the
+  [schema validation](schema-validation.md) checks the fields it converts use one of them. It reports as well a
+  property typed with a value object that no converter converts.
 - A converter named by `#[Field]` without dependencies needs no registration; one needing arguments must be a service,
   or an `InvalidArgumentException` is thrown when it is used.
 - A converter receives the value of one field: a value object spread over several fields (an amount and its currency)
