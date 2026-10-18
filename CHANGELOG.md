@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The timeline of the profiler shows the origin, the entity and the duration of each query, its hydration apart from
   the network, a graduated axis, and the time of the request before the first query.
 
+### Fixed
+
+- The time in GraphQL of the profiler and of its toolbar counts once the queries sent together, which the request
+  waited for at the same time; their sum is shown apart.
+
 ## [5.8.1] — 2026-10-18
 
 ### Changed

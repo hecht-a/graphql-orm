@@ -11,8 +11,9 @@ cache warnings, the slow queries, the N+1 relations and the repeated queries, in
 
 For each request, the panel shows:
 
-- **Metrics**: number of queries, time spent in GraphQL (measured via Symfony Stopwatch), time spent hydrating the
-  responses, slow queries when `slow_query_threshold` is set (see [logging.md](logging.md#slow-queries)), errors,
+- **Metrics**: number of queries, time spent in GraphQL (measured via Symfony Stopwatch), the queries sent together
+  (`GraphqlQuery::concurrently()`) counted once as the request waited for them at the same time, their sum shown apart,
+  time spent hydrating the responses, slow queries when `slow_query_threshold` is set (see [logging.md](logging.md#slow-queries)), errors,
   entities hydrated, queries served by the result cache and entities served by the identity map (when there are any),
   and bytes received.
 - **An alert** for each relation loaded one entity at a time, and when queries are repeated (see
