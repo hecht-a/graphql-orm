@@ -149,6 +149,28 @@ final class LifecycleEventsTest extends TestCase
     }
 
     #[Test]
+    public function itWritesTheChangesOfAnEntityReadFromTheSecondLevelCache(): void
+    {
+        $cache = new GraphqlCache(entities: new ArrayAdapter());
+        $client = new FakeGraphqlClient(
+            ['data' => ['notes' => ['items' => [['id' => 3, 'title' => 'Note A', 'stamp' => null]]]]],
+            ['data' => ['m0' => ['id' => 3]]],
+        );
+        $manager = $this->manager($client, cache: $cache);
+        $manager->getRepository(StampedNote::class)->findBy(['id' => 3]);
+        $manager->clear();
+
+        $note = $manager->getRepository(StampedNote::class)->find(3);
+        self::assertInstanceOf(StampedNote::class, $note);
+        self::assertSame(1, $client->callCount);
+
+        $note->title = 'Note B';
+        $manager->flush();
+
+        self::assertSame('mutation { m0: updateNote(id: 3, item: { title: "Note B", stamp: "updated" }) { id } }', self::flatten($client->lastQuery));
+    }
+
+    #[Test]
     public function itRefusesAFlushFromAListenerOfTheFlush(): void
     {
         $client = new FakeGraphqlClient(['data' => ['m0' => ['id' => 12]]]);

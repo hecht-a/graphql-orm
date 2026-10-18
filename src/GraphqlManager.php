@@ -282,6 +282,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
 
         $context->lazyLoader = $this->loadCachedEntityRelationLazily(...);
         $context->observer = $this->collector;
+        $context->unitOfWork = $this->unitOfWork();
         $context->lazyLoading = true;
         $context->typeConverters = $this->typeConverters;
         $metadata = $this->metadataFactory->getMetadata($class);
