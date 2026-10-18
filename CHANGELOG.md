@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `graphqlorm:make:entity` generates the mapping attributes through a namespace alias, as Doctrine:
   `use GraphqlOrm\Mapping as GraphqlOrm;` and `#[GraphqlOrm\Entity(name: 'tasks', repositoryClass: ...)]`. The
   documentation maps the entities the same way.
+- The messages of the exceptions, of the commands and of the profiler name the mapping attributes the same way:
+  `#[GraphqlOrm\Cache]`, `#[GraphqlOrm\Embedded]`...
 
 ## [5.8.0] — 2026-10-18
 
