@@ -24,10 +24,10 @@ pushing: PHP 8.4 and 8.5 differ, on the lazy objects for instance.
 removed call...) and tells the changes no unit test notices. Infection is installed by the task in
 `.castor/vendor/.tools/infection`, apart from the dependencies of the bundle, and runs in the container of the tests,
 with pcov measuring the coverage. The whole run takes about a quarter of an hour: `--filter=src/Converter` checks the
-files of a change. The reports are written in `cache/infection/`.
+files of a change in a minute. The reports are written in `cache/infection/`.
 
-The CI runs it on each push to `main`, without failing the build: the Mutation Score Indicator (MSI) on the covered code
-was 80 % when it was introduced.
+It is not run by the CI, as it takes long: run it on the files of a change before releasing it. The Mutation Score
+Indicator (MSI) on the covered code was 80 % when it was introduced.
 
 ## Benchmarks
 
