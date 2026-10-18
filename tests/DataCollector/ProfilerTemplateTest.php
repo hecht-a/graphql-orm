@@ -299,6 +299,26 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itListsTheQueriesByCaller(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        foreach ([20.0, 30.0] as $duration) {
+            $trace = new GraphqlQueryTrace();
+            $trace->graphql = 'query { labels { code } }';
+            $trace->duration = $duration;
+            $trace->origin = 'lazy';
+            $trace->entityClass = FakeLabel::class;
+            $trace->caller = ['file' => 'templates/task/board.html.twig', 'line' => 7, 'class' => null, 'function' => null];
+            $collector->addQuery($trace);
+        }
+
+        $html = $this->render($collector);
+
+        self::assertStringContainsString('data-graphql-orm-tab="callers"', $html);
+        self::assertStringContainsString('board.html.twig:7 2 50.0 ms lazy FakeLabel #1, #2', self::text($html));
+    }
+
+    #[Test]
     public function itSuggestsLoadingARelationLoadedOneByOneWithWith(): void
     {
         $collector = $this->collector(['query { tasks { id } }']);

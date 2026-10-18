@@ -217,6 +217,7 @@
                     Queries <span class="badge">{{ collector.queryCount }}</span>
                 </button>
                 <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="timeline">Timeline</button>
+                <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="callers">Callers</button>
                 <button type="button" class="tab-control" role="tab" aria-selected="false" data-graphql-orm-tab="configuration">
                     Configuration
                     {% if collector.schemaValidation.violations ?? null %}<span class="badge status-warning">{{ collector.schemaValidation.violations|length }}</span>{% endif %}
@@ -359,6 +360,30 @@
                     <p class="graphql-orm-warning">And {{ collector.queries|length - collector.detailedQueryLimit }} more queries, counted in the metrics: the profile keeps the detail of the first {{ collector.detailedQueryLimit }}.</p>
                 {% endif %}
                 <p class="graphql-orm-muted">Click a query to see its GraphQL, its variables, its AST and its hydration.</p>
+            </div>
+
+            <div data-graphql-orm-view="callers" hidden>
+                <p class="graphql-orm-muted">
+                    The queries grouped by the line of the application sending them, the costliest first: a template or a
+                    controller sending many queries is the place to load their entities at once.
+                </p>
+                <table>
+                    <thead>
+                        <tr><th>Called from</th><th class="graphql-orm-number">Queries</th><th class="graphql-orm-number">Time</th><th>Origin</th><th>Entities</th><th>Open</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for group in collector.queriesByCaller %}
+                            <tr>
+                                <td>{% if group.caller %}<code title="{{ group.caller }}">{{ group.caller|split('/')|last }}</code>{% else %}<span class="graphql-orm-muted">the bundle</span>{% endif %}</td>
+                                <td class="graphql-orm-number">{{ group.count }}</td>
+                                <td class="graphql-orm-number">{{ group.duration|number_format(1) }} ms</td>
+                                <td>{% for origin in group.origins %}<span class="graphql-orm-origin graphql-orm-origin-{{ _self.originKind(origin)|trim }}">{{ origin }}</span> {% endfor %}</td>
+                                <td>{% for entity in group.entities %}<span title="{{ entity }}">{{ entity|split('\\')|last }}</span>{{ loop.last ? '' : ', ' }}{% else %}<span class="graphql-orm-muted">-</span>{% endfor %}</td>
+                                <td>{% for number in group.queries|slice(0, 20) %}<a href="#graphql-orm-query-{{ number }}" data-graphql-orm-open="{{ number }}">#{{ number }}</a>{{ loop.last ? '' : ', ' }}{% endfor %}{{ group.queries|length > 20 ? '…' }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
 
             <div data-graphql-orm-view="timeline" hidden>

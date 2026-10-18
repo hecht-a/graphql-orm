@@ -271,6 +271,24 @@ final class GraphqlOrmDataCollectorTest extends TestCase
     }
 
     #[Test]
+    public function itGroupsTheQueriesByTheLineSendingThem(): void
+    {
+        foreach ([['TaskController.php', 18, 'findBy', FakeTask::class, 5.0], ['board.html.twig', 7, 'lazy', FakeLabel::class, 20.0], ['board.html.twig', 7, 'lazy', FakeLabel::class, 30.0], [null, null, 'introspection', null, 1.0]] as [$file, $line, $origin, $class, $duration]) {
+            $trace = self::trace(duration: $duration, errors: null);
+            $trace->caller = $file !== null ? ['file' => $file, 'line' => $line, 'class' => null, 'function' => null] : null;
+            $trace->origin = $origin;
+            $trace->entityClass = $class;
+            $this->collector->addQuery($trace);
+        }
+
+        self::assertSame([
+            ['caller' => 'board.html.twig:7', 'count' => 2, 'duration' => 50.0, 'origins' => ['lazy'], 'entities' => [FakeLabel::class], 'queries' => [2, 3]],
+            ['caller' => 'TaskController.php:18', 'count' => 1, 'duration' => 5.0, 'origins' => ['findBy'], 'entities' => [FakeTask::class], 'queries' => [1]],
+            ['caller' => null, 'count' => 1, 'duration' => 1.0, 'origins' => ['introspection'], 'entities' => [], 'queries' => [4]],
+        ], $this->collector->getQueriesByCaller());
+    }
+
+    #[Test]
     public function itSuggestsTheSecondLevelCacheForAnEntityReadAgainAndAgain(): void
     {
         foreach ([['find', FakeLabel::class], ['lazy', FakeLabel::class], ['find', FakeLabel::class], ['findBy', FakeTask::class], ['find', CachedTask::class], ['find', CachedTask::class], ['find', CachedTask::class]] as [$origin, $class]) {

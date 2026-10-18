@@ -1117,6 +1117,44 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     }
 
     /**
+     * The queries grouped by the line sending them (null for those of the bundle itself, such as introspection), the
+     * costliest first: the number of queries, their duration, their origins and entities, and their numbers (from 1).
+     *
+     * @return list<array{caller: string|null, count: int, duration: float, origins: list<string>, entities: list<string>, queries: list<int>}>
+     */
+    public function getQueriesByCaller(): array
+    {
+        $byCaller = [];
+
+        foreach ($this->getQueries() as $index => $query) {
+            $caller = $query['caller'] ?? null;
+            $key = \is_array($caller) && \is_string($caller['file'] ?? null)
+                ? $caller['file'] . (\is_int($caller['line'] ?? null) ? ':' . $caller['line'] : '')
+                : null;
+            $group = $byCaller[$key ?? ''] ?? ['caller' => $key, 'count' => 0, 'duration' => 0.0, 'origins' => [], 'entities' => [], 'queries' => []];
+            $duration = $query['duration'] ?? 0;
+            ++$group['count'];
+            $group['duration'] += \is_int($duration) || \is_float($duration) ? $duration : 0;
+
+            if (\is_string($query['origin'] ?? null) && !\in_array($query['origin'], $group['origins'], true)) {
+                $group['origins'][] = $query['origin'];
+            }
+
+            if (\is_string($query['entity_class'] ?? null) && !\in_array($query['entity_class'], $group['entities'], true)) {
+                $group['entities'][] = $query['entity_class'];
+            }
+
+            $group['queries'][] = $index + 1;
+            $byCaller[$key ?? ''] = $group;
+        }
+
+        $groups = array_values($byCaller);
+        usort($groups, static fn (array $a, array $b): int => [$b['duration'], $b['count']] <=> [$a['duration'], $a['count']]);
+
+        return $groups;
+    }
+
+    /**
      * The entities not marked #[GraphqlOrm\Cache] found by identifier or loaded on first access at least
      * REPEATED_QUERY_THRESHOLD times: the second-level cache would read them without a query, if they rarely change.
      *
