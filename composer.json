@@ -43,7 +43,7 @@
     "require-dev": {
         "symfony/phpunit-bridge": "^8.0",
         "phpunit/phpunit": "^12.5",
-        "symfony/cache": "^7.4 || ^8.0",
+        "symfony/cache": "^7.4.8 || ^8.0.8",
         "phpstan/phpstan": "^2.2",
         "twig/twig": "^3.20",
         "symfony/form": "^7.4 || ^8.0",
