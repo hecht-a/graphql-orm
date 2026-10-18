@@ -121,6 +121,21 @@ its default mutations (without `--disable-default-mutations`).
 
 Another API is written with a dialect implementing `MutationDialect`, see [custom dialect](dialects.md#custom-dialect).
 
+## Read-only
+
+A manager that only reads its API sets `read_only: true`, at the root or for one manager:
+
+```yaml
+graphql_orm:
+    managers:
+        crm:
+            endpoint: '%env(CRM_GRAPHQL_URL)%'
+            read_only: true
+```
+
+`persist()`, `remove()` and `flush()` then throw a `LogicException`, rather than letting a forgotten `flush()` pass
+unnoticed, and the entities read are not tracked: the values a query read are not kept for `flush()`.
+
 ## Events
 
 `flush()` dispatches the lifecycle events of the entities, `PrePersistEvent` to `PostFlushEvent`, and calls their

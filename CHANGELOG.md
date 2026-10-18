@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mutation throws a `FlushException` telling those applied; the next `flush()` sends again those that failed.
   `DataApiBuilderDialect`, `PostGraphileDialect` and `HasuraDialect` implement the new `MutationDialect`.
 - The profiler shows the mutations of `flush()` in their own color.
+- `read_only: true` makes a manager only read its API: `persist()`, `remove()` and `flush()` throw a `LogicException`,
+  and the entities read are not tracked.
 - `flush()` dispatches the lifecycle events of the entities, as Doctrine: `PrePersistEvent`, `PreRemoveEvent`,
   `PreFlushEvent`, `PreUpdateEvent` (with the `changedProperties`), `PostPersistEvent`, `PostUpdateEvent`,
   `PostRemoveEvent` and `PostFlushEvent`, and calls the lifecycle callbacks of the entities, `#[PrePersist]`,
@@ -24,8 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   written. An entity updated or deleted leaves the second-level cache.
 - `persisted_queries: true` sends the queries of a manager as the SHA-256 hash of their text, as the automatic persisted
   queries of Apollo, and their text once the server asks for it; a server refusing the hash otherwise, as Data API
-  Builder, is sent the queries in full from then on. The profiler marks the queries "persisted hit" or "persisted miss", and `MockGraphqlServer` asks
-  for the text of every persisted query.
+  Builder, is sent the queries in full from then on. The profiler marks the queries "persisted hit" or "persisted
+  miss", and `MockGraphqlServer` asks for the text of every persisted query.
 - `GraphqlOrmAdapter` paginates a query builder with Pagerfanta, and KnpPaginator paginates one once
   `knplabs/knp-components` is installed: a count, then the rows of the page by offset. They need a dialect paginating
   with an offset and counting the entities, as `HasuraDialect`; with a dialect paginating with cursors, they throw a
