@@ -6,8 +6,9 @@ namespace GraphqlOrm\Client;
 
 /**
  * Automatic persisted queries, as Apollo defines them: a query is sent as the SHA-256 hash of its text, the server
- * asking for the text once (PersistedQueryNotFound) and keeping it. A server telling it does not support them
- * (PersistedQueryNotSupported) is sent the queries in full from then on.
+ * asking for the text once (PersistedQueryNotFound) and keeping it. A server refusing the hash otherwise, telling it
+ * does not support them (PersistedQueryNotSupported) or not knowing them (Hot Chocolate, Data API Builder: a request
+ * without query), is sent the queries in full from then on.
  *
  * @internal shared by the requests of a client
  */
@@ -40,13 +41,19 @@ final class PersistedQueries
     }
 
     /**
-     * Whether errors ask for the text of the query (true), or tell the server does not support the persisted queries
-     * (false); null for other errors.
+     * Whether the answer to a hash asks for the text of the query (true), or refuses the hash otherwise (false): errors
+     * without data. Null for an answer, partial or not, and for a failure telling nothing, such as an HTML error page.
      *
-     * @param list<mixed> $errors
+     * @param array<mixed>|null $body the decoded body of the response
      */
-    public static function failureOf(array $errors): ?bool
+    public static function failureOf(?array $body): ?bool
     {
+        $errors = $body['errors'] ?? null;
+
+        if (!\is_array($errors) || $errors === [] || ($body['data'] ?? null) !== null) {
+            return null;
+        }
+
         foreach ($errors as $error) {
             $code = \is_array($error) && \is_array($error['extensions'] ?? null) ? $error['extensions']['code'] ?? null : null;
             $message = \is_array($error) ? $error['message'] ?? null : null;
@@ -62,6 +69,6 @@ final class PersistedQueries
             }
         }
 
-        return null;
+        return false;
     }
 }

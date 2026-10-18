@@ -74,7 +74,7 @@ final readonly class GraphqlClient implements ConcurrentGraphqlClientInterface
                 return $result;
             }
 
-            // The server asks for the text of the query, or does not support the persisted queries.
+            // The server asks for the text of the query, or refuses the hash: it does not support the persisted queries.
             if ($result) {
                 $json = ['query' => $query, 'variables' => $variables, 'extensions' => $persisted?->extensions($query)];
                 $context->trace->persistedQuery = 'miss';
@@ -136,7 +136,7 @@ final readonly class GraphqlClient implements ConcurrentGraphqlClientInterface
         $context->trace->responseSize = \strlen($content);
 
         // Answered with a 200 by Apollo, with a 400 by other servers.
-        if ($persisted && null !== $failure = PersistedQueries::failureOf($this->errorsOf($content))) {
+        if ($persisted && null !== $failure = PersistedQueries::failureOf($this->body($content))) {
             return $failure;
         }
 
@@ -167,6 +167,22 @@ final readonly class GraphqlClient implements ConcurrentGraphqlClientInterface
         }
 
         return [...$this->headers, ...$this->headersProvider->getHeaders()];
+    }
+
+    /**
+     * The decoded body of a response, null when it is no JSON object (an HTML error page, for instance).
+     *
+     * @return array<mixed>|null
+     */
+    private function body(string $content): ?array
+    {
+        try {
+            $body = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return null;
+        }
+
+        return \is_array($body) ? $body : null;
     }
 
     /**

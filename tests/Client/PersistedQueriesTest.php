@@ -97,6 +97,25 @@ final class PersistedQueriesTest extends TestCase
     }
 
     #[Test]
+    public function itSendsTheQueriesInFullToAServerIgnoringPersistedQueries(): void
+    {
+        $bodies = [];
+        $client = $this->client(
+            $bodies,
+            true,
+            new MockResponse('{"errors":[{"message":"Request must contain either a query or a document id.","extensions":{"code":"HC0012"}}]}', ['http_code' => 400]),
+            new MockResponse(self::DATA),
+            new MockResponse(self::DATA),
+        );
+
+        self::assertSame(['data' => ['tasks' => [['id' => 1]]]], $client->query(self::QUERY, new GraphqlExecutionContext()));
+        $client->query(self::QUERY, new GraphqlExecutionContext());
+
+        self::assertSame([self::QUERY, self::QUERY], [$bodies[1]['query'] ?? null, $bodies[2]['query'] ?? null]);
+        self::assertArrayNotHasKey('extensions', $bodies[2]);
+    }
+
+    #[Test]
     public function itSendsTheQueryInFullWithoutPersistedQueries(): void
     {
         $bodies = [];
