@@ -233,6 +233,12 @@ function release(
         $errors[] = 'The working tree has changes: commit or stash them first.';
     }
 
+    $branch = trim(capture(['git', 'branch', '--show-current'], context: $quiet));
+
+    if ($branch === '') {
+        $errors[] = 'HEAD is detached: release from a branch, main or 4.x.';
+    }
+
     if (trim(capture(['git', 'tag', '--list', 'v' . $version], context: $quiet)) !== '') {
         $errors[] = sprintf('The tag v%s exists already.', $version);
     }
