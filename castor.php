@@ -173,11 +173,6 @@ function qa_infection(
         '--initial-tests-php-options=-dpcov.enabled=1',
         ...($filter !== null ? ['--filter=' . $filter] : []),
     ];
-    // The CI runs it with the PHP of the runner, pcov installed by setup-php.
-    $ci = getenv('CI') === 'true';
-    $execute = static fn (array $command): bool => $ci
-        ? run($command, context: context()->withTimeout(null)->withAllowFailure())->isSuccessful()
-        : qa_run($php, $command);
 
     if (!is_file(__DIR__ . '/' . $tool . '/vendor/bin/infection')) {
         if (!is_dir(__DIR__ . '/' . $tool)) {
@@ -189,12 +184,12 @@ function qa_infection(
             'config' => ['allow-plugins' => ['infection/extension-installer' => true]],
         ], \JSON_PRETTY_PRINT));
 
-        if (!$execute($install)) {
+        if (!qa_run($php, $install)) {
             return 1;
         }
     }
 
-    return $execute($command) ? 0 : 1;
+    return qa_run($php, $command) ? 0 : 1;
 }
 
 #[AsTask('all', namespace: 'qa', description: 'Run every quality check: coding standards, PHPStan, unit tests with each PHP version, integration tests')]
