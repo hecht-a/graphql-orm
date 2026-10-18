@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- The `#[AfterHydrate]` hooks of an entity completed after being hydrated in part threw a `PartialEntityException` with
+  PHP 8.4, whose `ReflectionProperty::isInitialized()` runs the initializer of a lazy object.
+- No deprecation with symfony/dependency-injection 8.1, which deprecates the index and priority methods of the tagged
+  iterators given by position.
+
 ## [5.7.0] — 2026-10-18
 
 ### Added
