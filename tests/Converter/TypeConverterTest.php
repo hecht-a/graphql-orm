@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Tests\Converter;
 
+use GraphqlOrm\Cache\GraphqlCache;
 use GraphqlOrm\Converter\TypeConverterRegistry;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\GraphqlManager;
@@ -11,6 +12,7 @@ use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
+use GraphqlOrm\Tests\Fixtures\Converter\CachedProduct;
 use GraphqlOrm\Tests\Fixtures\Converter\Email;
 use GraphqlOrm\Tests\Fixtures\Converter\EmailConverter;
 use GraphqlOrm\Tests\Fixtures\Converter\Money;
@@ -126,6 +128,21 @@ final class TypeConverterTest extends TestCase
     }
 
     #[Test]
+    public function itConvertsTheEntitiesReadFromTheSecondLevelCache(): void
+    {
+        $cache = new GraphqlCache(entities: new ArrayAdapter());
+        $this->cachedProducts(new FakeGraphqlClient(['data' => ['products' => [['id' => 1, 'price' => 1250, 'discount' => 2.5]]]]), $cache)->findAll();
+        $client = new FakeGraphqlClient();
+
+        $product = $this->cachedProducts($client, $cache)->find(1);
+
+        self::assertSame(0, $client->callCount);
+        self::assertInstanceOf(CachedProduct::class, $product);
+        self::assertEquals(new Money(1250), $product->price);
+        self::assertEquals(new Money(250), $product->discount);
+    }
+
+    #[Test]
     public function itFailsForAConverterThatIsNeitherRegisteredNorCreatable(): void
     {
         $metadataFactory = new GraphqlEntityMetadataFactory();
@@ -135,6 +152,27 @@ final class TypeConverterTest extends TestCase
         $this->expectExceptionMessage('The type converter "GraphqlOrm\Tests\Fixtures\Converter\ConfiguredConverter" is not registered');
 
         (new GraphqlEntityRepository($manager, ProductWithUnregisteredConverter::class))->findAll();
+    }
+
+    /**
+     * A repository of a manager of its own, as in another request: only the second-level cache is shared.
+     *
+     * @return GraphqlEntityRepository<CachedProduct>
+     */
+    private function cachedProducts(FakeGraphqlClient $client, GraphqlCache $cache): GraphqlEntityRepository
+    {
+        $metadataFactory = new GraphqlEntityMetadataFactory();
+        $manager = new GraphqlManager(
+            $metadataFactory,
+            $client,
+            new EntityHydrator($metadataFactory),
+            null,
+            1,
+            cache: $cache,
+            typeConverters: new TypeConverterRegistry([new MoneyConverter()]),
+        );
+
+        return new GraphqlEntityRepository($manager, CachedProduct::class);
     }
 
     /**
