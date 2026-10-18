@@ -91,7 +91,10 @@ final class GraphqlOrmExtension extends Extension
 
     public function load(array $configs, ContainerBuilder $container): void
     {
-        $managers = ManagerConfigs::fromProcessedConfiguration($this->processConfiguration(new Configuration(), $configs));
+        $processed = $this->processConfiguration(new Configuration(), $configs);
+        $managers = ManagerConfigs::fromProcessedConfiguration($processed);
+        /** @var array{max_queries: int|null, max_query_time: float|int|null, repeated_queries: int} $profiler */
+        $profiler = $processed['profiler'];
 
         (new PhpFileLoader($container, new FileLocator(__DIR__ . '/../Resources/config')))->load('services.php');
 
@@ -151,7 +154,10 @@ final class GraphqlOrmExtension extends Extension
         $container->getDefinition(GraphqlOrmDataCollector::class)
             ->setArgument('$slowQueryThreshold', self::slowQueryThreshold($default))
             ->setArgument('$configuration', $this->profiledConfiguration($managers, $environment))
-            ->setArgument('$cachePools', new Reference(CachePoolDescriber::class));
+            ->setArgument('$cachePools', new Reference(CachePoolDescriber::class))
+            ->setArgument('$maxQueries', $profiler['max_queries'])
+            ->setArgument('$maxQueryTime', $profiler['max_query_time'] !== null ? (float) $profiler['max_query_time'] : null)
+            ->setArgument('$repeatedQueryThreshold', $profiler['repeated_queries']);
     }
 
     /**

@@ -253,6 +253,27 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itAlertsBeyondTheQueriesAndTheTimeConfigured(): void
+    {
+        $collector = new GraphqlOrmDataCollector(maxQueries: 1, maxQueryTime: 100.0);
+
+        foreach ([1, 2] as $id) {
+            $trace = new GraphqlQueryTrace();
+            $trace->graphql = 'query { task(id: ' . $id . ') { id } }';
+            $trace->duration = 60.0;
+            $collector->addQuery($trace);
+        }
+
+        $html = $this->render($collector);
+        $text = self::text($html);
+
+        self::assertMatchesRegularExpression('/<b>Queries<\/b>\s*<span class="sf-toolbar-status sf-toolbar-status-yellow" title="More than 1 queries \(profiler.max_queries\)">2</', $html);
+        self::assertMatchesRegularExpression('/<b>Query time<\/b>\s*<span class="sf-toolbar-status sf-toolbar-status-yellow" title="More than 100 ms \(profiler.max_query_time\)">120.00 ms</', $html);
+        self::assertStringContainsString('2 Queries more than 1 (profiler.max_queries)', $text);
+        self::assertStringContainsString('120.0 ms Time in GraphQL more than 100 ms (profiler.max_query_time)', $text);
+    }
+
+    #[Test]
     public function itListsTheDetailedQueriesAndCountsTheOthers(): void
     {
         $collector = new GraphqlOrmDataCollector();

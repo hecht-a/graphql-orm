@@ -145,6 +145,27 @@ final class GraphqlOrmExtensionTest extends TestCase
     }
 
     #[Test]
+    public function itPassesTheThresholdsOfTheProfilerToItsCollector(): void
+    {
+        $container = $this->createContainer(debug: true, config: ['profiler' => ['max_queries' => 20, 'max_query_time' => 300, 'repeated_queries' => 2]]);
+        $collector = $container->getDefinition(GraphqlOrmDataCollector::class);
+
+        self::assertSame(20, $collector->getArgument('$maxQueries'));
+        self::assertSame(300.0, $collector->getArgument('$maxQueryTime'));
+        self::assertSame(2, $collector->getArgument('$repeatedQueryThreshold'));
+    }
+
+    #[Test]
+    public function itAlertsBeyondFiftyQueriesByDefault(): void
+    {
+        $collector = $this->createContainer(debug: true)->getDefinition(GraphqlOrmDataCollector::class);
+
+        self::assertSame(50, $collector->getArgument('$maxQueries'));
+        self::assertNull($collector->getArgument('$maxQueryTime'));
+        self::assertSame(3, $collector->getArgument('$repeatedQueryThreshold'));
+    }
+
+    #[Test]
     public function itRegistersTheFindCommand(): void
     {
         $container = $this->createContainer(debug: false);

@@ -25,7 +25,8 @@ use Symfony\Component\HttpKernel\DataCollector\LateDataCollectorInterface;
 final class GraphqlOrmDataCollector extends DataCollector implements HydrationObserver, LateDataCollectorInterface
 {
     /**
-     * Queries of a same shape sent this many times are reported, as the sign of a loop (an N+1 problem).
+     * Queries of a same shape sent this many times are reported, as the sign of a loop (an N+1 problem), unless
+     * profiler.repeated_queries says otherwise.
      */
     public const REPEATED_QUERY_THRESHOLD = 3;
 
@@ -53,6 +54,8 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
      * @param float|null           $slowQueryThreshold duration in milliseconds from which a query is reported as slow
      * @param array<string, mixed> $configuration      the options of the bundle shown by the profiler, without secrets
      * @param list<class-string>   $entityClasses      the entities of the mapping directory, described with those the queries read
+     * @param int|null             $maxQueries         the queries of a request beyond which the toolbar turns yellow
+     * @param float|null           $maxQueryTime       the milliseconds in GraphQL beyond which the toolbar turns yellow
      */
     public function __construct(
         private readonly QueryRedactor $redactor = new QueryRedactor(),
@@ -64,6 +67,9 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
         private readonly ?TypeConverterRegistry $typeConverters = null,
         // Tells the sub-requests (fragments, forwards) apart from the main request, which they share the collector with
         private readonly ?RequestStack $requestStack = null,
+        private readonly ?int $maxQueries = null,
+        private readonly ?float $maxQueryTime = null,
+        private readonly int $repeatedQueryThreshold = self::REPEATED_QUERY_THRESHOLD,
     ) {
     }
 
@@ -770,6 +776,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
         $this->data['configuration'] = $configuration;
         // A profile read from the storage only has its data: the constructor is not called again.
         $this->data['slow_query_threshold'] = $this->slowQueryThreshold;
+        $this->data['thresholds'] = ['max_queries' => $this->maxQueries, 'max_query_time' => $this->maxQueryTime, 'repeated_queries' => $this->repeatedQueryThreshold];
         $this->data['entities'] = $this->describeEntities();
         $this->data['cache_pools'] = $this->cachePools?->describe() ?? [];
         $this->data['cache_warnings'] = $this->cacheWarnings();
@@ -833,6 +840,46 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
         return \is_float($threshold) ? $threshold : null;
     }
 
+    public function getMaxQueries(): ?int
+    {
+        $thresholds = $this->data['thresholds'] ?? null;
+        $max = \is_array($thresholds) ? $thresholds['max_queries'] ?? null : $this->maxQueries;
+
+        return \is_int($max) ? $max : null;
+    }
+
+    public function getMaxQueryTime(): ?float
+    {
+        $thresholds = $this->data['thresholds'] ?? null;
+        $max = \is_array($thresholds) ? $thresholds['max_query_time'] ?? null : $this->maxQueryTime;
+
+        return \is_float($max) ? $max : null;
+    }
+
+    public function getRepeatedQueryThreshold(): int
+    {
+        $thresholds = $this->data['thresholds'] ?? null;
+        $threshold = \is_array($thresholds) ? $thresholds['repeated_queries'] ?? null : $this->repeatedQueryThreshold;
+
+        return \is_int($threshold) ? $threshold : self::REPEATED_QUERY_THRESHOLD;
+    }
+
+    /** More queries than profiler.max_queries: the toolbar turns yellow. */
+    public function isOverMaxQueries(): bool
+    {
+        $max = $this->getMaxQueries();
+
+        return $max !== null && $this->getQueryCount() > $max;
+    }
+
+    /** More time waiting for GraphQL than profiler.max_query_time: the toolbar turns yellow. */
+    public function isOverMaxQueryTime(): bool
+    {
+        $max = $this->getMaxQueryTime();
+
+        return $max !== null && $this->getWaitedDuration() > $max;
+    }
+
     public function getQueryCount(): int
     {
         return \count($this->getQueries());
@@ -887,7 +934,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     }
 
     /**
-     * The shapes of queries sent at least REPEATED_QUERY_THRESHOLD times, with the numbers of these queries (from 1).
+     * The shapes of queries sent at least profiler.repeated_queries times, with the numbers of these queries (from 1).
      * When they are all a find() of the same entity, its class and identifier property tell the findBy() replacing
      * them.
      *
@@ -909,7 +956,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
         $repeated = [];
 
         foreach ($queriesByShape as $shape => $queries) {
-            if (\count($queries) >= self::REPEATED_QUERY_THRESHOLD) {
+            if (\count($queries) >= $this->getRepeatedQueryThreshold()) {
                 [$entity, $identifier] = $this->foundOneByOne($queries);
                 $repeated[] = ['shape' => (string) $shape, 'count' => \count($queries), 'queries' => $queries, 'find_entity' => $entity, 'find_identifier' => $identifier];
             }
@@ -1083,7 +1130,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     }
 
     /**
-     * The relations loaded on first access at least REPEATED_QUERY_THRESHOLD times, one query each: the N+1 problem of
+     * The relations loaded on first access at least profiler.repeated_queries times, one query each: the N+1 problem of
      * lazy loading. With the numbers of their queries (from 1), their total duration and the lines reading them.
      *
      * @return list<array{relation: string, count: int, queries: list<int>, duration: float, callers: list<string>}>
@@ -1114,7 +1161,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
             $byRelation[$relation] = $group;
         }
 
-        return array_values(array_filter($byRelation, fn (array $group): bool => $group['count'] >= self::REPEATED_QUERY_THRESHOLD));
+        return array_values(array_filter($byRelation, fn (array $group): bool => $group['count'] >= $this->getRepeatedQueryThreshold()));
     }
 
     /**
@@ -1157,7 +1204,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
 
     /**
      * The entities not marked #[GraphqlOrm\Cache] found by identifier or loaded on first access at least
-     * REPEATED_QUERY_THRESHOLD times: the second-level cache would read them without a query, if they rarely change.
+     * profiler.repeated_queries times: the second-level cache would read them without a query, if they rarely change.
      *
      * @return list<array{class: string, count: int, queries: list<int>}>
      */
@@ -1178,7 +1225,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
             $byClass[$class]['queries'][] = $index + 1;
         }
 
-        return array_values(array_filter($byClass, static fn (array $candidate): bool => $candidate['count'] >= self::REPEATED_QUERY_THRESHOLD));
+        return array_values(array_filter($byClass, fn (array $candidate): bool => $candidate['count'] >= $this->getRepeatedQueryThreshold()));
     }
 
     public function getErrorCount(): int

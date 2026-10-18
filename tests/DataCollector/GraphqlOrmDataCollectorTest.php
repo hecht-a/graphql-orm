@@ -225,6 +225,55 @@ final class GraphqlOrmDataCollectorTest extends TestCase
     }
 
     #[Test]
+    public function itAlertsBeyondTheQueriesAndTheTimeConfigured(): void
+    {
+        $collector = new GraphqlOrmDataCollector(maxQueries: 1, maxQueryTime: 100.0);
+        $collector->addQuery(self::trace(duration: 60.0, errors: null));
+
+        self::assertFalse($collector->isOverMaxQueries());
+        self::assertFalse($collector->isOverMaxQueryTime());
+
+        $collector->addQuery(self::trace(duration: 60.0, errors: null));
+
+        self::assertTrue($collector->isOverMaxQueries());
+        self::assertTrue($collector->isOverMaxQueryTime());
+    }
+
+    #[Test]
+    public function itDoesNotAlertWithoutThresholds(): void
+    {
+        $this->collector->addQuery(self::trace(duration: 6000.0, errors: null));
+
+        self::assertFalse($this->collector->isOverMaxQueries());
+        self::assertFalse($this->collector->isOverMaxQueryTime());
+    }
+
+    #[Test]
+    public function itReportsTheQueriesRepeatedAsOftenAsConfigured(): void
+    {
+        $collector = new GraphqlOrmDataCollector(repeatedQueryThreshold: 2);
+        $collector->addQuery(self::traceOf('query { tasks(filter: { id: { eq: 1 } }) { items { id } } }'));
+        $collector->addQuery(self::traceOf('query { tasks(filter: { id: { eq: 2 } }) { items { id } } }'));
+
+        self::assertCount(1, $collector->getRepeatedQueries());
+        self::assertCount(0, $this->collector->getRepeatedQueries());
+    }
+
+    #[Test]
+    public function itKeepsTheThresholdsInTheProfile(): void
+    {
+        $collector = new GraphqlOrmDataCollector(maxQueries: 1, maxQueryTime: 100.0, repeatedQueryThreshold: 2);
+        $collector->collect(new Request(), new Response());
+
+        $profiled = unserialize(serialize($collector));
+
+        self::assertInstanceOf(GraphqlOrmDataCollector::class, $profiled);
+        self::assertSame(1, $profiled->getMaxQueries());
+        self::assertSame(100.0, $profiled->getMaxQueryTime());
+        self::assertSame(2, $profiled->getRepeatedQueryThreshold());
+    }
+
+    #[Test]
     public function itCountsEveryQueryWhenTheirStartIsUnknown(): void
     {
         $this->collector->addQuery(self::trace(duration: 100.0, errors: null));

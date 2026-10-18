@@ -31,6 +31,17 @@ final class Configuration implements ConfigurationInterface
             ->info('The manager of the entities no mapping claims and of the services autowired without a name; the first of managers when null.')
             ->end();
 
+        $profiler = $root->arrayNode('profiler')
+            ->addDefaultsIfNotSet()
+            ->info('The alerts of the profiler, for every request whatever the manager.')
+            ->children();
+        $profiler->integerNode('max_queries')->defaultValue(50)->min(1)
+            ->info('Queries of a request beyond which the toolbar turns yellow, as Doctrine; null reports none.');
+        $profiler->floatNode('max_query_time')->defaultNull()->min(0)
+            ->info('Milliseconds of a request waiting for GraphQL beyond which the toolbar turns yellow; null reports none.');
+        $profiler->integerNode('repeated_queries')->defaultValue(3)->min(2)
+            ->info('Times from which queries of a same shape, the lazy loads of a relation and the reads of an entity are reported (N+1, second-level cache).');
+
         $manager = $root->arrayNode('managers')
             ->info('One manager per GraphQL API, as the entity managers of Doctrine; without managers, the options of the root are those of the manager "default".')
             ->useAttributeAsKey('name')

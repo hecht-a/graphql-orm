@@ -18,7 +18,11 @@
         {% set secondLevelAdapters = collector.cachePools|filter(pool => pool.name != 'result cache')|map(pool => pool.adapter)|reduce((adapters, adapter) => adapter in adapters ? adapters : adapters|merge([adapter]), [])|join(', ') %}
         <div class="sf-toolbar-info-piece">
             <b>Queries</b>
-            <span class="sf-toolbar-status">{{ collector.queryCount }}</span>
+            {% if collector.overMaxQueries %}
+                <span class="sf-toolbar-status sf-toolbar-status-yellow" title="More than {{ collector.maxQueries }} queries (profiler.max_queries)">{{ collector.queryCount }}</span>
+            {% else %}
+                <span class="sf-toolbar-status">{{ collector.queryCount }}</span>
+            {% endif %}
         </div>
         {% if (collector.configuration.managers ?? [])|length > 1 %}
             <div class="sf-toolbar-info-piece">
@@ -36,7 +40,11 @@
         </div>
         <div class="sf-toolbar-info-piece">
             <b>Query time</b>
-            <span>{{ collector.waitedDuration|number_format(2) }} ms</span>
+            {% if collector.overMaxQueryTime %}
+                <span class="sf-toolbar-status sf-toolbar-status-yellow" title="More than {{ collector.maxQueryTime }} ms (profiler.max_query_time)">{{ collector.waitedDuration|number_format(2) }} ms</span>
+            {% else %}
+                <span>{{ collector.waitedDuration|number_format(2) }} ms</span>
+            {% endif %}
         </div>
         <div class="sf-toolbar-info-piece">
             <b>Hydration</b>
@@ -96,7 +104,7 @@
         link: profiler_url,
         icon: icon,
         text: text,
-        status: collector.errorCount > 0 ? 'red' : (collector.repeatedQueries is not empty or collector.lazyLoadsByRelation is not empty or collector.slowQueryCount|default(0) > 0 or collector.cacheWarnings is not empty ? 'yellow')
+        status: collector.errorCount > 0 ? 'red' : (collector.overMaxQueries or collector.overMaxQueryTime or collector.repeatedQueries is not empty or collector.lazyLoadsByRelation is not empty or collector.slowQueryCount|default(0) > 0 or collector.cacheWarnings is not empty ? 'yellow')
     }) }}
 
 {% endblock %}
@@ -140,12 +148,18 @@
                 <div class="metric">
                     <span class="value">{{ collector.queryCount }}</span>
                     <span class="label">Queries</span>
+                    {% if collector.overMaxQueries %}
+                        <span class="graphql-orm-warning-text">more than {{ collector.maxQueries }} (profiler.max_queries)</span>
+                    {% endif %}
                 </div>
                 <div class="metric">
                     <span class="value">{{ collector.waitedDuration|number_format(1) }} <span class="unit">ms</span></span>
                     <span class="label">Time in GraphQL</span>
                     {% if collector.totalDuration - collector.waitedDuration > 0.05 %}
                         <span class="graphql-orm-muted" title="The duration of each query added up: some were sent together and waited for at the same time">{{ collector.totalDuration|number_format(1) }} ms summed, queries sent together</span>
+                    {% endif %}
+                    {% if collector.overMaxQueryTime %}
+                        <span class="graphql-orm-warning-text">more than {{ collector.maxQueryTime }} ms (profiler.max_query_time)</span>
                     {% endif %}
                 </div>
                 <div class="metric">
@@ -916,6 +930,7 @@
     <style>
         #graphql-orm-panel { display: flex; flex-direction: column; gap: 12px; }
         #graphql-orm-panel .metrics { margin: 0; }
+        .graphql-orm-warning-text { color: var(--color-warning, #a16207); font-size: 12px; }
         .graphql-orm-muted { color: var(--color-muted, #737373); font-size: 12px; }
         .graphql-orm-number { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
         .graphql-orm-alert { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; padding: 10px 14px; border-radius: 6px; border-left: 4px solid var(--color-warning, #785b02); background: var(--badge-warning-background, #fde496); color: var(--badge-warning-color, #785b02); }

@@ -59,7 +59,7 @@ final readonly class ManagerConfigs
         /** @var array<string, array<string, mixed>> $declared */
         $declared = \is_array($config['managers'] ?? null) ? $config['managers'] : [];
         $defaultManager = $config['default_manager'] ?? null;
-        unset($config['managers'], $config['default_manager']);
+        unset($config['managers'], $config['default_manager'], $config['profiler']);
 
         $managers = $declared === [] ? [self::DEFAULT_MANAGER => $config] : [];
 
