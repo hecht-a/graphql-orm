@@ -56,6 +56,7 @@ graphql_orm:
 | `variables.cache_pool`            | `cache.app`              | Cache pool storing the introspected argument types |
 | `variables.ttl`                   | `3600`                   | Seconds before the schema is introspected again |
 | `identity_map`                    | `true`                   | Share the entities between the queries of a request (see [shared identity map](#shared-identity-map)) |
+| `persisted_queries`               | `false`                  | Send the queries as the hash of their text, as Apollo automatic persisted queries (see [persisted queries](#persisted-queries)) |
 | `slow_query_threshold`            | `null`                   | Milliseconds from which a query is logged as a warning and highlighted in the profiler (see [slow queries](logging.md#slow-queries)) |
 | `redact_query_values`             | `true`                   | Mask query values in logs and profiler (see [logging.md](logging.md#masked-values)) |
 | `http_client`                     | `null`                   | HTTP client service id; defaults to the autowired `HttpClientInterface` |
@@ -244,3 +245,29 @@ Values are sent inline, as without the option, when:
 
 Enums are sent as their value and dates as ISO 8601 strings. `getQuery()->getGraphQL()` still shows the query with
 inline values.
+
+## Persisted queries
+
+With `persisted_queries: true`, a query is sent as the SHA-256 hash of its text, as the
+[automatic persisted queries](https://www.apollographql.com/docs/apollo-server/performance/apq) of Apollo: the
+server answers the queries it knows from their hash, and asks once for the text of the others
+(`PersistedQueryNotFound`), which the bundle then sends with the hash for the server to keep it. Large queries, such
+as those selecting every field of a deep entity, are no longer sent each time.
+
+```yaml
+graphql_orm:
+    managers:
+        crm:
+            endpoint: '%env(CRM_GRAPHQL_URL)%'
+            persisted_queries: true
+```
+
+Enable it for a server supporting them: Apollo Server, Hot Chocolate, GraphQL Yoga with its plugin... A server telling
+it does not (`PersistedQueryNotSupported`) is sent the queries in full from then on; another error fails the query.
+The requests are sent with `POST`, the variables apart from the hash. With [typed variables](#variables), the text of a
+query does not change with its values, and is asked for once; with values inline, once per value.
+
+The profiler marks each query "persisted hit" (the server knew it) or "persisted miss" (it asked for its text); a miss
+counts both requests in the duration. `MockGraphqlServer` asks for the text of every persisted query, so that the tests
+record the queries in full.
+
