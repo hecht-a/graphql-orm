@@ -8,6 +8,7 @@ use GraphqlOrm\Command\DebugEntityCommand;
 use GraphqlOrm\Command\EntityClassLocator;
 use GraphqlOrm\Command\FindCommand;
 use GraphqlOrm\Command\MakeGraphqlEntityCommand;
+use GraphqlOrm\Command\QueryCommand;
 use GraphqlOrm\Command\SchemaValidateCommand;
 use GraphqlOrm\Controller\EntityAutocompleteController;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
@@ -110,5 +111,8 @@ return static function (ContainerConfigurator $config) {
     $services->set(EntityClassLocator::class);
 
     $services->set(FindCommand::class)
+        ->tag('console.command');
+
+    $services->set(QueryCommand::class)
         ->tag('console.command');
 };
