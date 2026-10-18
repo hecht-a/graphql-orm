@@ -207,6 +207,30 @@ final class GraphqlOrmDataCollectorTest extends TestCase
     }
 
     #[Test]
+    public function itCountsTheTimeWaitedForQueriesSentTogetherOnce(): void
+    {
+        foreach ([[100.0, 100.0], [100.0, 100.0], [100.02, 60.0], [100.5, 50.0]] as [$startedAt, $duration]) {
+            $trace = self::trace(duration: $duration, errors: null);
+            $trace->startedAt = $startedAt;
+            $this->collector->addQuery($trace);
+        }
+
+        $this->collector->collect(new Request(server: ['REQUEST_TIME_FLOAT' => 100.0]), new Response());
+
+        self::assertEqualsWithDelta(310.0, $this->collector->getTotalDuration(), 0.001);
+        self::assertEqualsWithDelta(150.0, $this->collector->getWaitedDuration(), 0.001);
+    }
+
+    #[Test]
+    public function itCountsEveryQueryWhenTheirStartIsUnknown(): void
+    {
+        $this->collector->addQuery(self::trace(duration: 100.0, errors: null));
+        $this->collector->addQuery(self::trace(duration: 50.0, errors: null));
+
+        self::assertEqualsWithDelta(150.0, $this->collector->getWaitedDuration(), 0.001);
+    }
+
+    #[Test]
     public function itEndsTheTimelineAfterTheHydrationOfTheLastQuery(): void
     {
         $trace = self::trace(duration: 20.0, errors: null);

@@ -784,6 +784,42 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     }
 
     /**
+     * The milliseconds the request waited for the API: the queries sent together (GraphqlQuery::concurrently(), the
+     * concurrent lazy loads) counted once, unlike getTotalDuration(). Their sum when the start of a query is unknown.
+     */
+    public function getWaitedDuration(): float
+    {
+        $queries = $this->getQueries();
+        $intervals = [];
+
+        foreach ($this->getQueryOffsets() as $index => $offset) {
+            $duration = $queries[$index]['duration'] ?? 0;
+
+            if (!\is_float($queries[$index]['started_at'] ?? null)) {
+                return $this->getTotalDuration();
+            }
+
+            $intervals[] = [$offset, $offset + (\is_int($duration) || \is_float($duration) ? $duration : 0)];
+        }
+
+        usort($intervals, static fn (array $a, array $b): int => $a[0] <=> $b[0]);
+        $waited = 0.0;
+        $end = null;
+
+        foreach ($intervals as [$start, $stop]) {
+            if ($end === null || $start > $end) {
+                $waited += $stop - $start;
+                $end = $stop;
+            } elseif ($stop > $end) {
+                $waited += $stop - $end;
+                $end = $stop;
+            }
+        }
+
+        return $waited;
+    }
+
+    /**
      * The shapes of queries sent at least REPEATED_QUERY_THRESHOLD times, with the numbers of these queries (from 1).
      * When they are all a find() of the same entity, its class and identifier property tell the findBy() replacing
      * them.

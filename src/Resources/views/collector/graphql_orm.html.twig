@@ -36,7 +36,7 @@
         </div>
         <div class="sf-toolbar-info-piece">
             <b>Query time</b>
-            <span>{{ collector.totalDuration|number_format(2) }} ms</span>
+            <span>{{ collector.waitedDuration|number_format(2) }} ms</span>
         </div>
         <div class="sf-toolbar-info-piece">
             <b>Hydration</b>
@@ -141,8 +141,11 @@
                     <span class="label">Queries</span>
                 </div>
                 <div class="metric">
-                    <span class="value">{{ collector.totalDuration|number_format(1) }} <span class="unit">ms</span></span>
+                    <span class="value">{{ collector.waitedDuration|number_format(1) }} <span class="unit">ms</span></span>
                     <span class="label">Time in GraphQL</span>
+                    {% if collector.totalDuration - collector.waitedDuration > 0.05 %}
+                        <span class="graphql-orm-muted" title="The duration of each query added up: some were sent together and waited for at the same time">{{ collector.totalDuration|number_format(1) }} ms summed, queries sent together</span>
+                    {% endif %}
                 </div>
                 <div class="metric">
                     <span class="value">{{ collector.hydrationDuration|number_format(1) }} <span class="unit">ms</span></span>
@@ -357,7 +360,7 @@
             <div data-graphql-orm-view="timeline" hidden>
                 {% set ticks = collector.timelineTicks %}
                 {% set step = ticks|length > 1 ? (ticks[1] - ticks[0]) / span * 100 : 100 %}
-                {% set networkTime = collector.queries|reduce((total, query) => total + query.duration, 0) %}
+                {% set networkTime = collector.waitedDuration %}
                 {# The request runs before its first query: the kernel, the routing, the controller... #}
                 {% set firstOffset = min(offsets|merge([span])) %}
                 <p class="graphql-orm-timeline-summary">

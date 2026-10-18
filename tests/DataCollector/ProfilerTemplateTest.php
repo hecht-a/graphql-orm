@@ -231,6 +231,26 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itTellsTheTimeWaitedForQueriesSentTogether(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+
+        foreach ([100.0, 100.0, 100.0] as $startedAt) {
+            $trace = new GraphqlQueryTrace();
+            $trace->graphql = 'query { tasks { id } }';
+            $trace->startedAt = $startedAt;
+            $trace->duration = 100.0;
+            $collector->addQuery($trace);
+        }
+
+        $text = self::text($this->render($collector));
+
+        self::assertStringContainsString('100.0 ms Time in GraphQL 300.0 ms summed, queries sent together', $text);
+        self::assertStringContainsString('Query time 100.00 ms', $text);
+        self::assertStringContainsString('3 queries over 100 ms, 100.0 ms in GraphQL', $text);
+    }
+
+    #[Test]
     public function itShowsTheTimeBeforeTheFirstQuery(): void
     {
         $collector = new GraphqlOrmDataCollector();
