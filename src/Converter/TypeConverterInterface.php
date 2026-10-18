@@ -6,8 +6,8 @@ namespace GraphqlOrm\Converter;
 
 /**
  * Converts a scalar of the API into a value of PHP, a value object such as Money, Email or Siret, and back: chosen for
- * the properties typed with the class of its #[AsTypeConverter], or named by #[Field(converter: ...)]. null is never
- * given to it: it stays null.
+ * the properties typed with the class of its #[AsTypeConverter], or named by #[GraphqlOrm\Field(converter: ...)]. null
+ * is never given to it: it stays null.
  */
 interface TypeConverterInterface
 {

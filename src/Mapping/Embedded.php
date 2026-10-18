@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace GraphqlOrm\Mapping;
 
 /**
- * A property holding an #[Embeddable] value object, as Doctrine #[Embedded]: by default a GraphQL object
+ * A property holding an #[GraphqlOrm\Embeddable] value object, as Doctrine #[Embedded]: by default a GraphQL object
  * (`price { amount currency }`); with a prefix, fields of the entity itself (`total_amount`, `total_currency`).
  */
 #[\Attribute(\Attribute::TARGET_PROPERTY)]

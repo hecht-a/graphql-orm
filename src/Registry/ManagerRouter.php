@@ -8,8 +8,8 @@ use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Mapping\Entity;
 
 /**
- * Tells the manager of an entity: the one its #[Entity] names, or the one whose entity namespace holds it (the most
- * precise when they nest), or the default manager.
+ * Tells the manager of an entity: the one its #[GraphqlOrm\Entity] names, or the one whose entity namespace holds it
+ * (the most precise when they nest), or the default manager.
  *
  * @internal
  */
@@ -41,7 +41,7 @@ final class ManagerRouter
     }
 
     /**
-     * @throws InvalidArgumentException when the #[Entity] of the class names a manager that does not exist
+     * @throws InvalidArgumentException when the #[GraphqlOrm\Entity] of the class names a manager that does not exist
      */
     public function managerFor(string $class): string
     {
@@ -55,7 +55,7 @@ final class ManagerRouter
         if ($named !== null) {
             return isset($this->namespaces[$named])
                 ? $named
-                : throw new InvalidArgumentException(\sprintf('"%s" names the GraphQL ORM manager "%s" in its #[Entity], which is not one of: %s.', $class, $named, implode(', ', $this->managerNames())));
+                : throw new InvalidArgumentException(\sprintf('"%s" names the GraphQL ORM manager "%s" in its #[GraphqlOrm\Entity], which is not one of: %s.', $class, $named, implode(', ', $this->managerNames())));
         }
 
         $manager = $this->defaultManager;

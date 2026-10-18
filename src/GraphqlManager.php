@@ -167,7 +167,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
     }
 
     /**
-     * The repository of an entity: the service of the repositoryClass of its #[Entity] when the application
+     * The repository of an entity: the service of the repositoryClass of its #[GraphqlOrm\Entity] when the application
      * declares one, a generic repository otherwise, as Doctrine EntityManager::getRepository().
      *
      * @template T of object
@@ -387,7 +387,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
             $context->identityMap = $this->identityMap->entities();
         }
 
-        // Always set: a relation mapped with Fetch::Lazy is a lazy ghost even without lazy_loading.
+        // Always set: a relation mapped with GraphqlOrm\Fetch::Lazy is a lazy ghost even without lazy_loading.
         $context->lazyLoader = $this->loadLazily(...);
         $context->observer = $this->collector;
         $context->lazyLoading = $this->lazyLoading;
@@ -676,7 +676,8 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
     }
 
     /**
-     * The caches holding data of the API between requests, to evict what changed, as Doctrine EntityManager::getCache().
+     * The caches holding data of the API between requests, to evict what changed, as Doctrine
+     * EntityManager::getCache().
      */
     public function getCache(): GraphqlCache
     {

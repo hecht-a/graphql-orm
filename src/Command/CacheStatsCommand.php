@@ -17,8 +17,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
- * Describes the caches of each manager: their pools, adapters and lifetimes, the entities marked #[Cache] by region, and
- * how many times they were evicted. It reads no value: every pool can be described.
+ * Describes the caches of each manager: their pools, adapters and lifetimes, the entities marked #[GraphqlOrm\Cache] by
+ * region, and how many times they were evicted. It reads no value: every pool can be described.
  *
  * @internal
  */
@@ -92,7 +92,7 @@ final readonly class CacheStatsCommand
         $entities = $this->cachedEntities->all($name);
 
         if ($entities === []) {
-            $io->note('No entity is marked #[Cache].');
+            $io->note('No entity is marked #[GraphqlOrm\Cache].');
 
             return;
         }

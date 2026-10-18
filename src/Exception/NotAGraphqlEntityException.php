@@ -9,7 +9,7 @@ final class NotAGraphqlEntityException extends \LogicException implements Graphq
     public static function forClass(string $class): self
     {
         return new self(\sprintf(
-            'Class "%s" is not marked with #[Entity].',
+            'Class "%s" is not marked with #[GraphqlOrm\Entity].',
             $class
         ));
     }

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace GraphqlOrm\Metadata;
 
 /**
- * An #[Embeddable] value object held by a field: its class, and its fields, a GraphQL object or prefixed fields of the
- * entity.
+ * An #[GraphqlOrm\Embeddable] value object held by a field: its class, and its fields, a GraphQL object or prefixed
+ * fields of the entity.
  *
  * @internal
  */

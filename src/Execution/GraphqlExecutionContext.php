@@ -38,7 +38,8 @@ final class GraphqlExecutionContext
     public ?HydrationObserver $observer = null;
 
     /**
-     * Keeps the entities marked #[Cache] hydrated in full; null for rows read from a cache, which must not prolong them.
+     * Keeps the entities marked #[GraphqlOrm\Cache] hydrated in full; null for rows read from a cache, which must not
+     * prolong them.
      *
      * @internal set by GraphqlManager
      */

@@ -183,7 +183,8 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     }
 
     /**
-     * The type converter of a field: the one its #[Field] names, or the one registered for the class of its property.
+     * The type converter of a field: the one its #[GraphqlOrm\Field] names, or the one registered for the class of its
+     * property.
      *
      * @return array{converter: string|null, converter_source: 'field'|'type'|null}
      */
@@ -485,7 +486,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     }
 
     /**
-     * What is wrong with the configuration of the caches, e.g. #[Cache] ignored.
+     * What is wrong with the configuration of the caches, e.g. #[GraphqlOrm\Cache] ignored.
      *
      * @return list<string>
      */
@@ -510,7 +511,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
 
             foreach ($classes as $class) {
                 if (class_exists($class) && (new \ReflectionClass($class))->getAttributes(Cache::class) !== []) {
-                    $warnings[] = \sprintf('#[Cache] is ignored on %s: graphql_orm.second_level_cache.enabled is false.', (new \ReflectionClass($class))->getShortName());
+                    $warnings[] = \sprintf('#[GraphqlOrm\Cache] is ignored on %s: graphql_orm.second_level_cache.enabled is false.', (new \ReflectionClass($class))->getShortName());
                 }
             }
         }
@@ -691,7 +692,8 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     }
 
     /**
-     * The query as a cURL command, to replay it from a terminal. Headers are not recorded: authentication is to be added.
+     * The query as a cURL command, to replay it from a terminal. Headers are not recorded: authentication is to be
+     * added.
      *
      * @param array<mixed> $variables
      */
@@ -780,7 +782,8 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
 
     /**
      * The shapes of queries sent at least REPEATED_QUERY_THRESHOLD times, with the numbers of these queries (from 1).
-     * When they are all a find() of the same entity, its class and identifier property tell the findBy() replacing them.
+     * When they are all a find() of the same entity, its class and identifier property tell the findBy() replacing
+     * them.
      *
      * @return list<array{shape: string, count: int, queries: list<int>, find_entity: string|null, find_identifier: string|null}>
      */

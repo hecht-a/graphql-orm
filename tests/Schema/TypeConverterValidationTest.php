@@ -29,8 +29,8 @@ final class TypeConverterValidationTest extends TestCase
     public function itReportsAValueObjectWithoutConverter(): void
     {
         self::assertSame([
-            '[GraphqlOrm\Tests\Fixtures\Converter\Product] Field "price" has PHP type "GraphqlOrm\Tests\Fixtures\Converter\Money", which no type converter converts: register one with #[AsTypeConverter(Money::class)], or name it with #[Field(converter: ...)].',
-            '[GraphqlOrm\Tests\Fixtures\Converter\Product] Field "contact" has PHP type "GraphqlOrm\Tests\Fixtures\Converter\Email", which no type converter converts: register one with #[AsTypeConverter(Email::class)], or name it with #[Field(converter: ...)].',
+            '[GraphqlOrm\Tests\Fixtures\Converter\Product] Field "price" has PHP type "GraphqlOrm\Tests\Fixtures\Converter\Money", which no type converter converts: register one with #[AsTypeConverter(Money::class)], or name it with #[GraphqlOrm\\Field(converter: ...)].',
+            '[GraphqlOrm\Tests\Fixtures\Converter\Product] Field "contact" has PHP type "GraphqlOrm\Tests\Fixtures\Converter\Email", which no type converter converts: register one with #[AsTypeConverter(Email::class)], or name it with #[GraphqlOrm\\Field(converter: ...)].',
         ], $this->validate([], price: 'Int'));
     }
 

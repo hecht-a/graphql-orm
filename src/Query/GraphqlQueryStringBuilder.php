@@ -331,8 +331,8 @@ final class GraphqlQueryStringBuilder
     }
 
     /**
-     * The fields of an entity with the relations of with() loaded, whatever max_depth and Fetch::Lazy: the others only
-     * get their identifier selected.
+     * The fields of an entity with the relations of with() loaded, whatever max_depth and GraphqlOrm\Fetch::Lazy: the
+     * others only get their identifier selected.
      *
      * @param class-string         $entityClass
      * @param array<string, mixed> $with

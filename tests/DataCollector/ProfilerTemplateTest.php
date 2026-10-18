@@ -385,7 +385,7 @@ final class ProfilerTemplateTest extends TestCase
         $text = self::text($this->render($collector));
 
         self::assertStringContainsString('price price - - MoneyConverter by type', $text);
-        self::assertStringContainsString('discount discount - - DecimalMoneyConverter by #[Field]', $text);
+        self::assertStringContainsString('discount discount - - DecimalMoneyConverter by #[GraphqlOrm\\Field]', $text);
     }
 
     #[Test]

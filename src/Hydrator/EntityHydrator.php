@@ -73,7 +73,7 @@ final class EntityHydrator
      */
     public function reference(GraphqlEntityMetadata $metadata, int|string $identifier, GraphqlExecutionContext $context, ?string $relation = null): object
     {
-        $field = $metadata->identifier ?? throw new LogicException(\sprintf('"%s" has no identifier to be referenced: mark its identifier field with #[Identifier].', $metadata->class));
+        $field = $metadata->identifier ?? throw new LogicException(\sprintf('"%s" has no identifier to be referenced: mark its identifier field with #[GraphqlOrm\Identifier].', $metadata->class));
 
         return $this->hydrateEntity($metadata, [$field->mappedFrom => $identifier], $context, 0, lazy: true, relation: $relation);
     }
@@ -184,8 +184,9 @@ final class EntityHydrator
     }
 
     /**
-     * Keeps the row of an entity marked #[Cache] in the second-level cache, its relations reduced to their identifier:
-     * they are loaded on first access when it is read back. Not kept when a related entity has no identifier.
+     * Keeps the row of an entity marked #[GraphqlOrm\Cache] in the second-level cache, its relations reduced to their
+     * identifier: they are loaded on first access when it is read back. Not kept when a related entity has no
+     * identifier.
      *
      * @param array<string|int, mixed> $data
      */
@@ -349,8 +350,8 @@ final class EntityHydrator
 
     /**
      * Remembers the mapped properties the row did not hold, and makes those of them left without a value throw a
-     * PartialEntityException when read: the entity becomes a lazy ghost whose initializer throws, everything already set
-     * (by the row, the constructor or a default value) being set again as is.
+     * PartialEntityException when read: the entity becomes a lazy ghost whose initializer throws, everything already
+     * set (by the row, the constructor or a default value) being set again as is.
      *
      * @param array<string|int, mixed> $data
      */

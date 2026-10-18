@@ -156,7 +156,7 @@ final class DtoHydrationTest extends TestCase
     public function itRejectsARelationMappedToAScalar(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('"GraphqlOrm\Tests\Fixtures\Dto\RelationAsScalarDto::$assignee" maps the relation "assignee": type it with a class to hydrate, or map a field of the relation with #[MapFrom(\'assignee.name\')].');
+        $this->expectExceptionMessage('"GraphqlOrm\Tests\Fixtures\Dto\RelationAsScalarDto::$assignee" maps the relation "assignee": type it with a class to hydrate, or map a field of the relation with #[GraphqlOrm\\MapFrom(\'assignee.name\')].');
 
         $this->repository(Task::class)->createQueryBuilder()->hydrateAs(RelationAsScalarDto::class);
     }

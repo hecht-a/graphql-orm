@@ -470,7 +470,7 @@
                                                 <td>
                                                     {% if field.converter ?? null %}
                                                         <span title="{{ field.converter }}">{{ field.converter|split('\\')|last }}</span>
-                                                        <span class="graphql-orm-muted">{{ field.converter_source == 'field' ? 'by #[Field]' : 'by type' }}</span>
+                                                        <span class="graphql-orm-muted">{{ field.converter_source == 'field' ? 'by #[GraphqlOrm\\Field]' : 'by type' }}</span>
                                                     {% else %}
                                                         <span class="graphql-orm-muted">-</span>
                                                     {% endif %}
@@ -661,7 +661,7 @@
                     {% if collector.secondLevelCache is not empty %}
                     <h3>Second-level cache</h3>
                     <p class="graphql-orm-muted">
-                        The entities marked <code>#[Cache]</code>: read from the second-level cache by <code>find()</code>, the
+                        The entities marked <code>#[GraphqlOrm\Cache]</code>: read from the second-level cache by <code>find()</code>, the
                         references and the lazy loads (hits) or not found there (misses), and kept once hydrated in full.
                     </p>
                     <table>

@@ -311,7 +311,8 @@ final class GraphqlOrmExtension extends Extension
     }
 
     /**
-     * The registry of the managers, and the router telling the manager of an entity by its #[Entity] or its namespace.
+     * The registry of the managers, and the router telling the manager of an entity by its #[GraphqlOrm\Entity] or its
+     * namespace.
      */
     private function registerRegistry(ContainerBuilder $container, ManagerConfigs $managers): void
     {
@@ -378,7 +379,8 @@ final class GraphqlOrmExtension extends Extension
     }
 
     /**
-     * The options of a manager shown by the profiler: the names of the headers only, and no credentials in the endpoint.
+     * The options of a manager shown by the profiler: the names of the headers only, and no credentials in the
+     * endpoint.
      *
      * @param ManagerOptions $config
      *

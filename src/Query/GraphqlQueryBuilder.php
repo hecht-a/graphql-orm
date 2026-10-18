@@ -62,8 +62,8 @@ final class GraphqlQueryBuilder
 
     /**
      * Loads the relations named, nested ones by their path (assignee.company), in place of max_depth: the relations not
-     * named are selected by their identifier only. A relation mapped with Fetch::Lazy is loaded when named. Adds to
-     * the relations of the previous calls, and to the fields of select().
+     * named are selected by their identifier only. A relation mapped with GraphqlOrm\Fetch::Lazy is loaded when named.
+     * Adds to the relations of the previous calls, and to the fields of select().
      *
      * @param string ...$relations paths of GraphQL field names or PHP properties
      *
@@ -82,8 +82,9 @@ final class GraphqlQueryBuilder
     /**
      * Hydrates the result as read-only objects created through their constructor, rather than entities: neither
      * identity map, nor second-level cache, nor lazy loading. Each parameter maps the field of its name, or the path of
-     * its #[MapFrom] (assignee.name); one typed with a class maps a relation to a nested DTO, an array typed list<Dto>
-     * in a docblock a collection. The query selects these fields only: select() and with() cannot be used with it.
+     * its #[GraphqlOrm\MapFrom] (assignee.name); one typed with a class maps a relation to a nested DTO, an array typed
+     * list<Dto> in a docblock a collection. The query selects these fields only: select() and with() cannot be used
+     * with it.
      *
      * @template D of object
      *

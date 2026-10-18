@@ -25,7 +25,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
 /**
- * A value object spread over several fields, #[Embedded]: a GraphQL object, or prefixed fields of the entity.
+ * A value object spread over several fields, #[GraphqlOrm\Embedded]: a GraphQL object, or prefixed fields of the entity.
  */
 final class EmbeddedTest extends TestCase
 {
@@ -131,7 +131,7 @@ final class EmbeddedTest extends TestCase
     public function itRejectsAnEmbeddedClassThatIsNotEmbeddable(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('"GraphqlOrm\Tests\Fixtures\Embedded\OrderWithNotEmbeddable::$price" is mapped with #[Embedded] but "GraphqlOrm\Tests\Fixtures\Embedded\NotEmbeddable" has no #[Embeddable].');
+        $this->expectExceptionMessage('"GraphqlOrm\Tests\Fixtures\Embedded\OrderWithNotEmbeddable::$price" is mapped with #[GraphqlOrm\\Embedded] but "GraphqlOrm\Tests\Fixtures\Embedded\NotEmbeddable" has no #[GraphqlOrm\\Embeddable].');
 
         (new GraphqlEntityMetadataFactory())->getMetadata(OrderWithNotEmbeddable::class);
     }

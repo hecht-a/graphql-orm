@@ -8,7 +8,7 @@ use GraphqlOrm\Converter\TypeConverterInterface;
 
 /**
  * Maps a field holding a value: a scalar, a date, an enum, as Doctrine #[Column]. A relation is mapped with
- * #[Relation], the identifier marked with #[Identifier].
+ * #[GraphqlOrm\Relation], the identifier marked with #[GraphqlOrm\Identifier].
  */
 #[\Attribute(\Attribute::TARGET_PROPERTY)]
 final readonly class Field

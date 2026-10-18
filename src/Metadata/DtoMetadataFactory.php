@@ -14,8 +14,8 @@ use Symfony\Component\TypeInfo\TypeResolver\TypeResolverInterface;
 
 /**
  * Maps the parameters of the constructor of a DTO to the fields of an entity: by their name, or by the path of their
- * #[MapFrom]. A parameter typed with a class maps a relation to a nested DTO, an array typed list<Dto> in a docblock a
- * collection.
+ * #[GraphqlOrm\MapFrom]. A parameter typed with a class maps a relation to a nested DTO, an array typed list<Dto> in a
+ * docblock a collection.
  *
  * @internal
  */
@@ -111,7 +111,7 @@ final class DtoMetadataFactory
             $nestedClass = $field->isCollection ? $this->collectionItemClass($parameter) : $this->objectClass($parameter);
 
             if ($nestedClass === null) {
-                throw new InvalidArgumentException(\sprintf('"%s::$%s" maps the relation "%s": type it with a class to hydrate, or map a field of the relation with #[MapFrom(\'%s.name\')].', $dtoClass, $parameter->getName(), $path, $path));
+                throw new InvalidArgumentException(\sprintf('"%s::$%s" maps the relation "%s": type it with a class to hydrate, or map a field of the relation with #[GraphqlOrm\MapFrom(\'%s.name\')].', $dtoClass, $parameter->getName(), $path, $path));
             }
 
             $nested = $this->getMetadata($nestedClass, $field->relation, $nesting);

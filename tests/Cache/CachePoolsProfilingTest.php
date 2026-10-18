@@ -90,7 +90,7 @@ final class CachePoolsProfilingTest extends TestCase
         $collector->collect(new Request(), new Response());
 
         self::assertSame(
-            ['#[Cache] is ignored on CachedTask: graphql_orm.second_level_cache.enabled is false.'],
+            ['#[GraphqlOrm\\Cache] is ignored on CachedTask: graphql_orm.second_level_cache.enabled is false.'],
             $collector->getCacheWarnings(),
         );
     }

@@ -18,14 +18,14 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
- * Loads the entities marked #[Cache] from the API, page by page, so that the second-level cache keeps them: find(),
- * the references and the lazy loads then read them without a query, from the first request on.
+ * Loads the entities marked #[GraphqlOrm\Cache] from the API, page by page, so that the second-level cache keeps them:
+ * find(), the references and the lazy loads then read them without a query, from the first request on.
  *
  * @internal
  */
 #[AsCommand(
     name: 'graphqlorm:cache:warmup',
-    description: 'Load the entities marked #[Cache] into the second-level cache',
+    description: 'Load the entities marked #[GraphqlOrm\Cache] into the second-level cache',
 )]
 final readonly class CacheWarmupCommand
 {
@@ -58,7 +58,7 @@ final readonly class CacheWarmupCommand
         }
 
         if ($targets === []) {
-            $io->warning('No entity is kept in the second-level cache: mark entities with #[Cache], and enable graphql_orm.second_level_cache.');
+            $io->warning('No entity is kept in the second-level cache: mark entities with #[GraphqlOrm\Cache], and enable graphql_orm.second_level_cache.');
 
             return Command::SUCCESS;
         }

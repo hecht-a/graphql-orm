@@ -13,8 +13,9 @@ use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * The caches of the bundle holding data of the API between requests, as Doctrine EntityManager::getCache(): the result
- * cache of the queries (GraphqlQuery::enableResultCache()) and the second-level cache of the entities marked #[Cache].
- * Evicting is the only way to drop a value before its lifetime: the bundle does not know when the API changes.
+ * cache of the queries (GraphqlQuery::enableResultCache()) and the second-level cache of the entities marked
+ * #[GraphqlOrm\Cache]. Evicting is the only way to drop a value before its lifetime: the bundle does not know when the
+ * API changes.
  */
 final class GraphqlCache implements ResetInterface
 {
@@ -62,8 +63,8 @@ final class GraphqlCache implements ResetInterface
     }
 
     /**
-     * Drops the result kept under a key given to enableResultCache(). A paginated query keeps its other pages apart: only
-     * the first page is dropped.
+     * Drops the result kept under a key given to enableResultCache(). A paginated query keeps its other pages apart:
+     * only the first page is dropped.
      */
     public function evictQueryResult(string $key): void
     {
@@ -143,7 +144,8 @@ final class GraphqlCache implements ResetInterface
     }
 
     /**
-     * Drops every entity of a class from the second-level cache, whatever the pool: they are no longer read, and expire.
+     * Drops every entity of a class from the second-level cache, whatever the pool: they are no longer read, and
+     * expire.
      *
      * @param class-string $class
      */

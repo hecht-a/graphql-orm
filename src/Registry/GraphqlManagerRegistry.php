@@ -11,8 +11,8 @@ use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 
 /**
- * The managers of the GraphQL APIs of the application, as the ManagerRegistry of Doctrine: by name, or the manager of an
- * entity.
+ * The managers of the GraphQL APIs of the application, as the ManagerRegistry of Doctrine: by name, or the manager of
+ * an entity.
  */
 final readonly class GraphqlManagerRegistry
 {
@@ -26,7 +26,8 @@ final readonly class GraphqlManagerRegistry
     }
 
     /**
-     * The registry of a single manager, every entity being its own: for a script or a test building the services by hand.
+     * The registry of a single manager, every entity being its own: for a script or a test building the services by
+     * hand.
      */
     public static function forManager(GraphqlManager $manager): self
     {
@@ -69,12 +70,12 @@ final readonly class GraphqlManagerRegistry
     }
 
     /**
-     * The manager of the API of an entity: the one its #[Entity] names, or whose entity namespace holds it, or the
-     * default one.
+     * The manager of the API of an entity: the one its #[GraphqlOrm\Entity] names, or whose entity namespace holds it,
+     * or the default one.
      *
      * @param class-string $class
      *
-     * @throws InvalidArgumentException when the #[Entity] of the class names a manager that does not exist
+     * @throws InvalidArgumentException when the #[GraphqlOrm\Entity] of the class names a manager that does not exist
      */
     public function getManagerForClass(string $class): GraphqlManager
     {

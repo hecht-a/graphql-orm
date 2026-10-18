@@ -61,14 +61,14 @@ final readonly class CachedEntities
         }
 
         if (!$cache->caches($class)) {
-            throw new \InvalidArgumentException(\sprintf('"%s" is not kept in the second-level cache: mark it with #[Cache].', $class));
+            throw new \InvalidArgumentException(\sprintf('"%s" is not kept in the second-level cache: mark it with #[GraphqlOrm\Cache].', $class));
         }
 
         return [$name, $class];
     }
 
     /**
-     * Every entity marked #[Cache] of the managers named, or of every manager.
+     * Every entity marked #[GraphqlOrm\Cache] of the managers named, or of every manager.
      *
      * @return list<array{string, class-string}> the manager and the class of each one
      *

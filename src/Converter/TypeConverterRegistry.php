@@ -30,7 +30,7 @@ final class TypeConverterRegistry
     /**
      * The converter of a field: the one it names, or the one handling its type; none for the others.
      *
-     * @param string|null $converter the class of the converter named by #[Field(converter: ...)]
+     * @param string|null $converter the class of the converter named by #[GraphqlOrm\Field(converter: ...)]
      * @param string|null $type      the class the property or the parameter is typed with
      *
      * @throws InvalidArgumentException when the converter named is not registered and cannot be created
@@ -51,7 +51,7 @@ final class TypeConverterRegistry
      * of values, or a comparison such as {eq: value}. The converter is the one the field names, else the one of its
      * type, else the one of the class of the value; the other values are kept as they are.
      *
-     * @param string|null $converter the class of the converter named by #[Field(converter: ...)]
+     * @param string|null $converter the class of the converter named by #[GraphqlOrm\Field(converter: ...)]
      * @param string|null $type      the class the property is typed with
      *
      * @throws InvalidArgumentException when the converter named is not registered and cannot be created
@@ -88,8 +88,8 @@ final class TypeConverterRegistry
     }
 
     /**
-     * The value object of each GraphQL scalar a converter tells with #[AsTypeConverter(Siret::class, scalars: ['Siret'])],
-     * a scalar told for two classes left out.
+     * The value object of each GraphQL scalar a converter tells with #[AsTypeConverter(Siret::class, scalars:
+     * ['Siret'])], a scalar told for two classes left out.
      *
      * @return array<string, class-string>
      */

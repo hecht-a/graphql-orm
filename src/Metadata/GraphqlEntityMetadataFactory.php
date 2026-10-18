@@ -52,7 +52,7 @@ final class GraphqlEntityMetadataFactory
      * @param class-string $class
      *
      * @throws \ReflectionException
-     * @throws NotAGraphqlEntityException  when the class has no #[Entity] attribute
+     * @throws NotAGraphqlEntityException  when the class has no #[GraphqlOrm\Entity] attribute
      * @throws TooManyIdentifiersException when several fields are marked as identifier
      */
     public function getMetadata(string $class): GraphqlEntityMetadata
@@ -73,7 +73,7 @@ final class GraphqlEntityMetadataFactory
      * @param class-string $class
      *
      * @throws \ReflectionException
-     * @throws NotAGraphqlEntityException  when the class has no #[Entity] attribute
+     * @throws NotAGraphqlEntityException  when the class has no #[GraphqlOrm\Entity] attribute
      * @throws TooManyIdentifiersException when several fields are marked as identifier
      */
     private function build(string $class): GraphqlEntityMetadata
@@ -119,7 +119,7 @@ final class GraphqlEntityMetadataFactory
     }
 
     /**
-     * The field mapped on a property with #[Field] or #[Relation], if any.
+     * The field mapped on a property with #[GraphqlOrm\Field] or #[GraphqlOrm\Relation], if any.
      *
      * @param class-string $class
      *
@@ -134,16 +134,16 @@ final class GraphqlEntityMetadataFactory
         $name = $class . '::$' . $property->getName();
 
         if ($isIdentifier && $value === null) {
-            throw new InvalidArgumentException(\sprintf('"%s" has #[Identifier] without #[Field]: the identifier is a field holding a value, declare it with #[Field].', $name));
+            throw new InvalidArgumentException(\sprintf('"%s" has #[GraphqlOrm\Identifier] without #[GraphqlOrm\Field]: the identifier is a field holding a value, declare it with #[GraphqlOrm\Field].', $name));
         }
 
         if ($value !== null && $relation !== null) {
-            throw new InvalidArgumentException(\sprintf('"%s" is mapped with both #[Field] and #[Relation]: map a relation with #[Relation] only.', $name));
+            throw new InvalidArgumentException(\sprintf('"%s" is mapped with both #[GraphqlOrm\Field] and #[GraphqlOrm\Relation]: map a relation with #[GraphqlOrm\Relation] only.', $name));
         }
 
-        // #[Identifier] needs #[Field]: refused with #[Embedded] as well.
+        // #[GraphqlOrm\Identifier] needs #[GraphqlOrm\Field]: refused with #[GraphqlOrm\Embedded] as well.
         if ($embedded !== null && ($value !== null || $relation !== null)) {
-            throw new InvalidArgumentException(\sprintf('"%s" is mapped with #[Embedded] and #[Field], #[Relation] or #[Identifier]: an embedded value object is mapped with #[Embedded] only.', $name));
+            throw new InvalidArgumentException(\sprintf('"%s" is mapped with #[GraphqlOrm\Embedded] and #[GraphqlOrm\Field], #[GraphqlOrm\Relation] or #[GraphqlOrm\Identifier]: an embedded value object is mapped with #[GraphqlOrm\Embedded] only.', $name));
         }
 
         return match (true) {
@@ -162,7 +162,7 @@ final class GraphqlEntityMetadataFactory
         [$relation, $isCollection] = $this->resolveRelation($property, $attribute->targetEntity);
 
         if ($relation === null) {
-            throw new InvalidArgumentException(\sprintf('"%s" is mapped with #[Relation] but its type is no entity: map a value with #[Field], or give the targetEntity of the relation.', $name));
+            throw new InvalidArgumentException(\sprintf('"%s" is mapped with #[GraphqlOrm\Relation] but its type is no entity: map a value with #[GraphqlOrm\Field], or give the targetEntity of the relation.', $name));
         }
 
         return new GraphqlFieldMetadata(
@@ -176,14 +176,14 @@ final class GraphqlEntityMetadataFactory
     }
 
     /**
-     * @throws InvalidArgumentException when the type of the property is no #[Embeddable] class
+     * @throws InvalidArgumentException when the type of the property is no #[GraphqlOrm\Embeddable] class
      */
     private function embeddedField(string $name, \ReflectionProperty $property, Embedded $attribute): GraphqlFieldMetadata
     {
         $class = self::valueClass($property->getType());
 
         if ($class === null || (new \ReflectionClass($class))->getAttributes(Embeddable::class) === []) {
-            throw new InvalidArgumentException(\sprintf('"%s" is mapped with #[Embedded] but "%s" has no #[Embeddable].', $name, $class ?? (string) $property->getType()));
+            throw new InvalidArgumentException(\sprintf('"%s" is mapped with #[GraphqlOrm\Embedded] but "%s" has no #[GraphqlOrm\Embeddable].', $name, $class ?? (string) $property->getType()));
         }
 
         $fields = [];
@@ -210,7 +210,7 @@ final class GraphqlEntityMetadataFactory
     private function valueField(string $name, \ReflectionProperty $property, Field $attribute, bool $isIdentifier): GraphqlFieldMetadata
     {
         if ($this->resolveRelation($property, null)[0] !== null) {
-            throw new InvalidArgumentException(\sprintf('"%s" holds an entity: map a relation with #[Relation], not #[Field].', $name));
+            throw new InvalidArgumentException(\sprintf('"%s" holds an entity: map a relation with #[GraphqlOrm\Relation], not #[GraphqlOrm\Field].', $name));
         }
 
         return new GraphqlFieldMetadata(
@@ -288,7 +288,8 @@ final class GraphqlEntityMetadataFactory
     }
 
     /**
-     * Whether the type is a collection of doctrine/collections, e.g. Collection<int, Task>: a list of entities as an array.
+     * Whether the type is a collection of doctrine/collections, e.g. Collection<int, Task>: a list of entities as an
+     * array.
      */
     private static function isCollectionClass(string $type): bool
     {
@@ -327,7 +328,7 @@ final class GraphqlEntityMetadataFactory
     }
 
     /**
-     * Whether a class is mapped as an entity, with #[Entity].
+     * Whether a class is mapped as an entity, with #[GraphqlOrm\Entity].
      */
     public function isEntityClass(string $class): bool
     {

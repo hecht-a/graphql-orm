@@ -48,7 +48,7 @@ final class MappingAttributesTest extends TestCase
     public function itRejectsAnIdentifierWithoutField(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('#[Field]');
+        $this->expectExceptionMessage('#[GraphqlOrm\\Field]');
 
         (new GraphqlEntityMetadataFactory())->getMetadata(IdentifierWithoutField::class);
     }

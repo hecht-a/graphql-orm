@@ -66,9 +66,9 @@ class GraphqlEntityRepository
 
     /**
      * A copy of this repository whose find methods load the relations named, nested ones by their path
-     * (assignee.company), in place of max_depth, as with() of the query builder: `$tasks->with('assignee')->findBy([])`.
-     * This repository is left as it is. An entity find() serves from the identity map or the second-level cache is
-     * given as it was loaded.
+     * (assignee.company), in place of max_depth, as with() of the query builder:
+     * `$tasks->with('assignee')->findBy([])`. This repository is left as it is. An entity find() serves from the
+     * identity map or the second-level cache is given as it was loaded.
      *
      * @param string ...$relations paths of GraphQL field names or PHP properties
      *
@@ -93,7 +93,7 @@ class GraphqlEntityRepository
         $identifier = $this->manager->getMetadataFactory()->getMetadata($this->entityClass)->identifier;
 
         if ($identifier === null) {
-            throw new LogicException(\sprintf('"%s" has no identifier: mark its identifier field with #[Identifier].', $this->entityClass));
+            throw new LogicException(\sprintf('"%s" has no identifier: mark its identifier field with #[GraphqlOrm\Identifier].', $this->entityClass));
         }
 
         $known = \is_int($id) || \is_string($id) ? $this->manager->findKnown($this->entityClass, $id) : null;

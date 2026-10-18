@@ -85,7 +85,7 @@ final class Configuration implements ConfigurationInterface
         $this->default($slow, null, $defaults);
 
         $this->scalar($children, 'naming_strategy', DefaultNamingStrategy::class, $defaults)
-            ->info('Id of a service implementing NamingStrategy, naming the fields whose #[Field] or #[Relation] has no "mappedFrom" from their property: DefaultNamingStrategy keeps the property name, SnakeCaseNamingStrategy turns dueDate into due_date.');
+            ->info('Id of a service implementing NamingStrategy, naming the fields whose #[GraphqlOrm\Field] or #[GraphqlOrm\Relation] has no "mappedFrom" from their property: DefaultNamingStrategy keeps the property name, SnakeCaseNamingStrategy turns dueDate into due_date.');
 
         $this->scalar($this->arrayNode($children, 'result_cache', $defaults)
             ->info('Keeps the responses of the queries calling enableResultCache() between requests.')
@@ -93,16 +93,16 @@ final class Configuration implements ConfigurationInterface
             ->info('Id of the cache pool keeping them, e.g. a pool of framework.cache.pools with the Redis adapter; null disables the result cache.');
 
         $secondLevel = $this->arrayNode($children, 'second_level_cache', $defaults)
-            ->info('Keeps the entities marked #[Cache] between requests once hydrated in full: find(), the references and the lazy loads read them from there.')
+            ->info('Keeps the entities marked #[GraphqlOrm\Cache] between requests once hydrated in full: find(), the references and the lazy loads read them from there.')
             ->children();
-        $secondLevel->append($this->boolean('enabled', false, $defaults)->info('Disabled by default, as in Doctrine: #[Cache] is ignored until it is enabled.'));
+        $secondLevel->append($this->boolean('enabled', false, $defaults)->info('Disabled by default, as in Doctrine: #[GraphqlOrm\Cache] is ignored until it is enabled.'));
         $this->scalar($secondLevel, 'pool', 'cache.app', $defaults)
             ->cannotBeEmpty()
             ->info('Id of the cache pool keeping the entities without region, e.g. a pool of framework.cache.pools with the Redis adapter.');
-        $lifetime = $secondLevel->integerNode('default_lifetime')->min(1)->info('Seconds an entity is kept, unless its region or its #[Cache] says otherwise.');
+        $lifetime = $secondLevel->integerNode('default_lifetime')->min(1)->info('Seconds an entity is kept, unless its region or its #[GraphqlOrm\Cache] says otherwise.');
         $this->default($lifetime, 3600, $defaults);
         $secondLevel->arrayNode('regions')
-            ->info('Named by #[Cache(region: ...)]: a pool and a lifetime for some entities, e.g. reference data kept a day in Redis.')
+            ->info('Named by #[GraphqlOrm\Cache(region: ...)]: a pool and a lifetime for some entities, e.g. reference data kept a day in Redis.')
             ->useAttributeAsKey('name')
             ->arrayPrototype()
             ->children()
@@ -130,7 +130,7 @@ final class Configuration implements ConfigurationInterface
         $this->default($mode, null, $defaults);
 
         $mapping = $this->arrayNode($children, 'mapping', $defaults)
-            ->info('Where the entities and repositories of the API are: an entity belongs to the manager whose entity namespace holds it, unless its #[Entity] names one.')
+            ->info('Where the entities and repositories of the API are: an entity belongs to the manager whose entity namespace holds it, unless its #[GraphqlOrm\Entity] names one.')
             ->children();
         foreach (['entity' => 'Entity', 'repository' => 'Repository'] as $name => $folder) {
             $node = $this->arrayNode($mapping, $name, $defaults)->children();

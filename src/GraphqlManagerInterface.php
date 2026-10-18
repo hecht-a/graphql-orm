@@ -13,8 +13,8 @@ use GraphqlOrm\Repository\GraphqlEntityRepository;
 interface GraphqlManagerInterface
 {
     /**
-     * The repository of an entity: the service of the repositoryClass of its #[Entity] when the application declares
-     * one, a generic repository otherwise.
+     * The repository of an entity: the service of the repositoryClass of its #[GraphqlOrm\Entity] when the application
+     * declares one, a generic repository otherwise.
      *
      * @template T of object
      *

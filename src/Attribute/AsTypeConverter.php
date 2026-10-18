@@ -6,7 +6,7 @@ namespace GraphqlOrm\Attribute;
 
 /**
  * The class of the values a type converter handles: the properties and the parameters of DTOs typed with it are
- * converted by it, unless their #[Field] names another converter.
+ * converted by it, unless their #[GraphqlOrm\Field] names another converter.
  */
 #[\Attribute(\Attribute::TARGET_CLASS | \Attribute::IS_REPEATABLE)]
 final readonly class AsTypeConverter

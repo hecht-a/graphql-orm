@@ -199,7 +199,7 @@ final readonly class SchemaValidator
             }
 
             return [\sprintf(
-                '[%s] Field "%s" has PHP type "%s", which no type converter converts: register one with #[AsTypeConverter(%s::class)], or name it with #[Field(converter: ...)].',
+                '[%s] Field "%s" has PHP type "%s", which no type converter converts: register one with #[AsTypeConverter(%s::class)], or name it with #[GraphqlOrm\Field(converter: ...)].',
                 $entityClass,
                 $field->mappedFrom,
                 $valueClass,
