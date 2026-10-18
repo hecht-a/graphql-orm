@@ -751,6 +751,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         $redacted->graphql = $this->redactor->redactQuery($trace->graphql);
         $redacted->variables = $this->redactor->redactValues($trace->variables);
         $redacted->ast = $trace->ast !== null ? $this->redactor->redactAst($trace->ast) : null;
+        $redacted->redacted = true;
 
         return $redacted;
     }

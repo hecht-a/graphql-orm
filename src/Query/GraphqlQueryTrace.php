@@ -66,6 +66,8 @@ final class GraphqlQueryTrace
     public bool $duringSerialization = false;
     /** The beginning of the response, its values masked unless redact_query_values is false; profiler only. */
     public ?string $responsePreview = null;
+    /** Its values masked by redact_query_values: a profile cannot send it again; profiler only. */
+    public bool $redacted = false;
 
     public function __construct()
     {

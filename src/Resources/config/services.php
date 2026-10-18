@@ -16,6 +16,7 @@ use GraphqlOrm\Command\MakeGraphqlEntityCommand;
 use GraphqlOrm\Command\QueryCommand;
 use GraphqlOrm\Command\SchemaValidateCommand;
 use GraphqlOrm\Controller\EntityAutocompleteController;
+use GraphqlOrm\Controller\ProfilerReplayController;
 use GraphqlOrm\Converter\TypeConverterRegistry;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\DependencyInjection\GraphqlOrmExtension;
@@ -96,6 +97,13 @@ return static function (ContainerConfigurator $config) {
             ->tag('controller.service_arguments')
             ->public();
     }
+
+    $services->set(ProfilerReplayController::class)
+        ->autoconfigure(false)
+        ->arg('$profiler', service('profiler')->nullOnInvalid())
+        ->arg('$debug', param('kernel.debug'))
+        ->tag('controller.service_arguments')
+        ->public();
 
     $services->set(GraphqlOrmDataCollector::class)
         ->arg('$entityClasses', param('graphql_orm.schema_validation.entity_classes'))

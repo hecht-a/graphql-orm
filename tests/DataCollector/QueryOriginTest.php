@@ -234,6 +234,14 @@ final class QueryOriginTest extends TestCase
     }
 
     #[Test]
+    public function itTellsTheQueryHasItsValuesMasked(): void
+    {
+        $this->repository(new FakeGraphqlClient(['data' => ['tasks' => []]]), FakeTask::class)->findBy(['title' => 'A']);
+
+        self::assertTrue($this->collector->getQueries()[0]['redacted'] ?? null);
+    }
+
+    #[Test]
     public function itCutsTheResponsePreview(): void
     {
         $tasks = array_map(fn (int $id) => ['id' => $id, 'title' => str_repeat('a', 100)], range(1, 100));

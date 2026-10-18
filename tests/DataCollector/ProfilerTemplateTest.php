@@ -286,6 +286,44 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itOffersToReplayAQueryReadWithItsValues(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { tasks { id } }';
+        $collector->addQuery($trace);
+
+        self::assertStringContainsString('data-graphql-orm-replay="/_graphql_orm/replay/abc/1"', $this->render($collector));
+    }
+
+    #[Test]
+    public function itTellsWhyAQueryWhoseValuesAreMaskedIsNotReplayed(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { tasks { id } }';
+        $trace->redacted = true;
+        $collector->addQuery($trace);
+        $html = $this->render($collector);
+
+        self::assertStringNotContainsString('data-graphql-orm-replay=', $html);
+        self::assertStringContainsString('Replay: the values are masked, set redact_query_values: false', self::text($html));
+    }
+
+    #[Test]
+    public function itDoesNotOfferToReplayAMutation(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'mutation { createTask(item: { title: "Task A" }) { id } }';
+        $collector->addQuery($trace);
+        $html = $this->render($collector);
+
+        self::assertStringNotContainsString('data-graphql-orm-replay=', $html);
+        self::assertStringNotContainsString('Replay:', self::text($html));
+    }
+
+    #[Test]
     public function itMarksTheQueriesSentAfterTheResponse(): void
     {
         $collector = new GraphqlOrmDataCollector();
@@ -974,6 +1012,6 @@ final class ProfilerTemplateTest extends TestCase
         $twig->addExtension(new DebugExtension());
         $twig->addExtension(new GraphqlOrmTwigExtension());
 
-        return $twig->render('@GraphqlOrm/collector/graphql_orm.html.twig', ['collector' => $collector, 'profiler_url' => '/_profiler/abc']);
+        return $twig->render('@GraphqlOrm/collector/graphql_orm.html.twig', ['collector' => $collector, 'profiler_url' => '/_profiler/abc', 'token' => 'abc']);
     }
 }

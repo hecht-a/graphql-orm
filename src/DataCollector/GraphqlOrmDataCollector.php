@@ -102,6 +102,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
             'after_response' => ($this->data['collected'] ?? false) === true,
             'sub_request' => $this->subRequestPath(),
             'detailed' => true,
+            'redacted' => $trace->redacted,
             'result_cache' => $trace->resultCache,
             'manager' => $trace->manager,
             'result_cache_key' => $trace->resultCacheKey,

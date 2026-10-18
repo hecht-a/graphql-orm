@@ -350,7 +350,7 @@
                             </tr>
                             <tr class="graphql-orm-detail" data-graphql-orm-detail="{{ loop.index }}" hidden>
                                 <td colspan="7">
-                                    {{ _self.renderDetail(query, loop.index, collector.configuration.result_cache.pool ?? null) }}
+                                    {{ _self.renderDetail(query, loop.index, collector.configuration.result_cache.pool ?? null, token is defined ? (app.request.baseUrl ?? '') ~ '/_graphql_orm/replay/' ~ token ~ '/' ~ loop.index : null) }}
                                 </td>
                             </tr>
                         {% endfor %}
@@ -986,6 +986,7 @@
         .graphql-orm-hl-masked { color: var(--color-muted, #737373); font-style: italic; }
         .graphql-orm-hl-comment { color: var(--highlight-comment, #6a737d); }
         .graphql-orm-code { margin: 0; max-height: 320px; overflow: auto; white-space: pre-wrap; background: var(--code-block-background, #fafafa); padding: 10px 12px; border-radius: 6px; }
+        .graphql-orm-replay-result { max-height: 400px; overflow: auto; margin-top: 8px; }
         .graphql-orm-actions { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
         .graphql-orm-error { border-left: 4px solid var(--color-error, #b41939); background: var(--badge-danger-background, #fce9ed); color: var(--badge-danger-color, #83122a); padding: 8px 12px; border-radius: 0 6px 6px 0; }
         .graphql-orm-error pre { max-height: 250px; overflow: auto; }
@@ -1003,6 +1004,31 @@
     </style>
 
     <script>
+        // Sends the query again through the bundle, and shows its response under the detail.
+        function replayQuery(button) {
+            const result = button.closest(".graphql-orm-detail-box").querySelector(".graphql-orm-replay-result");
+            button.disabled = true;
+            result.hidden = false;
+            result.textContent = "Sending…";
+
+            fetch(button.dataset.graphqlOrmReplay, { method: "POST", headers: { "X-Requested-With": "XMLHttpRequest" } })
+                .then((response) => response.json().catch(() => ({
+                    error: response.status === 404
+                        ? "No replay route: import @GraphqlOrmBundle/Resources/config/routes.php, see the profiler documentation."
+                        : `HTTP ${response.status}`,
+                })))
+                .then((body) => {
+                    result.textContent = body.error ?? body.detail
+                        ?? `Replayed in ${body.duration.toFixed(1)} ms\n\n${JSON.stringify(body.response, null, 2)}`;
+                })
+                .catch((error) => {
+                    result.textContent = String(error);
+                })
+                .finally(() => {
+                    button.disabled = false;
+                });
+        }
+
         function copyToClipboard(button) {
             // The Clipboard API only exists in a secure context (HTTPS or localhost): an application served over plain
             // HTTP, e.g. http://app.docker, copies through a selected textarea instead.
@@ -1085,6 +1111,7 @@
                 const chip = event.target.closest("[data-graphql-orm-filter]");
                 const subtab = event.target.closest("[data-graphql-orm-subtab]");
                 const row = event.target.closest("[data-graphql-orm-row]");
+                const replay = event.target.closest("[data-graphql-orm-replay]");
 
                 if (tab || goto) {
                     event.preventDefault();
@@ -1092,6 +1119,8 @@
                 } else if (open) {
                     event.preventDefault();
                     openQuery(open.dataset.graphqlOrmOpen);
+                } else if (replay) {
+                    replayQuery(replay);
                 } else if (chip) {
                     panel.querySelectorAll("[data-graphql-orm-filter]").forEach((other) => other.setAttribute("aria-pressed", String(other === chip)));
                     applyFilter();
@@ -1194,7 +1223,7 @@
     {{- trigger starts with lazyLoadOf ? lazyLoadOf ~ (trigger|slice(lazyLoadOf|length)|split('\\')|last) : trigger -}}
 {% endmacro %}
 
-{% macro renderDetail(query, number, resultCachePool) %}
+{% macro renderDetail(query, number, resultCachePool, replayUrl) %}
     <div class="graphql-orm-detail-box">
         {# A query the application wrote: not a lazy load, a count or an introspection #}
         {% if ((query.slow ?? false) or query.response_size > 102400) and _self.originKind(query.origin ?? null)|trim == 'query' %}
@@ -1338,6 +1367,16 @@
                     Copy as cURL
                 </button>
             {% endif %}
+            {% if replayUrl and (query.detailed ?? true) and not (query.graphql|trim matches '/^(mutation|subscription)\\b/i') %}
+                {% if query.redacted ?? true %}
+                    <span class="graphql-orm-muted">Replay: the values are masked, set <code>redact_query_values: false</code> to send the query again.</span>
+                {% else %}
+                    <button type="button" class="btn btn-sm" data-graphql-orm-replay="{{ replayUrl }}"
+                            title="Sends the query again, with its variables, and shows the response.">
+                        Replay
+                    </button>
+                {% endif %}
+            {% endif %}
             {% if query.caller %}
                 <span class="graphql-orm-muted" title="{{ query.caller.file }}">
                     Called from <code>{{ query.caller.file|split('/')|last }}:{{ query.caller.line }}</code>
@@ -1348,6 +1387,7 @@
                 <span class="graphql-orm-muted">POST {{ query.endpoint }}</span>
             {% endif %}
         </div>
+        <pre class="graphql-orm-code graphql-orm-replay-result" hidden></pre>
     </div>
 {% endmacro %}
 
