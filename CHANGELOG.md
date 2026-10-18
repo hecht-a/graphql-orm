@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fields a converter converts use one of the scalars of its `#[AsTypeConverter(..., scalars: ['Int'])]`.
 - `graphqlorm:make:entity --from-schema` types a custom scalar of the API with the value object of the type converter
   telling it (`scalars: ['Siret']`).
+- Value objects spread over several fields, as the embeddables of Doctrine: a class marked `#[Embeddable]`, its fields
+  mapped with `#[Field]`, held by a property mapped with `#[Embedded]`, a GraphQL object (`price { amount currency }`)
+  or fields of the entity with `#[Embedded(prefix: 'total_')]`. Created through its constructor, selected, filtered
+  and ordered by the path of its fields (`total.amount`), kept in the second-level cache, hydrated for the DTOs, checked
+  by the schema validation and the PHPStan rules, listed by the profiler.
 
 ## [5.7.1] — 2026-10-18
 

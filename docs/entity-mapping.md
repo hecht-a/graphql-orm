@@ -244,6 +244,58 @@ public ?Money $discount = null;       // a Float of the API, as 12.5
 - A converter named by `#[Field]` without dependencies needs no registration; one needing arguments must be a service,
   or an `InvalidArgumentException` is thrown when it is used.
 - A converter receives the value of one field: a value object spread over several fields (an amount and its currency)
-  is mapped field by field.
+  is an [embedded value object](#embedded-value-objects).
 - Without Symfony, the converters are given to the manager: `new GraphqlManager(..., typeConverters: new
   TypeConverterRegistry([new MoneyConverter()]))`.
+
+## Embedded value objects
+
+A value object spread over several fields, as the embeddables of Doctrine: the class is marked `#[Embeddable]`, its
+fields mapped with `#[Field]`, and the property holding it with `#[Embedded]`.
+
+```php
+use GraphqlOrm\Mapping\Embeddable;
+use GraphqlOrm\Mapping\Embedded;
+
+#[Embeddable]
+final readonly class Money
+{
+    public function __construct(
+        #[Field] public int $amount,
+        #[Field] public string $currency,
+    ) {
+    }
+}
+
+#[Entity(name: 'orders')]
+class Order
+{
+    // A GraphQL object: price { amount currency }
+    #[Embedded]
+    public ?Money $price = null;
+
+    // Fields of the entity itself: total_amount, total_currency
+    #[Embedded(prefix: 'total_')]
+    public ?Money $total = null;
+}
+```
+
+| `#[Embedded]` | Description |
+|---------------|-------------|
+| `mappedFrom`  | GraphQL name of the object; named by the [naming strategy](#naming-strategy) when omitted |
+| `prefix`      | the prefix of the fields of the entity holding the value object; a GraphQL object when omitted |
+
+- The value object is created through its constructor, the values given by the name of their property: it can be
+  `readonly`. Its fields follow the naming strategy, and take [type converters](#type-converters).
+- A GraphQL object `null`, or prefixed fields all `null`, give `null`. A selection lacking a field the constructor
+  needs leaves the property not selected, as a [partial entity](query-builder.md#field-selection).
+- Its fields are named by their path: `select('price.amount')`, `where($qb->expr()->gte('total.amount', 100))`
+  (`price: { amount: … }` or `total_amount`). The ordering and the criteria of the repositories, which the dialects
+  give for fields of the entity, name the fields of prefixed value objects only: `findBy(['total.currency' =>
+  'EUR'], ['total.amount' => Direction::Desc])`.
+- It is kept in the second-level cache with its entity, and hydrated as well for a parameter of a
+  [DTO](query-builder.md#dto-results) typed with it, or mapped to one of its fields with `#[MapFrom('price.amount')]`.
+- The schema validation checks its fields, the profiler lists them in the "Entities" tab, and the PHPStan rules accept
+  their paths.
+- An embedded value object holds no relation nor other embedded value object; a filter compares its fields, not the
+  value object as a whole.
