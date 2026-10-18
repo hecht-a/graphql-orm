@@ -8,25 +8,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@master
+        uses: actions/checkout@v5
       - name: setup
-        uses: castor-php/setup-castor@v1.0.0
+        uses: castor-php/setup-castor@v1.1.0
       - name: 'PHP-CS-Fixer check'
         run: 'castor qa:cs:check'
   phpstan:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@master
+        uses: actions/checkout@v5
       - name: setup
-        uses: shivammathur/setup-php@2.36.0
+        uses: shivammathur/setup-php@2.37.2
         with:
           php-version: 8.4
           coverage: none
+      - name: composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+      - name: composer cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-phpstan-${{ hashFiles('composer.json') }}
+          restore-keys: composer-phpstan-
       - name: composer install
         run: composer update --prefer-stable
       - name: setup
-        uses: castor-php/setup-castor@v1.0.0
+        uses: castor-php/setup-castor@v1.1.0
       - name: 'PHPStan check'
         run: 'castor qa:phpstan'
   tests:
@@ -46,12 +55,21 @@ jobs:
             dependencies: lowest
     steps:
       - name: checkout
-        uses: actions/checkout@master
+        uses: actions/checkout@v5
       - name: setup
-        uses: shivammathur/setup-php@2.36.0
+        uses: shivammathur/setup-php@2.37.2
         with:
           php-version: '${{ matrix.php-versions }}'
           coverage: none
+      - name: composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+      - name: composer cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ matrix.php-versions }}-${{ matrix.dependencies }}-${{ hashFiles('composer.json') }}
+          restore-keys: composer-${{ matrix.php-versions }}-${{ matrix.dependencies }}-
       - name: composer install
         run: composer update --prefer-stable ${{ matrix.dependencies == 'lowest' && '--prefer-lowest' || '' }}
       - name: tests
@@ -61,12 +79,21 @@ jobs:
     name: 'integration (Data API Builder, Hasura, PostGraphile)'
     steps:
       - name: checkout
-        uses: actions/checkout@master
+        uses: actions/checkout@v5
       - name: setup
-        uses: shivammathur/setup-php@2.36.0
+        uses: shivammathur/setup-php@2.37.2
         with:
           php-version: 8.4
           coverage: none
+      - name: composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+      - name: composer cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-integration-${{ hashFiles('composer.json') }}
+          restore-keys: composer-integration-
       - name: composer install
         run: composer update --prefer-stable
       - name: start the GraphQL servers
@@ -94,3 +121,21 @@ jobs:
       - name: GraphQL servers logs
         if: failure()
         run: docker compose -f tests/Integration/compose.yaml logs
+  # The site is published from main by the Documentation workflow: building it here tells a broken page before.
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v5
+      - name: setup node
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+      - name: install VitePress
+        run: npm ci
+        working-directory: docs
+      - name: build the site
+        run: npx vitepress build
+        working-directory: docs
