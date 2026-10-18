@@ -64,6 +64,5 @@ services:
             - '5000'
             - --simple-collections
             - both
-            - --disable-default-mutations
         ports:
             - '${GRAPHQL_ORM_POSTGRAPHILE_PORT:-5001}:5000'

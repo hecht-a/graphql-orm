@@ -22,6 +22,11 @@ final readonly class Relation
         /** When the relation is loaded: Fetch::Lazy selects it by its identifier and loads it on first access */
         public Fetch $fetch = Fetch::Eager,
         public bool $ignoreValidation = false,
+        /**
+         * The GraphQL field of the mutations holding the identifier of the related entity (e.g. user_id): flush()
+         * writes a relation through it. A collection is written by the entities it holds.
+         */
+        public ?string $joinField = null,
     ) {
     }
 }

@@ -65,6 +65,24 @@ final class IdentityMap implements ResetInterface
         return $entity instanceof $class && isset($this->complete[$entity]) ? $entity : null;
     }
 
+    /**
+     * Records an entity created by flush(), not known in full: find() still queries it.
+     */
+    public function add(object $entity, int|string $identifier): void
+    {
+        $this->entities[$entity::class][$identifier] ??= $entity;
+    }
+
+    /**
+     * Forgets an entity deleted by flush().
+     */
+    public function remove(object $entity, int|string $identifier): void
+    {
+        if (($this->entities[$entity::class][$identifier] ?? null) === $entity) {
+            unset($this->entities[$entity::class][$identifier], $this->complete[$entity]);
+        }
+    }
+
     public function reset(): void
     {
         $this->entities = [];

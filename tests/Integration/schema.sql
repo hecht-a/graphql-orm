@@ -13,6 +13,14 @@ CREATE TABLE tasks (
     user_id INT NULL REFERENCES users (id)
 );
 
+-- Written by the tests of flush(), which create and delete their own rows: the rows read by the other tests stay.
+CREATE TABLE notes (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    done BOOLEAN NOT NULL DEFAULT FALSE,
+    user_id INT NULL REFERENCES users (id)
+);
+
 -- A text identifier, which Data API Builder cannot count on.
 CREATE TABLE labels (
     code TEXT PRIMARY KEY,

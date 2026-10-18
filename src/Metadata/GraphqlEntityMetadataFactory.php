@@ -114,7 +114,8 @@ final class GraphqlEntityMetadataFactory
             $entity->name,
             $entity->repositoryClass,
             $fields,
-            $identifier
+            $identifier,
+            $entity->type ?? $reflection->getShortName(),
         );
     }
 
@@ -172,6 +173,7 @@ final class GraphqlEntityMetadataFactory
             isCollection: $isCollection,
             ignoreValidation: $attribute->ignoreValidation,
             fetch: $attribute->fetch,
+            joinField: $attribute->joinField,
         );
     }
 

@@ -18,8 +18,10 @@ use GraphqlOrm\Tests\Integration\Dto\TaskSummary;
 use GraphqlOrm\Tests\Integration\Dto\TaskTitle;
 use GraphqlOrm\Tests\Integration\Dto\UserWithTaskTitles;
 use GraphqlOrm\Tests\Integration\IntegrationTestCase;
+use GraphqlOrm\Tests\Integration\PostGraphile\Entity\RelayNote;
 use GraphqlOrm\Tests\Integration\PostGraphile\Entity\RelayTask;
 use GraphqlOrm\Tests\Integration\PostGraphile\Entity\RelayUser;
+use GraphqlOrm\Tests\Integration\WritesEntities;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -30,6 +32,8 @@ use Symfony\Component\Cache\Adapter\ArrayAdapter;
 #[Group('integration')]
 final class PostGraphileTest extends IntegrationTestCase
 {
+    use WritesEntities;
+
     protected static function endpointVariable(): string
     {
         return 'GRAPHQL_ORM_POSTGRAPHILE_ENDPOINT';
@@ -195,5 +199,10 @@ final class PostGraphileTest extends IntegrationTestCase
 
         $this->expectException(LogicException::class);
         $qb->where($qb->expr()->eq('title', 'A'))->getQuery();
+    }
+
+    protected function noteAndUser(): array
+    {
+        return [RelayNote::class, RelayUser::class];
     }
 }

@@ -21,11 +21,13 @@ use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Schema\SchemaValidator;
 use GraphqlOrm\Tests\Integration\Entity\BrokenTask;
 use GraphqlOrm\Tests\Integration\Entity\LazyTask;
+use GraphqlOrm\Tests\Integration\Entity\Note;
 use GraphqlOrm\Tests\Integration\Entity\SnakeCaseTask;
 use GraphqlOrm\Tests\Integration\Entity\Task;
 use GraphqlOrm\Tests\Integration\Entity\User;
 use GraphqlOrm\Tests\Integration\Entity\UserWithLazyTasks;
 use GraphqlOrm\Tests\Integration\IntegrationTestCase;
+use GraphqlOrm\Tests\Integration\WritesEntities;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -33,6 +35,8 @@ use Symfony\Component\Cache\Adapter\ArrayAdapter;
 #[Group('integration')]
 final class HasuraTest extends IntegrationTestCase
 {
+    use WritesEntities;
+
     protected static function endpointVariable(): string
     {
         return 'GRAPHQL_ORM_HASURA_ENDPOINT';
@@ -396,5 +400,10 @@ final class HasuraTest extends IntegrationTestCase
         self::assertSame(['int', false, true, false], $properties['id']);
         self::assertSame(['\DateTimeImmutable', true, false, false], $properties['due_date']);
         self::assertSame(['User', true, false, false], $properties['user']);
+    }
+
+    protected function noteAndUser(): array
+    {
+        return [Note::class, User::class];
     }
 }

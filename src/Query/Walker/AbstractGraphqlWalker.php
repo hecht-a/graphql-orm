@@ -45,7 +45,13 @@ abstract class AbstractGraphqlWalker implements VariableAwareWalkerInterface
         $this->printer->indent();
 
         foreach ($query->fields as $field) {
-            $this->walkRootField($field);
+            // The fields of a mutation answer with one entity, without the envelope of a collection; their values are
+            // inline, the input types the API names them with being unknown.
+            if ($query->operation === 'mutation') {
+                $this->walkField($field);
+            } else {
+                $this->walkRootField($field);
+            }
         }
 
         return $this->operationHeader($query->operation) . " {\n" . $this->printer->get() . "\n}";
@@ -100,14 +106,15 @@ abstract class AbstractGraphqlWalker implements VariableAwareWalkerInterface
     protected function walkField(FieldNode $field, bool $isRoot = false): void
     {
         $args = $isRoot ? $this->formatRootArguments($field->arguments) : $this->formatArguments($field->arguments);
+        $name = ($field->alias !== null ? $this->assertValidName($field->alias) . ': ' : '') . $field->name;
 
         if ($field->selectionSet === null) {
-            $this->printer->line($field->name . $args);
+            $this->printer->line($name . $args);
 
             return;
         }
 
-        $this->printer->line($field->name . $args . ' {');
+        $this->printer->line($name . $args . ' {');
 
         $this->printer->indent();
 

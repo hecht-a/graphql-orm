@@ -468,6 +468,7 @@
                     <span><i class="graphql-orm-swatch graphql-orm-kind-lazy"></i>Lazy load</span>
                     <span><i class="graphql-orm-swatch graphql-orm-kind-count"></i>Aggregate</span>
                     <span><i class="graphql-orm-swatch graphql-orm-kind-introspection"></i>Introspection</span>
+                    <span><i class="graphql-orm-swatch graphql-orm-kind-mutation"></i>Mutation (flush)</span>
                     {% if firstOffset > 0 %}<span><i class="graphql-orm-swatch graphql-orm-timeline-before"></i>Before the first query</span>{% endif %}
                 </p>
             </div>
@@ -965,6 +966,7 @@
         .graphql-orm-origin-lazy { color: var(--highlight-variable, #e36209); }
         .graphql-orm-origin-count { color: var(--color-success, #4f805d); }
         .graphql-orm-origin-introspection { color: var(--color-muted, #737373); }
+        .graphql-orm-origin-mutation { color: #7c3aed; }
         .graphql-orm-timeline-summary { margin: 0 0 8px; }
         .graphql-orm-timeline { display: flex; flex-direction: column; overflow-x: auto; border: 1px solid var(--table-border-color, #d4d4d4); border-radius: 6px; background: var(--page-background, #fff); }
         .graphql-orm-timeline-row { display: grid; grid-template-columns: minmax(180px, 260px) minmax(400px, 1fr) 90px; gap: 12px; align-items: center; padding: 3px 12px; }
@@ -980,6 +982,7 @@
         .graphql-orm-timeline-bar { position: absolute; top: 4px; height: 12px; min-width: 3px; border-radius: 3px; background: var(--color-link, #1d4ed8); }
         .graphql-orm-timeline-bar.graphql-orm-kind-lazy, .graphql-orm-swatch.graphql-orm-kind-lazy { background: var(--highlight-variable, #e36209); }
         .graphql-orm-timeline-bar.graphql-orm-kind-count, .graphql-orm-swatch.graphql-orm-kind-count { background: var(--color-success, #4f805d); }
+        .graphql-orm-timeline-bar.graphql-orm-kind-mutation, .graphql-orm-swatch.graphql-orm-kind-mutation { background: #7c3aed; }
         .graphql-orm-timeline-bar.graphql-orm-kind-introspection, .graphql-orm-swatch.graphql-orm-kind-introspection { background: var(--color-muted, #737373); }
         .graphql-orm-timeline-bar.graphql-orm-fill-slow, .graphql-orm-swatch.graphql-orm-fill-slow { background: var(--color-warning, #785b02); }
         .graphql-orm-timeline-bar.graphql-orm-fill-error, .graphql-orm-swatch.graphql-orm-fill-error { background: var(--color-error, #b41939); }
@@ -1229,7 +1232,7 @@
     {%- endif -%}
 {% endmacro %}
 
-{% macro originKind(origin) %}{{ origin in ['lazy', 'introspection'] ? origin : (origin in ['count', 'sum', 'avg', 'min', 'max'] ? 'count' : 'query') }}{% endmacro %}
+{% macro originKind(origin) %}{{ origin in ['lazy', 'introspection'] ? origin : (origin in ['count', 'sum', 'avg', 'min', 'max'] ? 'count' : (origin == 'flush' ? 'mutation' : 'query')) }}{% endmacro %}
 
 {% macro renderOrigin(query) %}
     {% if query.origin ?? null %}

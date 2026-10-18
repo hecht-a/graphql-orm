@@ -23,6 +23,8 @@ final readonly class GraphqlEntityMetadata
         public ?string $repositoryClass,
         public array $fields,
         public ?GraphqlFieldMetadata $identifier = null,
+        /** The GraphQL type of the entity, naming its mutations, e.g. Task */
+        public string $type = '',
     ) {
     }
 

@@ -8,6 +8,7 @@ use GraphqlOrm\Cache\GraphqlCache;
 use GraphqlOrm\Converter\TypeConverterRegistry;
 use GraphqlOrm\Dialect\DefaultDialect;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
+use GraphqlOrm\Persistence\UnitOfWork;
 use GraphqlOrm\Query\GraphqlQueryTrace;
 
 final class GraphqlExecutionContext
@@ -51,6 +52,13 @@ final class GraphqlExecutionContext
      * @internal set by GraphqlManager
      */
     public ?TypeConverterRegistry $typeConverters = null;
+
+    /**
+     * Told of the fields of the entities hydrated, as the API has them: flush() writes those changed since.
+     *
+     * @internal set by GraphqlManager
+     */
+    public ?UnitOfWork $unitOfWork = null;
 
     /**
      * The entities already kept in the second-level cache by this response, which may hold one several times.

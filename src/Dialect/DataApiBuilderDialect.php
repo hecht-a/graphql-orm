@@ -16,7 +16,7 @@ use GraphqlOrm\Query\Walker\DABGraphqlWalker;
 use GraphqlOrm\Query\Walker\GraphqlWalkerInterface;
 use GraphqlOrm\Schema\CountableFieldResolver;
 
-final class DataApiBuilderDialect implements GraphqlQueryDialect, CursorPaginationDialect, BatchLoadingDialect, CountingDialect, AggregatingDialect
+final class DataApiBuilderDialect implements GraphqlQueryDialect, CursorPaginationDialect, BatchLoadingDialect, CountingDialect, AggregatingDialect, MutationDialect
 {
     /**
      * @param CountableFieldResolver|null $countableFields finds the field to count on when the identifier is no number
@@ -176,5 +176,32 @@ final class DataApiBuilderDialect implements GraphqlQueryDialect, CursorPaginati
         $value = \is_array($group) && \is_array($group['aggregations'] ?? null) ? ($group['aggregations'][$aggregate->value] ?? null) : null;
 
         return $value === null || \is_scalar($value) && !\is_bool($value) ? $value : throw InvalidGraphqlResponseException::expectedArray($group);
+    }
+
+    /**
+     * `createTask(item: { ... }) { id }`.
+     */
+    public function createField(MutationTarget $target, array $values, SelectionSetNode $selection): FieldNode
+    {
+        return new FieldNode('create' . $target->type, ['item' => $values], $selection);
+    }
+
+    /**
+     * `updateTask(id: 3, item: { ... }) { id }`: the primary key is an argument named after its field.
+     */
+    public function updateField(MutationTarget $target, int|string $identifier, array $values, SelectionSetNode $selection): FieldNode
+    {
+        return new FieldNode('update' . $target->type, [$target->identifierField => $identifier, 'item' => $values], $selection);
+    }
+
+    public function deleteField(MutationTarget $target, int|string $identifier, SelectionSetNode $selection): FieldNode
+    {
+        return new FieldNode('delete' . $target->type, [$target->identifierField => $identifier], $selection);
+    }
+
+    public function mutatedRow(MutationTarget $target, mixed $value): ?array
+    {
+        /** @var array<string, mixed>|null */
+        return \is_array($value) ? $value : null;
     }
 }

@@ -21,7 +21,7 @@ use GraphqlOrm\Query\Walker\HasuraGraphqlWalker;
  *
  * Hasura paginates with an offset: `paginate()` needs a `limit()`, the cursor of a page being the offset of the next one.
  */
-final class HasuraDialect implements GraphqlQueryDialect, BatchLoadingDialect, OffsetPaginationDialect, CountingDialect, AggregatingDialect
+final class HasuraDialect implements GraphqlQueryDialect, BatchLoadingDialect, OffsetPaginationDialect, CountingDialect, AggregatingDialect, MutationDialect
 {
     private const OPERATORS = [
         'eq' => '_eq',
@@ -243,5 +243,35 @@ final class HasuraDialect implements GraphqlQueryDialect, BatchLoadingDialect, O
         $value = \is_array($values) ? ($values[$field] ?? null) : throw InvalidGraphqlResponseException::expectedArray($result);
 
         return $value === null || \is_scalar($value) && !\is_bool($value) ? $value : throw InvalidGraphqlResponseException::expectedArray($values);
+    }
+
+    /**
+     * `insert_tasks_one(object: { ... }) { id }`: the mutations are named after the root field of the table.
+     */
+    public function createField(MutationTarget $target, array $values, SelectionSetNode $selection): FieldNode
+    {
+        return new FieldNode('insert_' . $target->root . '_one', ['object' => $values], $selection);
+    }
+
+    /**
+     * `update_tasks_by_pk(pk_columns: { id: 3 }, _set: { ... }) { id }`.
+     */
+    public function updateField(MutationTarget $target, int|string $identifier, array $values, SelectionSetNode $selection): FieldNode
+    {
+        return new FieldNode('update_' . $target->root . '_by_pk', ['pk_columns' => [$target->identifierField => $identifier], '_set' => $values], $selection);
+    }
+
+    public function deleteField(MutationTarget $target, int|string $identifier, SelectionSetNode $selection): FieldNode
+    {
+        return new FieldNode('delete_' . $target->root . '_by_pk', [$target->identifierField => $identifier], $selection);
+    }
+
+    /**
+     * Null when no row has the primary key: Hasura answers without error.
+     */
+    public function mutatedRow(MutationTarget $target, mixed $value): ?array
+    {
+        /** @var array<string, mixed>|null */
+        return \is_array($value) ? $value : null;
     }
 }

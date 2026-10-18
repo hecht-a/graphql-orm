@@ -171,6 +171,8 @@ final class EntityHydrator
      */
     private function markComplete(object $entity, GraphqlEntityMetadata $metadata, array $data, GraphqlExecutionContext $context): object
     {
+        $context->unitOfWork?->hydrated($entity, $metadata, $data);
+
         foreach ($metadata->fields as $field) {
             if (!\array_key_exists($field->mappedFrom, $data)) {
                 return $entity;

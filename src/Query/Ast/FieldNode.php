@@ -14,6 +14,8 @@ final class FieldNode
         public array $arguments = [],
         public ?SelectionSetNode $selectionSet = null,
         public bool $isCollection = false,
+        /** The name of the field in the response, e.g. the alias of each mutation of a document */
+        public ?string $alias = null,
     ) {
     }
 }

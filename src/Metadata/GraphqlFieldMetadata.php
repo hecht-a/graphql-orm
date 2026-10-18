@@ -28,6 +28,8 @@ final readonly class GraphqlFieldMetadata
          * The value object of an #[GraphqlOrm\Embedded] property, whose response key is $mappedFrom once its fields are nested.
          */
         public ?GraphqlEmbeddedMetadata $embedded = null,
+        /** The GraphQL field of the mutations holding the identifier of the related entity, e.g. user_id */
+        public ?string $joinField = null,
     ) {
     }
 }

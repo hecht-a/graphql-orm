@@ -369,6 +369,23 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itTellsTheMutationsOfAFlush(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'mutation { m0: createNote(item: { title: "Note A" }) { id } }';
+        $trace->origin = 'flush';
+        $trace->duration = 900.0;
+        $trace->slowQueryThreshold = 500.0;
+        $collector->addQuery($trace);
+
+        $html = $this->render($collector);
+
+        self::assertStringContainsString('<span class="graphql-orm-origin graphql-orm-origin-mutation">flush</span>', $html);
+        self::assertStringNotContainsString('Select only the fields used', self::text($html));
+    }
+
+    #[Test]
     public function itListsTheQueriesByCaller(): void
     {
         $collector = new GraphqlOrmDataCollector();

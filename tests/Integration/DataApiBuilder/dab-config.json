@@ -78,6 +78,36 @@
                 }
             }
         },
+        "Note": {
+            "source": {
+                "object": "public.notes",
+                "type": "table"
+            },
+            "graphql": {
+                "enabled": true,
+                "type": {
+                    "singular": "Note",
+                    "plural": "notes"
+                }
+            },
+            "rest": {
+                "enabled": false
+            },
+            "permissions": [
+                {
+                    "role": "anonymous",
+                    "actions": [{ "action": "*" }]
+                }
+            ],
+            "relationships": {
+                "author": {
+                    "cardinality": "one",
+                    "target.entity": "User",
+                    "source.fields": ["user_id"],
+                    "target.fields": ["id"]
+                }
+            }
+        },
         "Label": {
             "source": {
                 "object": "public.labels",

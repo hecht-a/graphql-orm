@@ -35,6 +35,7 @@ use GraphqlOrm\Tests\Integration\Entity\BrokenTask;
 use GraphqlOrm\Tests\Integration\Entity\CachedTask;
 use GraphqlOrm\Tests\Integration\Entity\Label;
 use GraphqlOrm\Tests\Integration\Entity\LazyTask;
+use GraphqlOrm\Tests\Integration\Entity\Note;
 use GraphqlOrm\Tests\Integration\Entity\SnakeCaseTask;
 use GraphqlOrm\Tests\Integration\Entity\Task;
 use GraphqlOrm\Tests\Integration\Entity\Title;
@@ -43,6 +44,7 @@ use GraphqlOrm\Tests\Integration\Entity\TitledTask;
 use GraphqlOrm\Tests\Integration\Entity\User;
 use GraphqlOrm\Tests\Integration\Entity\UserWithLazyTasks;
 use GraphqlOrm\Tests\Integration\IntegrationTestCase;
+use GraphqlOrm\Tests\Integration\WritesEntities;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -52,6 +54,8 @@ use Symfony\Component\Console\Tester\CommandTester;
 #[Group('integration')]
 final class DataApiBuilderTest extends IntegrationTestCase
 {
+    use WritesEntities;
+
     protected static function endpointVariable(): string
     {
         return 'GRAPHQL_ORM_DAB_ENDPOINT';
@@ -579,5 +583,10 @@ final class DataApiBuilderTest extends IntegrationTestCase
     private function users(): GraphqlEntityRepository
     {
         return $this->repository(User::class);
+    }
+
+    protected function noteAndUser(): array
+    {
+        return [Note::class, User::class];
     }
 }

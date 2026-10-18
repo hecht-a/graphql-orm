@@ -13,15 +13,19 @@ use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\BatchLoadingDialect;
 use GraphqlOrm\Dialect\DefaultDialect;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
+use GraphqlOrm\Dialect\MutationDialect;
 use GraphqlOrm\Event\QueryExecutedEvent;
 use GraphqlOrm\Event\QueryFailedEvent;
 use GraphqlOrm\Event\QueryStartedEvent;
+use GraphqlOrm\Exception\FlushException;
+use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\Execution\IdentityMap;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Persistence\UnitOfWork;
 use GraphqlOrm\Query\Ast\AstExporter;
 use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\CompiledQuery;
@@ -86,6 +90,8 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
 
     /** @var array<class-string, GraphqlEntityRepository<object>> */
     private array $genericRepositories = [];
+
+    private ?UnitOfWork $unitOfWork = null;
 
     public function __construct(
         private GraphqlEntityMetadataFactory $metadataFactory,
@@ -323,15 +329,73 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
     public function clear(): void
     {
         $this->identityMap?->reset();
+        $this->unitOfWork?->clear();
         $this->referenceContext = null;
     }
 
     /**
-     * Forgets the references waiting to be loaded, between two requests or messages (kernel.reset).
+     * Forgets the references waiting to be loaded and the entities to write, between two requests or messages
+     * (kernel.reset).
      */
     public function reset(): void
     {
+        $this->unitOfWork?->clear();
         $this->referenceContext = null;
+    }
+
+    /**
+     * Makes a new entity written by the next flush(), as Doctrine: created with the mutation of the dialect. An entity
+     * read by a query needs no persist(), its changes being written by flush().
+     *
+     * @throws InvalidArgumentException when the object is no entity
+     */
+    public function persist(object $entity): void
+    {
+        $this->assertManages($entity::class);
+        $this->unitOfWork()->persist($entity);
+    }
+
+    /**
+     * Makes an entity deleted by the next flush(); a new entity is only forgotten.
+     *
+     * @throws InvalidArgumentException when the object is no entity, or one no query read
+     */
+    public function remove(object $entity): void
+    {
+        $this->assertManages($entity::class);
+        $this->unitOfWork()->remove($entity);
+    }
+
+    /**
+     * Writes the entities persisted, changed since a query read them, and removed: one mutation document, and one more
+     * for an entity created whose identifier another needs. Only the fields changed are sent.
+     *
+     * @throws LogicException when the dialect cannot write, or an entity cannot be written
+     * @throws FlushException when a mutation fails: those before were applied
+     */
+    public function flush(): void
+    {
+        $dialect = $this->dialect;
+
+        if (!$dialect instanceof MutationDialect) {
+            if ($this->unitOfWork?->hasWork() === true) {
+                throw new LogicException(\sprintf('"%s" cannot write the entities: flush() needs a dialect implementing %s.', $dialect::class, MutationDialect::class));
+            }
+
+            return;
+        }
+
+        $this->unitOfWork()->flush(
+            $dialect,
+            fn (QueryNode $mutation): array => $this->execute($mutation, static fn (array $response): array => $response),
+            fn (object $entity, int|string $identifier) => $this->identityMap?->add($entity, $identifier),
+            fn (object $entity, int|string $identifier) => $this->identityMap?->remove($entity, $identifier),
+        );
+    }
+
+    private function unitOfWork(): UnitOfWork
+    {
+        return $this->unitOfWork ??= new UnitOfWork($this->metadataFactory, $this->typeConverters);
     }
 
     /**
@@ -348,6 +412,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         $context->lazyLoader = $this->loadLazily(...);
         $context->identityMap = $this->identityMap?->entities() ?? [];
         $context->observer = $this->collector;
+        $context->unitOfWork = $this->unitOfWork();
         $context->typeConverters = $this->typeConverters;
 
         return $this->identityMap !== null ? $this->referenceContext = $context : $context;
@@ -390,6 +455,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         // Always set: a relation mapped with GraphqlOrm\Fetch::Lazy is a lazy ghost even without lazy_loading.
         $context->lazyLoader = $this->loadLazily(...);
         $context->observer = $this->collector;
+        $context->unitOfWork = $this->unitOfWork();
         $context->lazyLoading = $this->lazyLoading;
         $context->entityCache = $this->cache;
         $context->typeConverters = $this->typeConverters;
@@ -719,7 +785,8 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
 
     private function compile(QueryNode $query, QueryOptions $options): CompiledQuery
     {
-        $rootField = \count($query->fields) === 1 ? $query->fields[0]->name : null;
+        // The types of the arguments of the mutations are not introspected: their values are inline.
+        $rootField = \count($query->fields) === 1 && $query->operation === 'query' ? $query->fields[0]->name : null;
         $argumentTypes = $rootField !== null ? $this->argumentTypeResolver?->argumentTypes($rootField) : null;
 
         if ($argumentTypes === null) {

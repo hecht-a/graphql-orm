@@ -6,6 +6,7 @@ namespace GraphqlOrm\Dialect;
 
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\Query\Ast\FieldNode;
+use GraphqlOrm\Query\Ast\SelectionSetNode;
 use GraphqlOrm\Query\Direction;
 use GraphqlOrm\Query\EnumLiteral;
 use GraphqlOrm\Query\Expr\FilterExpressionInterface;
@@ -20,7 +21,7 @@ use GraphqlOrm\Query\Walker\RelayGraphqlWalker;
  * The query builder filters need postgraphile-plugin-connection-filter, which core PostGraphile does not provide: they
  * are rejected. Without a list filter, lazy relations are loaded one query each.
  */
-final class PostGraphileDialect implements GraphqlQueryDialect, CursorPaginationDialect, CountingDialect
+final class PostGraphileDialect implements GraphqlQueryDialect, CursorPaginationDialect, CountingDialect, MutationDialect
 {
     private RelayDialect $relay;
 
@@ -112,5 +113,58 @@ final class PostGraphileDialect implements GraphqlQueryDialect, CursorPagination
     public function readCount(array $data, string $countRoot): int
     {
         return $this->relay->readCount($data, $countRoot);
+    }
+
+    /**
+     * `createTask(input: { task: { ... } }) { task { id } }`: the entity is a field of the payload, named after its type.
+     */
+    public function createField(MutationTarget $target, array $values, SelectionSetNode $selection): FieldNode
+    {
+        return new FieldNode('create' . $target->type, ['input' => [lcfirst($target->type) => $values]], $this->payload($target, $selection));
+    }
+
+    /**
+     * `updateTaskById(input: { id: 3, taskPatch: { ... } }) { task { id } }`: the mutation by the primary key.
+     */
+    public function updateField(MutationTarget $target, int|string $identifier, array $values, SelectionSetNode $selection): FieldNode
+    {
+        return new FieldNode(
+            'update' . $target->type . $this->byIdentifier($target),
+            ['input' => [$target->identifierField => $identifier, lcfirst($target->type) . 'Patch' => $values]],
+            $this->payload($target, $selection),
+        );
+    }
+
+    public function deleteField(MutationTarget $target, int|string $identifier, SelectionSetNode $selection): FieldNode
+    {
+        return new FieldNode(
+            'delete' . $target->type . $this->byIdentifier($target),
+            ['input' => [$target->identifierField => $identifier]],
+            $this->payload($target, $selection),
+        );
+    }
+
+    public function mutatedRow(MutationTarget $target, mixed $value): ?array
+    {
+        $row = \is_array($value) ? $value[lcfirst($target->type)] ?? null : null;
+
+        /** @var array<string, mixed>|null */
+        return \is_array($row) ? $row : null;
+    }
+
+    private function payload(MutationTarget $target, SelectionSetNode $selection): SelectionSetNode
+    {
+        $payload = new SelectionSetNode();
+        $payload->add(new FieldNode(lcfirst($target->type), [], $selection));
+
+        return $payload;
+    }
+
+    /**
+     * `ById` for the field `id`, `ByCode` for `code`: PostGraphile names the mutations by primary key after its field.
+     */
+    private function byIdentifier(MutationTarget $target): string
+    {
+        return 'By' . str_replace(' ', '', ucwords(str_replace('_', ' ', $target->identifierField)));
     }
 }
