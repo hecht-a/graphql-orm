@@ -195,6 +195,28 @@ final class GraphqlCache implements ResetInterface
     }
 
     /**
+     * The region the entities of the class are kept in, null when they are not kept.
+     *
+     * @param class-string $class
+     *
+     * @internal
+     */
+    public function regionName(string $class): ?string
+    {
+        return $this->region($class)[2] ?? null;
+    }
+
+    /**
+     * Whether the second-level cache is enabled: graphql_orm.second_level_cache.enabled.
+     *
+     * @internal
+     */
+    public function keepsEntities(): bool
+    {
+        return $this->entities !== null;
+    }
+
+    /**
      * The rows kept for these identifiers, by identifier: those not kept are left out.
      *
      * @param class-string     $class

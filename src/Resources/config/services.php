@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Doctrine\Persistence\Event\LifecycleEventArgs;
 use GraphqlOrm\Codegen\StubRenderer;
+use GraphqlOrm\Command\CacheWarmupCommand;
 use GraphqlOrm\Command\DebugEntityCommand;
 use GraphqlOrm\Command\EntityClassLocator;
 use GraphqlOrm\Command\FindCommand;
@@ -121,5 +122,8 @@ return static function (ContainerConfigurator $config) {
         ->tag('console.command');
 
     $services->set(QueryCommand::class)
+        ->tag('console.command');
+
+    $services->set(CacheWarmupCommand::class)
         ->tag('console.command');
 };
