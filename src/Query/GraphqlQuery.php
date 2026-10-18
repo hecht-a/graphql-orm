@@ -62,7 +62,8 @@ final readonly class GraphqlQuery
 
     /**
      * Keeps the response in the result cache (graphql_orm.result_cache.pool) and answers from it while it is kept, as
-     * Doctrine Query::enableResultCache(). The response is hydrated again from the cache: the entities are new instances.
+     * Doctrine Query::enableResultCache(). The response is hydrated again from the cache, through the identity map of
+     * the request: an entity it knows already is given as it is, the others are new instances.
      *
      * @param int|null    $lifetime seconds the response is kept, null for the default lifetime of the pool
      * @param string|null $key      the key to evict it with GraphqlCache::evictQueryResult(); derived from the query and
