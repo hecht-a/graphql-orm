@@ -54,9 +54,9 @@ query {
 
 - A nested relation is named by its path, of GraphQL names or PHP properties, whatever `max_depth`: `assignee.company`
   loads `assignee` too.
-- A relation mapped with `Fetch::Lazy` is loaded when named.
-- A relation not named is hydrated as a lazy ghost when it is mapped with `Fetch::Lazy` or `lazy_loading` is enabled,
-  as a [partial entity](#field-selection) otherwise.
+- A relation mapped with `GraphqlOrm\Fetch::Lazy` is loaded when named.
+- A relation not named is hydrated as a lazy ghost when it is mapped with `GraphqlOrm\Fetch::Lazy` or `lazy_loading` is
+  enabled, as a [partial entity](#field-selection) otherwise.
 - Each call adds to the relations of the previous ones. Along with `select()`, the relations named are added to the
   fields selected, with every field of their entity.
 - A name that is not a relation of its entity throws an `InvalidArgumentException`, which suggests the closest field.
@@ -294,8 +294,8 @@ query {
 }
 ```
 
-- Each parameter of the constructor maps the field of its name, PHP property or GraphQL name. `#[MapFrom]` maps another
-  one, or a field of a relation by its path (`assignee.name`), `null` when the relation is.
+- Each parameter of the constructor maps the field of its name, PHP property or GraphQL name. `#[GraphqlOrm\MapFrom]`
+  maps another one, or a field of a relation by its path (`assignee.name`), `null` when the relation is.
 - A parameter typed with a class maps a relation to a nested DTO; an array typed `list<TaskLine>`, in the `@param` of
   the constructor or the `@var` of a promoted property, maps a collection to a list of DTOs:
 

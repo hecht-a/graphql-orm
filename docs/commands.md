@@ -8,9 +8,9 @@ php bin/console graphqlorm:make:entity Task
 
 Launches an interactive wizard that generates:
 
-- An entity class with `#[Entity]`, `#[Field]`, `#[Identifier]` and `#[Relation]` attributes, imported through the
-  `GraphqlOrm` alias of the [entity mapping](entity-mapping.md#define-an-entity):
-  `#[GraphqlOrm\Field(mappedFrom: 'title')]`
+- An entity class with `#[GraphqlOrm\Entity]`, `#[GraphqlOrm\Field]`, `#[GraphqlOrm\Identifier]` and
+  `#[GraphqlOrm\Relation]` attributes, imported through the `GraphqlOrm` alias of the [entity
+  mapping](entity-mapping.md#define-an-entity): `#[GraphqlOrm\Field(mappedFrom: 'title')]`
 - A typed repository class
 
 Supports scalar fields, nullable fields, object relations, and collection relations. Existing entities are suggested
@@ -177,8 +177,8 @@ php bin/console graphqlorm:query '{ tasks(filter: { done: { eq: false } }) { ite
 
 ## Warm up the second-level cache
 
-`graphqlorm:cache:warmup` loads the entities marked `#[Cache]` into the second-level cache, every one or those of an
-entity, page by page: see [caching](caching.md#warming-up).
+`graphqlorm:cache:warmup` loads the entities marked `#[GraphqlOrm\Cache]` into the second-level cache, every one or
+those of an entity, page by page: see [caching](caching.md#warming-up).
 
 ```bash
 php bin/console graphqlorm:cache:warmup Label --manager=main --batch-size=500

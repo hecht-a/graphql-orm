@@ -23,7 +23,7 @@ class TaskRepository extends ServiceGraphqlEntityRepository
 `GraphqlEntityRepository` and taking `GraphqlManager $manager` keeps working, with the default manager.
 
 Declared as a service (autowired, as with the default Symfony configuration) and named in the `repositoryClass` of
-`#[Entity]`, the repository is the one `GraphqlManager::getRepository()` gives, as Doctrine
+`#[GraphqlOrm\Entity]`, the repository is the one `GraphqlManager::getRepository()` gives, as Doctrine
 `EntityManager::getRepository()`; an entity without one gets a generic `GraphqlEntityRepository`:
 
 ```php
@@ -103,8 +103,8 @@ with Doctrine (`findBy(['id' => [1, 3]])`, an empty list matching nothing); the 
 `RelayDialect` sends them as `DefaultDialect` does. A list is sent as `in` (Data API Builder) or `_in` (Hasura);
 PostGraphile conditions matching a single value, a list throws a `LogicException` there.
 
-`find()` requires an identifier (`#[Identifier]`) and throws a `LogicException` otherwise. An ordering must be a
-`Direction`, an `InvalidArgumentException` telling otherwise. Ordering is supported by neither `DefaultDialect` nor
+`find()` requires an identifier (`#[GraphqlOrm\Identifier]`) and throws a `LogicException` otherwise. An ordering must
+be a `Direction`, an `InvalidArgumentException` telling otherwise. Ordering is supported by neither `DefaultDialect` nor
 `RelayDialect` (see [dialects](dialects.md)). Use the query builder for anything other than equalities.
 
 ## Counting

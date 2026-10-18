@@ -4,8 +4,8 @@ Within a request, the [shared identity map](configuration.md#shared-identity-map
 query. Between requests, two caches keep data of the API, as with Doctrine:
 
 - the **result cache** keeps the response of a query that asks for it;
-- the **second-level cache** keeps the entities marked `#[Cache]`, read back by `find()`, the references and the lazy
-  loads.
+- the **second-level cache** keeps the entities marked `#[GraphqlOrm\Cache]`, read back by `find()`, the references and
+  the lazy loads.
 
 Both store in Symfony cache pools: any adapter works, Redis, APCu or the filesystem.
 
@@ -25,7 +25,7 @@ graphql_orm:
     result_cache:
         pool: cache.graphql         # default: cache.app; null disables the result cache
     second_level_cache:
-        enabled: true               # default: false, #[Cache] is then ignored
+        enabled: true               # default: false, #[GraphqlOrm\Cache] is then ignored
         pool: cache.app             # the entities without region
         default_lifetime: 3600      # seconds
         regions:
@@ -70,11 +70,11 @@ class Label
 }
 ```
 
-The second-level cache is disabled by default, as in Doctrine: `#[Cache]` is ignored until
+The second-level cache is disabled by default, as in Doctrine: `#[GraphqlOrm\Cache]` is ignored until
 `graphql_orm.second_level_cache.enabled` is true.
 
-An entity marked `#[Cache]` is kept when a query hydrates it **in full** (every mapped field selected): a partial entity
-is not. It is then read from the cache by:
+An entity marked `#[GraphqlOrm\Cache]` is kept when a query hydrates it **in full** (every mapped field selected): a
+partial entity is not. It is then read from the cache by:
 
 - `find()`, after the identity map of the request;
 - the references (`getReference()`, `#[GraphqlReference]` of Doctrine entities) and the lazy loads
@@ -92,11 +92,11 @@ The queries of `findBy()`, `findAll()` or the query builder are still sent: cach
 
 ### Warming up
 
-`graphqlorm:cache:warmup` loads the entities marked `#[Cache]` from the API, so that the first requests after a
-deployment or a clear read them from the cache:
+`graphqlorm:cache:warmup` loads the entities marked `#[GraphqlOrm\Cache]` from the API, so that the first requests after
+a deployment or a clear read them from the cache:
 
 ```bash
-php bin/console graphqlorm:cache:warmup                  # every entity marked #[Cache], of every manager
+php bin/console graphqlorm:cache:warmup                  # every entity marked #[GraphqlOrm\Cache], of every manager
 php bin/console graphqlorm:cache:warmup Label            # one entity (short name or FQCN)
 php bin/console graphqlorm:cache:warmup --manager=crm --batch-size=500
 ```
@@ -114,8 +114,8 @@ php bin/console graphqlorm:cache:warmup --manager=crm --batch-size=500
 The entities are loaded page by page, `--batch-size` (100 by default) a query, with the memory of a single page; with a
 dialect that cannot paginate, they are loaded by one query, which the command tells. "Kept" counts those now in the
 cache: an entity hydrated in part, or whose relation has no identifier, is not kept. Naming an entity not marked
-`#[Cache]`, or of a manager whose second-level cache is disabled, fails the command; without an entity named, the
-command only warns when no entity is kept in the second-level cache.
+`#[GraphqlOrm\Cache]`, or of a manager whose second-level cache is disabled, fails the command; without an entity named,
+the command only warns when no entity is kept in the second-level cache.
 
 ## Eviction
 
@@ -144,14 +144,14 @@ request. A result kept by the result cache is not evicted with its entities.
 php bin/console graphqlorm:cache:clear                      # the results and the entities, of every manager
 php bin/console graphqlorm:cache:clear --results            # every result
 php bin/console graphqlorm:cache:clear --key=tasks.open     # the result kept under this key
-php bin/console graphqlorm:cache:clear --entities           # the entities of every class marked #[Cache]
+php bin/console graphqlorm:cache:clear --entities           # the entities of every class marked #[GraphqlOrm\Cache]
 php bin/console graphqlorm:cache:clear --class=Label        # the entities of a class
 php bin/console graphqlorm:cache:clear --manager=crm        # the caches of one manager
 ```
 
 `graphqlorm:cache:stats` describes the caches of each manager, without reading their values: the pool, adapter and
-lifetime of the result cache and of each region, the entities marked `#[Cache]` with their region and lifetime, and
-how many times the results and the entities of each class were evicted.
+lifetime of the result cache and of each region, the entities marked `#[GraphqlOrm\Cache]` with their region and
+lifetime, and how many times the results and the entities of each class were evicted.
 
 ```
 Manager "main"
@@ -178,4 +178,4 @@ The toolbar gives the hits of each cache and the adapter of its pools, e.g. `Res
 queries sent to the API. The "Cache" tab of the [profiler](profiler.md) tells where each cache lives (pool,
 adapter, lifetime), what it cost (values read and written, time, size), which entities it served and why, the queries
 it added (relations of entities read from it, loaded on first access), and the evictions with the line calling them.
-It warns when `#[Cache]` is ignored, or when a pool is an `ArrayAdapter`.
+It warns when `#[GraphqlOrm\Cache]` is ignored, or when a pool is an `ArrayAdapter`.

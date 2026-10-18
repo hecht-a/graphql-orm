@@ -114,9 +114,9 @@ query {
 | `andX`, `orX`                                      | `_and`, `_or`                    |
 | `notIn`                                            | `_and` of `_neq`                 |
 
-`%` and `_` in a searched value are escaped, so they match literally. `findBy()` criteria are sent in `where` as
-`_eq` (`_is_null` for `null`, `_in` for a list). Hasura paginates with an offset: `paginate()` needs a `limit()`, and the cursor of a page
-is the offset of the next one (see [pagination](pagination.md)).
+`%` and `_` in a searched value are escaped, so they match literally. `findBy()` criteria are sent in `where` as `_eq`
+(`_is_null` for `null`, `_in` for a list). Hasura paginates with an offset: `paginate()` needs a `limit()`, and the
+cursor of a page is the offset of the next one (see [pagination](pagination.md)).
 
 ## PostGraphile dialect
 

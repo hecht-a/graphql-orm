@@ -22,13 +22,13 @@ For each request, the panel shows:
   in red, a slow query in yellow). Filter them by status (all, slow, errors), or search their text. A query in error is
   shown open.
 - **The entities**: those of the mapping directory and those read by the queries of the request (first), as the bundle
-  maps them: root field, identifier, repository, and for each property its GraphQL field, the target of a relation
-  (`[]` for a collection) or its embedded value object, its fetch mode and its
-  [type converter](entity-mapping.md#type-converters), named by its `#[Field]` or found by type. An entity whose
+  maps them: root field, identifier, repository, and for each property its GraphQL field, the target of a relation (`[]`
+  for a collection) or its embedded value object, its fetch mode and its [type
+  converter](entity-mapping.md#type-converters), named by its `#[GraphqlOrm\Field]` or found by type. An entity whose
   mapping fails shows the error.
-- **The lazy loading**: the entities left to be loaded on first access (`Fetch::Lazy`, `lazy_loading`, the references
-  of Doctrine entities), by relation: how many, how many were loaded and by which queries, how many were never read and
-  so cost no query.
+- **The lazy loading**: the entities left to be loaded on first access (`GraphqlOrm\Fetch::Lazy`, `lazy_loading`, the
+  references of Doctrine entities), by relation: how many, how many were loaded and by which queries, how many were
+  never read and so cost no query.
 - **The partial entities**: the entities hydrated from a [selection of their fields](query-builder.md#field-selection),
   by class and fields not selected: how many, by which queries, and how many `PartialEntityException` were thrown, for
   which properties (in warning on the tab).
@@ -45,9 +45,9 @@ For each request, the panel shows:
     the queries the cache adds;
   - the evictions, with the line calling them, and a link to the Cache panel of Symfony.
 
-  A warning tops the panel when `#[Cache]` is ignored (second-level cache disabled) or when a pool is an `ArrayAdapter`,
-  whose values do not outlive the process. The panel is shown for a request reading only the second-level cache, or
-  only evicting, without a query.
+  A warning tops the panel when `#[GraphqlOrm\Cache]` is ignored (second-level cache disabled) or when a pool is an
+  `ArrayAdapter`, whose values do not outlive the process. The panel is shown for a request reading only the
+  second-level cache, or only evicting, without a query.
 - **The autocomplete searches** answered by the bundle (see [forms](forms.md)): entity, fields searched, text typed
   (masked unless `redact_query_values` is false), results and limit. Their queries have the origin `autocomplete`.
 - **The serializer**: the relations written as identifiers and the partial entities written by
@@ -115,15 +115,15 @@ profiler. The values are those shown by the profiler, masked by default: to repl
 
 A loop sending one query per entity is the classic N+1 problem. The "N+1 & repeated" tab of the panel shows two cases.
 
-**A relation loaded on first access** (`Fetch::Lazy`, or `lazy_loading`) 3 times or more, one query each: the panel
-names the relation, such as `Task::$assignee`, with its queries, their total duration and the lines reading it. Select
-the relation with the entities holding it (raise `max_depth`, or select its fields with the query builder). A dialect
-implementing `BatchLoadingDialect` loads the relations met in a same response with one query.
+**A relation loaded on first access** (`GraphqlOrm\Fetch::Lazy`, or `lazy_loading`) 3 times or more, one query each: the
+panel names the relation, such as `Task::$assignee`, with its queries, their total duration and the lines reading it.
+Select the relation with the entities holding it (raise `max_depth`, or select its fields with the query builder). A
+dialect implementing `BatchLoadingDialect` loads the relations met in a same response with one query.
 
 **Repeated queries**, such as a `find()` in a `foreach`: the panel groups the queries whose shape is the same once their
 values are masked, and lists those sent 3 times or more, with links opening them. When they are all a `find()` of the
-same entity, the panel suggests the query replacing them, e.g. `$repository->findBy(['id' => [/* the 8 identifiers */]])`
-(the values stay masked):
+same entity, the panel suggests the query replacing them, e.g. `$repository->findBy(['id' => [/* the 8 identifiers
+*/]])` (the values stay masked):
 
 | Sent    | Queries         | Query, values masked                      |
 |---------|-----------------|-------------------------------------------|

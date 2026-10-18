@@ -71,12 +71,12 @@ $builder->add('client', GraphqlEntityType::class, [
 ]);
 ```
 
-The field sends what the user types to the endpoint of the bundle (`/_graphql_orm/autocomplete`), which answers with
-the first entities whose `search_fields` contain it, as many as the `max_results` option of UX Autocomplete (10 by
-default, 20 when the option is not given, 100 at most); typing more narrows the results, which are not paginated. Only the selected entity is loaded to
-render or submit the form (`choice_lazy` is on). The search queries every entity of the class, without the
-`query_builder` restriction, and labels the results with `choice_label` when it is a property path, with
-`__toString()` or the identifier otherwise.
+The field sends what the user types to the endpoint of the bundle (`/_graphql_orm/autocomplete`), which answers with the
+first entities whose `search_fields` contain it, as many as the `max_results` option of UX Autocomplete (10 by default,
+20 when the option is not given, 100 at most); typing more narrows the results, which are not paginated. Only the
+selected entity is loaded to render or submit the form (`choice_lazy` is on). The search queries every entity of the
+class, without the `query_builder` restriction, and labels the results with `choice_label` when it is a property path,
+with `__toString()` or the identifier otherwise.
 
 The URL of the search is signed with the `UriSigner` of FrameworkBundle: the endpoint only queries the entity, the
 fields and the label a form of the application asked for. Restrict the endpoint as the pages using it are, e.g. with an

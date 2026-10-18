@@ -91,8 +91,8 @@ class Task
 
 - The method must be **public** and take **no arguments**: a method that is not public is ignored
 - Multiple `#[AfterHydrate]` methods are supported — all are called
-- **Skipped** if any mapped property (`#[Field]`, `#[Relation]`, `#[Embedded]`) is not initialized — this happens on
-  partial hydration (e.g. a nested relation with only a subset of fields selected)
+- **Skipped** if any mapped property (`#[GraphqlOrm\Field]`, `#[GraphqlOrm\Relation]`, `#[GraphqlOrm\Embedded]`) is not
+  initialized — this happens on partial hydration (e.g. a nested relation with only a subset of fields selected)
 - Run later, once the missing fields are assigned: when the entity is met again in a row holding them, or when a
   lazy ghost is loaded
 - Virtual fields (no mapping attribute) are ignored in this check — they are meant to be set by the hook — and so

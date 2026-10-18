@@ -3,13 +3,14 @@
 With `symfony/serializer` installed, the bundle registers `GraphqlEntityNormalizer`. It writes the entities whose fields
 are not all loaded **without loading them**:
 
-- a relation loaded on first access (`Fetch::Lazy`, or `lazy_loading`) and not read yet is written as its identifier;
+- a relation loaded on first access (`GraphqlOrm\Fetch::Lazy`, or `lazy_loading`) and not read yet is written as its
+  identifier;
 - a partial entity, hydrated from a [selection of its fields](query-builder.md#field-selection), is written with its
   selected fields only, the others left out even when they have a default value: `"done": false` would contradict the
   API for a task that is done.
 
 ```php
-$tasks = $taskRepository->findAll(); // Task::$assignee mapped with Fetch::Lazy
+$tasks = $taskRepository->findAll(); // Task::$assignee mapped with GraphqlOrm\Fetch::Lazy
 
 return $this->json($tasks);
 // [{"id": 1, "title": "Write the docs", "assignee": {"id": 7}}, ...]: no query for the assignees

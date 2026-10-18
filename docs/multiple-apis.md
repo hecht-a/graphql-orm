@@ -52,8 +52,8 @@ nothing.
 
 An entity belongs to the manager:
 
-1. its `#[Entity]` names, e.g. `#[GraphqlOrm\Entity(name: 'contacts', manager: 'crm')]`, for an entity outside the
-   namespace of its manager (a manager that does not exist throws an `InvalidArgumentException`);
+1. its `#[GraphqlOrm\Entity]` names, e.g. `#[GraphqlOrm\Entity(name: 'contacts', manager: 'crm')]`, for an entity
+   outside the namespace of its manager (a manager that does not exist throws an `InvalidArgumentException`);
 2. otherwise, whose `mapping.entity.namespace` holds it (the most precise when they nest);
 3. otherwise, the default manager.
 

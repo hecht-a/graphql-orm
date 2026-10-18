@@ -63,9 +63,9 @@ graphql_orm:
 | `headers`                         | `[]`                     | HTTP headers sent with every request; those of a manager are added to those of the root |
 | `naming_strategy`                 | `DefaultNamingStrategy`  | Service id of the `NamingStrategy` naming the fields without `mappedFrom` (see [naming strategy](entity-mapping.md#naming-strategy)) |
 | `result_cache.pool`               | `cache.app`              | Cache pool of the [result cache](caching.md#result-cache); `null` disables it |
-| `second_level_cache.enabled`      | `false`                  | Keep the entities marked `#[Cache]` (see [second-level cache](caching.md#second-level-cache)); ignored until enabled |
+| `second_level_cache.enabled`      | `false`                  | Keep the entities marked `#[GraphqlOrm\Cache]` (see [second-level cache](caching.md#second-level-cache)); ignored until enabled |
 | `second_level_cache.pool`         | `cache.app`              | Cache pool of the entities without region |
-| `second_level_cache.default_lifetime` | `3600`               | Seconds an entity is kept, unless its region or `#[Cache]` says otherwise |
+| `second_level_cache.default_lifetime` | `3600`               | Seconds an entity is kept, unless its region or `#[GraphqlOrm\Cache]` says otherwise |
 | `second_level_cache.regions`      | `[]`                     | Regions by name, each with a `pool` and a `lifetime` (see [choosing the pools](caching.md#choosing-the-pools)) |
 | `metadata_cache_pool`             | `cache.system`           | Cache pool for entity metadata outside debug mode (see [metadata cache](#metadata-cache)); `null` disables it |
 | `headers_provider`                | `null`                   | Service id computing headers per request (see [dynamic headers](#dynamic-headers)) |

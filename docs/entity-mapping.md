@@ -26,7 +26,7 @@ class Task
 The attributes are imported through a namespace alias, as with Doctrine `use Doctrine\ORM\Mapping as ORM;`: a class
 mapped with Doctrine too can hold both `Entity` attributes.
 
-## `#[Entity]`
+## `#[GraphqlOrm\Entity]`
 
 | Parameter         | Type                 | Description                                  |
 |-------------------|----------------------|----------------------------------------------|
@@ -36,7 +36,7 @@ mapped with Doctrine too can hold both `Entity` attributes.
 
 `#[GraphqlOrm\Cache]` on the class keeps its entities in the [second-level cache](caching.md#second-level-cache).
 
-## `#[Field]`
+## `#[GraphqlOrm\Field]`
 
 A field holding a value: a scalar, a date, an enum, or a value object given by a [type converter](#type-converters).
 
@@ -46,11 +46,12 @@ A field holding a value: a scalar, a date, an enum, or a value object given by a
 | `ignoreValidation` | `bool`               | Ignore the schema validation                           |
 | `converter`        | `class-string\|null` | The [type converter](#type-converters) of the value, rather than the one of the type of the property |
 
-## `#[Identifier]`
+## `#[GraphqlOrm\Identifier]`
 
-Marks the field identifying the entity, declared with `#[Field]`, as Doctrine `#[Id]`. `find()`, the identity
+Marks the field identifying the entity, declared with `#[GraphqlOrm\Field]`, as Doctrine `#[Id]`. `find()`, the identity
 map, the lazy relations and the form type need it. An entity has one at most: a second one throws a
-`TooManyIdentifiersException`, and `#[Identifier]` without `#[Field]` an `InvalidArgumentException`.
+`TooManyIdentifiersException`, and `#[GraphqlOrm\Identifier]` without `#[GraphqlOrm\Field]` an
+`InvalidArgumentException`.
 
 ```php
 #[GraphqlOrm\Field(mappedFrom: 'id')]
@@ -58,20 +59,20 @@ map, the lazy relations and the form type need it. An entity has one at most: a 
 public int $id;
 ```
 
-## `#[Relation]`
+## `#[GraphqlOrm\Relation]`
 
 A relation to another entity, or a collection of them, as Doctrine `#[ManyToOne]` and `#[OneToMany]`: it replaces
-`#[Field]` on the property.
+`#[GraphqlOrm\Field]` on the property.
 
 | Parameter          | Type                 | Description                                            |
 |--------------------|----------------------|--------------------------------------------------------|
 | `mappedFrom`       | `string\|null`       | Field name in the GraphQL schema; named by the [naming strategy](#naming-strategy) when omitted |
 | `targetEntity`     | `class-string\|null` | The related entity, when the type of the property does not tell it |
-| `fetch`            | `Fetch`              | `Fetch::Eager` (default) or `Fetch::Lazy`, see [lazy relations](#lazy-relations) |
+| `fetch`            | `Fetch`              | `GraphqlOrm\Fetch::Eager` (default) or `GraphqlOrm\Fetch::Lazy`, see [lazy relations](#lazy-relations) |
 | `ignoreValidation` | `bool`               | Ignore the schema validation                           |
 
-A property mapped with both `#[Field]` and `#[Relation]`, a `#[Relation]` whose type is no entity, or a `#[Field]`
-holding an entity, throws an `InvalidArgumentException`.
+A property mapped with both `#[GraphqlOrm\Field]` and `#[GraphqlOrm\Relation]`, a `#[GraphqlOrm\Relation]` whose type is
+no entity, or a `#[GraphqlOrm\Field]` holding an entity, throws an `InvalidArgumentException`.
 
 ## Lazy relations
 
@@ -173,11 +174,11 @@ public Collection $tasks;
 $project->tasks->filter(fn (Task $task) => !$task->done)->count();
 ```
 
-It works with `Fetch::Lazy` as an array does, and the [serializer](serializer.md) writes it as a list. The results of
-`findBy()` and of the query builder stay arrays, as with Doctrine.
+It works with `GraphqlOrm\Fetch::Lazy` as an array does, and the [serializer](serializer.md) writes it as a list. The
+results of `findBy()` and of the query builder stay arrays, as with Doctrine.
 
-An `array` mapped with `#[Field]` is a plain array (e.g. a list of scalars such as `/** @var string[] */`). An
-untyped property is hydrated with the raw value.
+An `array` mapped with `#[GraphqlOrm\Field]` is a plain array (e.g. a list of scalars such as `/** @var string[] */`).
+An untyped property is hydrated with the raw value.
 
 ## Upgrading from the mapping of 4.8
 
@@ -228,7 +229,7 @@ final class MoneyConverter implements TypeConverterInterface
 ```
 
 In Symfony, a service implementing `TypeConverterInterface` is registered by autoconfiguration, and every manager uses
-it. Each property typed with its class is then converted, unless its `#[Field]` names another converter:
+it. Each property typed with its class is then converted, unless its `#[GraphqlOrm\Field]` names another converter:
 
 ```php
 #[GraphqlOrm\Field]
@@ -248,8 +249,8 @@ public ?Money $discount = null;       // a Float of the API, as 12.5
 - `#[AsTypeConverter(Money::class, scalars: ['Int'])]` tells the GraphQL scalars the converter reads and writes: the
   [schema validation](schema-validation.md) checks the fields it converts use one of them. It reports as well a
   property typed with a value object that no converter converts.
-- A converter named by `#[Field]` without dependencies needs no registration; one needing arguments must be a service,
-  or an `InvalidArgumentException` is thrown when it is used.
+- A converter named by `#[GraphqlOrm\Field]` without dependencies needs no registration; one needing arguments must be a
+  service, or an `InvalidArgumentException` is thrown when it is used.
 - A converter receives the value of one field: a value object spread over several fields (an amount and its currency)
   is an [embedded value object](#embedded-value-objects).
 - Without Symfony, the converters are given to the manager: `new GraphqlManager(..., typeConverters: new
@@ -257,8 +258,9 @@ public ?Money $discount = null;       // a Float of the API, as 12.5
 
 ## Embedded value objects
 
-A value object spread over several fields, as the embeddables of Doctrine: the class is marked `#[Embeddable]`, its
-fields mapped with `#[Field]`, and the property holding it with `#[Embedded]`.
+A value object spread over several fields, as the embeddables of Doctrine: the class is marked
+`#[GraphqlOrm\Embeddable]`, its fields mapped with `#[GraphqlOrm\Field]`, and the property holding it with
+`#[GraphqlOrm\Embedded]`.
 
 ```php
 use GraphqlOrm\Mapping as GraphqlOrm;
@@ -286,7 +288,7 @@ class Order
 }
 ```
 
-| `#[Embedded]` | Description |
+| `#[GraphqlOrm\Embedded]` | Description |
 |---------------|-------------|
 | `mappedFrom`  | GraphQL name of the object; named by the [naming strategy](#naming-strategy) when omitted |
 | `prefix`      | the prefix of the fields of the entity holding the value object; a GraphQL object when omitted |
@@ -306,5 +308,5 @@ class Order
   their paths.
 - An embedded value object holds no relation nor other embedded value object; a filter compares its fields, not the
   value object as a whole.
-- `#[Embedded]` with `#[Field]`, `#[Relation]` or `#[Identifier]`, or on a property whose class has no `#[Embeddable]`,
-  throws an `InvalidArgumentException`.
+- `#[GraphqlOrm\Embedded]` with `#[GraphqlOrm\Field]`, `#[GraphqlOrm\Relation]` or `#[GraphqlOrm\Identifier]`, or on a
+  property whose class has no `#[GraphqlOrm\Embeddable]`, throws an `InvalidArgumentException`.
