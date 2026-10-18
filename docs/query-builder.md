@@ -238,6 +238,71 @@ Keys are GraphQL field names and values are not converted (no enums nor dates). 
 dialect, such as the `items` of Data API Builder, are removed, nested collections included. A paginated query returns
 the rows of the requested page.
 
+## DTO results
+
+`hydrateAs()` hydrates the result as read-only objects created through their constructor, rather than entities, as
+`NEW` in Doctrine DQL. The query selects the fields of the DTO only:
+
+```php
+use GraphqlOrm\Mapping\MapFrom;
+
+final readonly class TaskSummary
+{
+    public function __construct(
+        public int $id,
+        public string $title,
+        public ?\DateTimeImmutable $dueDate,
+        #[MapFrom('assignee.name')]
+        public ?string $assigneeName = null,
+    ) {
+    }
+}
+
+$qb = $repository->createQueryBuilder();
+$summaries = $qb
+    ->where($qb->expr()->eq('done', false))
+    ->hydrateAs(TaskSummary::class)
+    ->getQuery()
+    ->getResult(); // list<TaskSummary>
+```
+
+```graphql
+query {
+  tasks(filter: { done: { eq: false } }) {
+    items { id title due_date assignee { name id } }
+  }
+}
+```
+
+- Each parameter of the constructor maps the field of its name, PHP property or GraphQL name. `#[MapFrom]` maps another
+  one, or a field of a relation by its path (`assignee.name`), `null` when the relation is.
+- A parameter typed with a class maps a relation to a nested DTO; an array typed `list<TaskLine>`, in the `@param` of
+  the constructor or the `@var` of a promoted property, maps a collection to a list of DTOs:
+
+  ```php
+  final readonly class UserCard
+  {
+      /**
+       * @param list<TaskLine> $tasks
+       */
+      public function __construct(
+          public string $name,
+          public ?CompanyRef $company,
+          public array $tasks = [],
+      ) {
+      }
+  }
+  ```
+
+- The values are converted as for an entity: dates, backed enums, scalars. A missing or null value takes the default
+  value of its parameter, or `null` when the parameter allows it; otherwise a `CastException` names the parameter.
+- The DTOs are not entities: neither identity map, nor second-level cache, nor lazy loading, nor partial entities.
+- `getResult()`, `getOneOrNullResult()`, `getSingleResult()`, `paginate()`, `toIterable()`, `indexBy()` (on a field of
+  the entity, selected if the DTO does not map it) and the result cache work as with entities. `select()` and `with()`
+  cannot be used with it: the DTO tells the fields.
+- A parameter mapping no field of the entity, or a relation without a class to hydrate, throws an
+  `InvalidArgumentException` when `hydrateAs()` is called, suggesting the closest field.
+
 ## Inspecting the generated query
 
 ```php

@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `graphqlorm:query` sends a raw GraphQL query to the API of a manager (`--manager`), with its variables
   (`--variables='{"id": 1}'`) or from the standard input, and prints the JSON response. A response holding errors fails
   the command; the query is logged and profiled, its values masked there as any other.
+- `hydrateAs()` on the query builder hydrates the result as read-only DTOs, created through their constructor, rather
+  than entities: the query selects their fields only. A parameter maps the field of its name, or another one with
+  `#[MapFrom('assignee.name')]`; one typed with a class maps a relation to a nested DTO, an array typed `list<Dto>` a
+  collection. Neither identity map nor second-level cache; pagination, `indexBy()` and the result cache work as with
+  entities.
 
 ## [5.6.0] — 2026-10-16
 
