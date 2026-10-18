@@ -5,10 +5,48 @@ declare(strict_types=1);
 // Keeps the current working directory behaviour, and silences the Castor 1.8 deprecation asking to choose it.
 defined('CASTOR_USE_CHDIR') || define('CASTOR_USE_CHDIR', false);
 
+use Castor\Attribute\AsOption;
 use Castor\Attribute\AsTask;
 
+use function Castor\context;
+use function Castor\io;
 use function Castor\PHPQa\php_cs_fixer;
 use function Castor\PHPQa\phpstan;
+use function Castor\run;
+
+/** The PHP versions the bundle supports, each one tested in a container of .docker/qa. */
+const QA_PHP_VERSIONS = ['8.4', '8.5'];
+
+/** The compose project of the GraphQL servers of the integration tests. */
+const INTEGRATION_PROJECT = 'graphql-orm-it';
+
+/** The endpoint of each server, reached by the tests from the network of the compose project. */
+const INTEGRATION_ENDPOINTS = [
+    'dab' => ['GRAPHQL_ORM_DAB_ENDPOINT', 'http://dab:5000/graphql'],
+    'hasura' => ['GRAPHQL_ORM_HASURA_ENDPOINT', 'http://hasura:8080/v1/graphql'],
+    'postgraphile' => ['GRAPHQL_ORM_POSTGRAPHILE_ENDPOINT', 'http://postgraphile:5000/graphql'],
+];
+
+/** Seconds the servers are given to answer a query once started. */
+const INTEGRATION_READY_TIMEOUT = 180;
+
+/**
+ * Polls each endpoint given as argument with a GraphQL query until it answers, or the timeout.
+ */
+const INTEGRATION_WAIT_SCRIPT = <<<'PHP'
+    $deadline = time() + %TIMEOUT%;
+    foreach (array_slice($argv, 1) as $endpoint) {
+        $context = stream_context_create(['http' => ['method' => 'POST', 'header' => 'Content-Type: application/json', 'content' => '{"query":"{ __typename }"}', 'timeout' => 5, 'ignore_errors' => true]]);
+        while (!str_contains((string) @file_get_contents($endpoint, false, $context), '__typename')) {
+            if (time() > $deadline) {
+                fwrite(STDERR, "$endpoint does not answer\n");
+                exit(1);
+            }
+            sleep(2);
+        }
+        echo "$endpoint answers\n";
+    }
+    PHP;
 
 #[AsTask('cs:check', namespace: 'qa', description: 'Check for coding standards without fixing them')]
 function qa_cs_check()
@@ -37,4 +75,138 @@ function qa_phpstan(bool $generateBaseline = false)
     }
 
     phpstan($params, '2.2.16');
+}
+
+#[AsTask('tests', namespace: 'qa', description: 'Run the unit tests with every supported PHP version, in containers', aliases: ['tests'])]
+function qa_tests(
+    #[AsOption(description: 'One PHP version, 8.4 or 8.5; every supported one when omitted')]
+    ?string $php = null,
+    #[AsOption(description: 'Only the tests matching this PHPUnit filter')]
+    ?string $filter = null,
+): int {
+    $failed = [];
+
+    foreach ($php !== null ? [$php] : QA_PHP_VERSIONS as $version) {
+        io()->section(sprintf('Unit tests with PHP %s', $version));
+
+        if (!qa_run($version, ['vendor/bin/phpunit', ...($filter !== null ? ['--filter', $filter] : [])])) {
+            $failed[] = $version;
+        }
+    }
+
+    if ($failed !== []) {
+        io()->error(sprintf('The unit tests fail with PHP %s.', implode(' and ', $failed)));
+
+        return 1;
+    }
+
+    return 0;
+}
+
+#[AsTask('integration', namespace: 'qa', description: 'Run the integration tests against the GraphQL servers of tests/Integration, in containers')]
+function qa_integration(
+    #[AsOption(description: 'The PHP version of the tests')]
+    string $php = '8.5',
+    #[AsOption(description: 'Leave the servers running afterwards')]
+    bool $keep = false,
+): int {
+    // The Hasura engine does not start emulated on Apple Silicon: the CI runs its tests.
+    $servers = in_array(php_uname('m'), ['arm64', 'aarch64'], true) ? ['dab', 'postgraphile'] : array_keys(INTEGRATION_ENDPOINTS);
+
+    if (!in_array('hasura', $servers, true)) {
+        io()->note('Hasura is left out on an ARM host, where its engine does not start emulated: the CI runs its tests.');
+    }
+
+    // No port published: the tests reach the servers on the network of the project, whatever the host already uses.
+    $compose = ['docker', 'compose', '-p', INTEGRATION_PROJECT, '-f', __DIR__ . '/tests/Integration/compose.yaml'];
+    $ports = context()->withEnvironment(['GRAPHQL_ORM_DAB_PORT' => '0', 'GRAPHQL_ORM_HASURA_PORT' => '0', 'GRAPHQL_ORM_POSTGRAPHILE_PORT' => '0']);
+    $network = INTEGRATION_PROJECT . '_default';
+    $environment = [];
+
+    foreach ($servers as $server) {
+        [$variable, $endpoint] = INTEGRATION_ENDPOINTS[$server];
+        $environment[$variable] = $endpoint;
+    }
+
+    io()->section('Starting the GraphQL servers');
+    run([...$compose, 'up', '--detach', 'database', ...$servers], context: $ports->withTimeout(null));
+
+    try {
+        io()->section('Waiting for the servers to answer');
+
+        if (!qa_run($php, ['php', '-r', INTEGRATION_WAIT_SCRIPT, ...array_values($environment)], $network)) {
+            io()->error('The GraphQL servers do not answer: see docker compose -p ' . INTEGRATION_PROJECT . ' logs.');
+
+            return 1;
+        }
+
+        io()->section(sprintf('Integration tests with PHP %s', $php));
+
+        return qa_run($php, ['vendor/bin/phpunit', '--group', 'integration'], $network, $environment) ? 0 : 1;
+    } finally {
+        if (!$keep) {
+            run([...$compose, 'down'], context: $ports->withTimeout(null));
+        }
+    }
+}
+
+#[AsTask('all', namespace: 'qa', description: 'Run every quality check: coding standards, PHPStan, unit tests with each PHP version, integration tests')]
+function qa_all(): int
+{
+    $failed = [];
+
+    foreach (['coding standards' => qa_cs_check(...), 'PHPStan' => qa_phpstan(...), 'unit tests' => qa_tests(...), 'integration tests' => qa_integration(...)] as $check => $task) {
+        try {
+            if (($task() ?? 0) !== 0) {
+                $failed[] = $check;
+            }
+        } catch (Throwable) {
+            $failed[] = $check;
+        }
+    }
+
+    if ($failed !== []) {
+        io()->error('Failed: ' . implode(', ', $failed) . '.');
+
+        return 1;
+    }
+
+    io()->success('Every quality check passes.');
+
+    return 0;
+}
+
+/**
+ * Runs a command in the container of a PHP version, the project mounted as the working directory and owned by the user
+ * of the host; the image is built on first use. Installs the dependencies first when they are missing.
+ *
+ * @param list<string>          $command
+ * @param array<string, string> $environment
+ */
+function qa_run(string $php, array $command, ?string $network = null, array $environment = []): bool
+{
+    $image = 'graphql-orm-qa:php' . $php;
+    $quiet = context()->withQuiet()->withAllowFailure();
+
+    if (!run(['docker', 'image', 'inspect', $image], context: $quiet)->isSuccessful()) {
+        run(['docker', 'build', '--build-arg', 'PHP_VERSION=' . $php, '-t', $image, __DIR__ . '/.docker/qa'], context: context()->withTimeout(null));
+    }
+
+    $docker = ['docker', 'run', '--rm', '-u', posix_getuid() . ':' . posix_getgid(), '-v', __DIR__ . ':/app', '-w', '/app'];
+
+    if ($network !== null) {
+        $docker = [...$docker, '--network', $network];
+    }
+
+    foreach ($environment as $name => $value) {
+        $docker = [...$docker, '-e', $name . '=' . $value];
+    }
+
+    if (!is_dir(__DIR__ . '/vendor')) {
+        run([...$docker, $image, 'composer', 'install', '--no-interaction', '--no-progress'], context: context()->withTimeout(null));
+    }
+
+    $command = array_map(static fn (string $argument) => str_replace('%TIMEOUT%', (string) INTEGRATION_READY_TIMEOUT, $argument), $command);
+
+    return run([...$docker, $image, ...$command], context: context()->withTimeout(null)->withAllowFailure())->isSuccessful();
 }

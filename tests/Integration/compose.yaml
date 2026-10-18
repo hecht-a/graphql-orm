@@ -18,6 +18,8 @@ services:
     # DataApiBuilderDialect
     dab:
         image: mcr.microsoft.com/azure-databases/data-api-builder:2.0.12
+        # No arm64 image: emulated on Apple Silicon
+        platform: linux/amd64
         depends_on:
             database:
                 condition: service_healthy
@@ -26,11 +28,13 @@ services:
         volumes:
             - ./DataApiBuilder/dab-config.json:/App/dab-config.json:ro
         ports:
-            - '5000:5000'
+            - '${GRAPHQL_ORM_DAB_PORT:-5000}:5000'
 
     # HasuraDialect: the metadata (tracked tables, relationships) is applied on startup
     hasura:
         image: hasura/graphql-engine:v2.51.0.cli-migrations-v3
+        # No arm64 image of this variant: emulated on Apple Silicon, where the engine may not start
+        platform: linux/amd64
         depends_on:
             database:
                 condition: service_healthy
@@ -41,7 +45,7 @@ services:
         volumes:
             - ./Hasura/metadata:/hasura-metadata:ro
         ports:
-            - '8080:8080'
+            - '${GRAPHQL_ORM_HASURA_PORT:-8080}:8080'
 
     # RelayDialect (connections) and DefaultDialect (simple lists)
     postgraphile:
@@ -62,4 +66,4 @@ services:
             - both
             - --disable-default-mutations
         ports:
-            - '5001:5000'
+            - '${GRAPHQL_ORM_POSTGRAPHILE_PORT:-5001}:5000'
