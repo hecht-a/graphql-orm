@@ -54,6 +54,8 @@ final class GraphqlQueryTrace
     public ?int $resultCacheLifetime = null;
     /** The property indexing the result (indexBy), e.g. "code"; profiler only. */
     public ?string $indexBy = null;
+    /** @var list<string> the relations named by with(), as written; profiler only */
+    public array $with = [];
     /** The DTO the rows were hydrated as with hydrateAs(), null for entities; profiler only. */
     public ?string $hydratedAs = null;
     /** @var array<string, array{type: string, collections: int, items: int}> the collections hydrated, by relation (e.g. App\Entity\User::$tasks) */

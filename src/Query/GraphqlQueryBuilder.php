@@ -74,6 +74,7 @@ final class GraphqlQueryBuilder
     public function with(string ...$relations): self
     {
         $this->with = (new RelationTree($this->manager->getMetadataFactory()))->add($this->with ?? [], $this->entityClass, array_values($relations));
+        $this->options->with = [...$this->options->with, ...array_values($relations)];
 
         return $this;
     }

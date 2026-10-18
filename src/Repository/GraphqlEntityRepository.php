@@ -32,6 +32,9 @@ class GraphqlEntityRepository
     /** @var array<string, mixed> the relations the find methods load, as a tree of GraphQL names */
     private array $with = [];
 
+    /** @var list<string> the same relations, as written: told to the profiler */
+    private array $withPaths = [];
+
     /**
      * @param class-string<T> $entityClass
      */
@@ -75,6 +78,7 @@ class GraphqlEntityRepository
     {
         $repository = clone $this;
         $repository->with = (new RelationTree($this->manager->getMetadataFactory()))->add($this->with, $this->entityClass, array_values($relations));
+        $repository->withPaths = [...$this->withPaths, ...array_values($relations)];
 
         return $repository;
     }
@@ -149,6 +153,7 @@ class GraphqlEntityRepository
         $options->orderBy = $orderBy !== null && $orderBy !== [] ? $metadata->withGraphqlNames($orderBy) : null;
         $options->limit = $limit;
         $options->indexBy = $indexBy !== null ? $metadata->property($indexBy) : null;
+        $options->with = $this->withPaths;
 
         $query = (new GraphqlQueryStringBuilder($this->manager))
             ->entity($this->entityClass)

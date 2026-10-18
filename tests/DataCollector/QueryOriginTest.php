@@ -144,6 +144,19 @@ final class QueryOriginTest extends TestCase
     }
 
     #[Test]
+    public function itRecordsTheRelationsNamedByWith(): void
+    {
+        $client = new FakeGraphqlClient(['data' => ['chainAs' => []]], ['data' => ['chainAs' => []]], ['data' => ['chainAs' => []]]);
+        $repository = $this->repository($client, ChainA::class);
+
+        $repository->createQueryBuilder()->with('next.next')->getQuery()->getResult();
+        $repository->with('next')->findAll();
+        $repository->findAll();
+
+        self::assertSame([['next.next'], ['next'], []], array_column($this->collector->getQueries(), 'with'));
+    }
+
+    #[Test]
     public function itRecordsTheDtoTheResultIsHydratedAs(): void
     {
         $client = new FakeGraphqlClient(['data' => ['tasks' => [['id' => 1, 'title' => 'Task A', 'done' => true]]]], ['data' => ['tasks' => []]]);

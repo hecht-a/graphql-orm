@@ -489,6 +489,24 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itTellsTheRelationsNamedByWith(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $named = new GraphqlQueryTrace();
+        $named->graphql = 'query { tasks { id } }';
+        $named->with = ['assignee.company', 'label'];
+        $collector->addQuery($named);
+        $default = new GraphqlQueryTrace();
+        $default->graphql = 'query { users { id } }';
+        $collector->addQuery($default);
+
+        $text = self::text($this->render($collector));
+
+        self::assertStringContainsString('Relations loaded assignee.company, label, named by with()', $text);
+        self::assertStringContainsString('Relations loaded up to max_depth', $text);
+    }
+
+    #[Test]
     public function itTellsTheQueriesHydratedAsEntities(): void
     {
         $collector = new GraphqlOrmDataCollector();

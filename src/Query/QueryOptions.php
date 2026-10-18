@@ -32,6 +32,15 @@ final class QueryOptions
      */
     public ?string $indexBy = null;
 
+    /**
+     * The relations named by with(), as written: told to the profiler.
+     *
+     * @internal set by GraphqlQueryBuilder::with() and GraphqlEntityRepository::with()
+     *
+     * @var list<string>
+     */
+    public array $with = [];
+
     /** Whether the response is kept in the result cache and read from it. */
     public bool $resultCache = false;
 

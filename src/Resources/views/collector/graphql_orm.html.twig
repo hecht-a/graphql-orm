@@ -1174,6 +1174,16 @@
                             {% endif %}
                         </td>
                     </tr>
+                    <tr>
+                        <th>Relations loaded</th>
+                        <td>
+                            {% if query.with ?? [] is not empty %}
+                                {% for path in query.with %}<code>{{ path }}</code>{{ not loop.last ? ', ' }}{% endfor %}, named by <code>with()</code>
+                            {% else %}
+                                up to <code>max_depth</code>
+                            {% endif %}
+                        </td>
+                    </tr>
                     <tr><th>Time</th><td>{{ (query.hydration_duration ?? 0)|number_format(1) }} ms, apart from the {{ query.duration|number_format(1) }} ms of the network</td></tr>
                     <tr><th>Entities</th><td>{{ query.hydrated_entities }}</td></tr>
                     <tr><th>Relations</th><td>{{ query.hydrated_relations }}</td></tr>

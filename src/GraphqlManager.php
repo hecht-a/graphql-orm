@@ -405,6 +405,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
 
         $context->trace->graphql = $compiled;
         $context->trace->variables = $variables;
+        $context->trace->with = $options->with;
         $context->trace->startedAt = microtime(true);
 
         if ($this->collector !== null) {
