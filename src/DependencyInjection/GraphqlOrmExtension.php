@@ -8,6 +8,7 @@ use GraphqlOrm\Cache\CachePoolDescriber;
 use GraphqlOrm\Cache\GraphqlCache;
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Client\GraphqlClientInterface;
+use GraphqlOrm\Command\CacheStatsCommand;
 use GraphqlOrm\Converter\TypeConverterInterface;
 use GraphqlOrm\Converter\TypeConverterRegistry;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
@@ -103,11 +104,17 @@ final class GraphqlOrmExtension extends Extension
         $environment = \is_string($environment) ? $environment : null;
         $entityClasses = [];
         $cachePools = [];
+        $managerCachePools = [];
 
         foreach ($managers->managers as $name => $config) {
             $entityClasses[$name] = $this->registerManager($container, $name, $config, $debug, $environment);
             $cachePools = [...$cachePools, ...$this->cachePools($config, \count($managers->managers) > 1 ? $name . ': ' : '')];
+            // Described by graphqlorm:cache:stats, in any environment.
+            $container->register('graphql_orm.' . $name . '.cache_pools', CachePoolDescriber::class)->setArguments([$this->cachePools($config, '')]);
+            $managerCachePools[$name] = new Reference('graphql_orm.' . $name . '.cache_pools');
         }
+
+        $container->getDefinition(CacheStatsCommand::class)->setArgument('$cachePools', new ServiceLocatorArgument($managerCachePools));
 
         // Two APIs may share a pool and receive the same query: their results are kept apart.
         if (\count($managers->managers) > 1) {

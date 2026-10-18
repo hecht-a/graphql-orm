@@ -259,6 +259,32 @@ final class GraphqlCache implements ResetInterface
     }
 
     /**
+     * Seconds the entities of the class are kept, null for the default lifetime of the pool or when they are not kept.
+     *
+     * @param class-string $class
+     *
+     * @internal
+     */
+    public function entityLifetime(string $class): ?int
+    {
+        return $this->region($class)[1] ?? null;
+    }
+
+    /**
+     * How many times every entity of the class was evicted: part of their key.
+     *
+     * @param class-string $class
+     *
+     * @internal
+     */
+    public function entityGeneration(string $class): int
+    {
+        $region = $this->region($class);
+
+        return $region !== null ? $this->generation($class, $region[0]) : 0;
+    }
+
+    /**
      * Whether the second-level cache is enabled: graphql_orm.second_level_cache.enabled.
      *
      * @internal
@@ -418,11 +444,21 @@ final class GraphqlCache implements ResetInterface
      */
     private function entityKey(string $class, int|string $identifier, CacheItemPoolInterface $pool): string
     {
+        return self::ENTITY_KEY_PREFIX . hash('xxh128', $class . "\0" . $this->generation($class, $pool) . "\0" . $identifier);
+    }
+
+    /**
+     * The generation of the entities of a class, read once per request.
+     *
+     * @param class-string $class
+     */
+    private function generation(string $class, CacheItemPoolInterface $pool): int
+    {
         if (!isset($this->generations[$class])) {
             $generation = $pool->getItem(self::GENERATION_KEY_PREFIX . hash('xxh128', $class))->get();
             $this->generations[$class] = \is_int($generation) ? $generation : 0;
         }
 
-        return self::ENTITY_KEY_PREFIX . hash('xxh128', $class . "\0" . $this->generations[$class] . "\0" . $identifier);
+        return $this->generations[$class];
     }
 }

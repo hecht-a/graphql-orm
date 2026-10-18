@@ -6,6 +6,7 @@ use Doctrine\Persistence\Event\LifecycleEventArgs;
 use GraphqlOrm\Codegen\StubRenderer;
 use GraphqlOrm\Command\CacheClearCommand;
 use GraphqlOrm\Command\CachedEntities;
+use GraphqlOrm\Command\CacheStatsCommand;
 use GraphqlOrm\Command\CacheWarmupCommand;
 use GraphqlOrm\Command\DebugEntityCommand;
 use GraphqlOrm\Command\EntityClassLocator;
@@ -132,5 +133,9 @@ return static function (ContainerConfigurator $config) {
         ->tag('console.command');
 
     $services->set(CacheClearCommand::class)
+        ->tag('console.command');
+
+    // Its $cachePools are given by GraphqlOrmExtension, a CachePoolDescriber per manager.
+    $services->set(CacheStatsCommand::class)
         ->tag('console.command');
 };
