@@ -5,9 +5,11 @@ declare(strict_types=1);
 // Keeps the current working directory behaviour, and silences the Castor 1.8 deprecation asking to choose it.
 defined('CASTOR_USE_CHDIR') || define('CASTOR_USE_CHDIR', false);
 
+use Castor\Attribute\AsArgument;
 use Castor\Attribute\AsOption;
 use Castor\Attribute\AsTask;
 
+use function Castor\capture;
 use function Castor\context;
 use function Castor\io;
 use function Castor\PHPQa\php_cs_fixer;
@@ -209,4 +211,63 @@ function qa_run(string $php, array $command, ?string $network = null, array $env
     $command = array_map(static fn (string $argument) => str_replace('%TIMEOUT%', (string) INTEGRATION_READY_TIMEOUT, $argument), $command);
 
     return run([...$docker, $image, ...$command], context: context()->withTimeout(null)->withAllowFailure())->isSuccessful();
+}
+
+#[AsTask('release', description: 'Release a version: date its CHANGELOG section and commit it; the tag is pushed by hand')]
+function release(
+    #[AsArgument(description: 'The version, e.g. 5.8.0')]
+    string $version,
+    #[AsOption(description: 'Check everything without writing nor committing')]
+    bool $dryRun = false,
+): int {
+    $changelog = __DIR__ . '/CHANGELOG.md';
+    $content = (string) file_get_contents($changelog);
+    $quiet = context()->withQuiet()->withAllowFailure();
+    $errors = [];
+
+    if (preg_match('/^\d+\.\d+\.\d+$/', $version) !== 1) {
+        $errors[] = sprintf('"%s" is not a version: x.y.z.', $version);
+    }
+
+    if (trim(capture(['git', 'status', '--porcelain'], context: $quiet)) !== '') {
+        $errors[] = 'The working tree has changes: commit or stash them first.';
+    }
+
+    if (trim(capture(['git', 'tag', '--list', 'v' . $version], context: $quiet)) !== '') {
+        $errors[] = sprintf('The tag v%s exists already.', $version);
+    }
+
+    if (preg_match('/^## \[Unreleased\]\n(.*?)(?=^## \[)/ms', $content, $unreleased) !== 1 || trim($unreleased[1]) === '') {
+        $errors[] = 'CHANGELOG.md has no [Unreleased] section with changes to release.';
+    }
+
+    if ($errors !== []) {
+        io()->error($errors);
+
+        return 1;
+    }
+
+    $heading = sprintf('## [%s] — %s', $version, date('Y-m-d'));
+    io()->writeln(sprintf('<info>CHANGELOG.md</info>: ## [Unreleased] becomes %s', $heading));
+
+    if ($dryRun) {
+        io()->note('Dry run: nothing written nor committed.');
+
+        return 0;
+    }
+
+    file_put_contents($changelog, preg_replace('/^## \[Unreleased\]$/m', $heading, $content, 1));
+
+    if (!run(['bash', __DIR__ . '/.github/scripts/changelog-section.sh', $version], context: $quiet)->isSuccessful()) {
+        run(['git', 'checkout', '--', 'CHANGELOG.md'], context: $quiet);
+        io()->error(sprintf('The release notes of %s cannot be read from CHANGELOG.md: nothing committed.', $version));
+
+        return 1;
+    }
+
+    run(['git', 'commit', '--quiet', '-m', 'chore: release ' . $version, '--', 'CHANGELOG.md']);
+    io()->success(sprintf('%s committed. Tag it and push from your terminal:', $version));
+    io()->writeln(sprintf('    git tag -a v%1$s -m "%1$s" && git push origin %2$s v%1$s', $version, trim(capture(['git', 'branch', '--show-current']))));
+
+    return 0;
 }
