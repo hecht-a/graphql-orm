@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The profiler suggests `->with()` for a relation loaded one entity at a time, `select()`, `hydrateAs()` or
+  `enableResultCache()` for a slow query or a large response, and the second-level cache for an entity found or loaded
+  3 times or more.
+
 ### Changed
 
 - The timeline of the profiler shows the origin, the entity and the duration of each query, its hydration apart from

@@ -126,12 +126,14 @@ profiler. The values are those shown by the profiler, masked by default: to repl
 
 ## N+1 and repeated queries
 
-A loop sending one query per entity is the classic N+1 problem. The "N+1 & repeated" tab of the panel shows two cases.
+A loop sending one query per entity is the classic N+1 problem. The "N+1 & repeated" tab of the panel shows two cases,
+and the entities worth the second-level cache.
 
 **A relation loaded on first access** (`GraphqlOrm\Fetch::Lazy`, or `lazy_loading`) 3 times or more, one query each: the
-panel names the relation, such as `Task::$assignee`, with its queries, their total duration and the lines reading it.
-Select the relation with the entities holding it (raise `max_depth`, or select its fields with the query builder). A
-dialect implementing `BatchLoadingDialect` loads the relations met in a same response with one query.
+panel names the relation, such as `Task::$assignee`, with its queries, their total duration and the lines reading it,
+and suggests loading it with the query of its entities: `->with('assignee')` on the query builder, or
+`$repository->with('assignee')->findBy(...)` (see [loading relations](query-builder.md#loading-relations)). A dialect
+implementing `BatchLoadingDialect` loads the relations met in a same response with one query.
 
 **Repeated queries**, such as a `find()` in a `foreach`: the panel groups the queries whose shape is the same once their
 values are masked, and lists those sent 3 times or more, with links opening them. When they are all a `find()` of the
@@ -144,3 +146,11 @@ same entity, the panel suggests the query replacing them, e.g. `$repository->fin
 
 To fix it, select the fields you need or raise `max_depth`, so that the relation comes with the first query, or use a
 dialect loading lazy relations in batches (see [lazy loading](configuration.md#lazy-loading)).
+
+**An entity read again and again**: an entity not marked `#[GraphqlOrm\Cache]` found by identifier or loaded on first
+access by 3 queries or more is named, with its queries, and the panel suggests the
+[second-level cache](caching.md#second-level-cache) if it rarely changes.
+
+The detail of a slow query, or of a response over 100 KB, sent by the application (not a lazy load, a count or an
+introspection) suggests selecting only the fields used with `select()` or `hydrateAs()`, or keeping its result with
+`enableResultCache()`.
