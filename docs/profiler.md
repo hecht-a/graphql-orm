@@ -77,6 +77,9 @@ The caller is the first line of the application on the way to the query. The met
 that a relation loaded on first access from `__toString()` or a getter points to the code reading it; a line of a
 compiled Twig template is given as the line of the template itself, e.g. `task/index.html.twig:25`.
 
+A query sent by a sub-request (a fragment rendered with `render()` or ESI, a `forward()`) is marked with its path: the
+profile of the sub-request holds it as well as the one of the page.
+
 A profile keeps the detail of the first 500 queries: beyond, a query is counted in the metrics and the alerts, without
 its text, variables, AST nor response, so that a page sending thousands of queries does not bloat the profile; the
 list and the timeline tell how many more there were.

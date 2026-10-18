@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   waited for at the same time; their sum is shown apart.
 - The profiler describes the entities read by the queries sent after the response (a `kernel.terminate` listener, a
   streamed response), and marks these queries "after the response".
+- The profiler marks the queries of a sub-request (a fragment, a forward) with its path.
 - A profile keeps the detail of the first 500 queries only: the others are counted in the metrics and the alerts,
   without their text, variables, AST nor response, so that a page sending thousands of queries does not bloat it.
 
