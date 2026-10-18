@@ -33,6 +33,12 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     /** The entities of the second-level cache detailed by a profile, which a page reading thousands would bloat. */
     private const MAX_CACHE_ENTRIES = 500;
 
+    /**
+     * The queries kept in detail by a profile: beyond, a query keeps what the metrics and the alerts need, not its text,
+     * variables, AST nor response, which a page sending thousands of queries would bloat the profile with.
+     */
+    private const MAX_DETAILED_QUERIES = 500;
+
     /** The graduations the timeline is divided in, roughly. */
     private const TIMELINE_TICKS = 4;
 
@@ -88,6 +94,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
             'with' => $trace->with,
             // Sent once the response was collected: by a kernel.terminate listener, or a streamed response
             'after_response' => ($this->data['collected'] ?? false) === true,
+            'detailed' => true,
             'result_cache' => $trace->resultCache,
             'manager' => $trace->manager,
             'result_cache_key' => $trace->resultCacheKey,
@@ -103,7 +110,28 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
             // The threshold of the manager of the query, each API having its own
             'slow' => ($trace->slowQueryThreshold ?? $this->slowQueryThreshold) !== null && $trace->duration >= ($trace->slowQueryThreshold ?? $this->slowQueryThreshold),
         ];
-        $this->data['queries'] = $queries;
+        $this->data['queries'] = $this->withoutDetailBeyondTheLimit($queries);
+    }
+
+    public function getDetailedQueryLimit(): int
+    {
+        return self::MAX_DETAILED_QUERIES;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $queries
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function withoutDetailBeyondTheLimit(array $queries): array
+    {
+        $last = \count($queries) - 1;
+
+        if ($last >= self::MAX_DETAILED_QUERIES) {
+            $queries[$last] = ['graphql' => '', 'ast' => null, 'variables' => [], 'curl' => null, 'response_preview' => null, 'detailed' => false] + $queries[$last];
+        }
+
+        return $queries;
     }
 
     /**

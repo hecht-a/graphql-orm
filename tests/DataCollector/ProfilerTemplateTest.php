@@ -251,6 +251,24 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itListsTheDetailedQueriesAndCountsTheOthers(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+
+        for ($index = 0; $index < $collector->getDetailedQueryLimit() + 3; ++$index) {
+            $trace = new GraphqlQueryTrace();
+            $trace->graphql = 'query { tasks { id } }';
+            $trace->duration = 1.0;
+            $collector->addQuery($trace);
+        }
+
+        $html = $this->render($collector);
+
+        self::assertSame($collector->getDetailedQueryLimit(), substr_count($html, 'class="graphql-orm-row'));
+        self::assertStringContainsString('And 3 more queries, counted in the metrics: the profile keeps the detail of the first 500.', self::text($html));
+    }
+
+    #[Test]
     public function itMarksTheQueriesSentAfterTheResponse(): void
     {
         $collector = new GraphqlOrmDataCollector();

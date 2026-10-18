@@ -295,7 +295,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for query in collector.queries %}
+                        {% for query in collector.queries|slice(0, collector.detailedQueryLimit) %}
                             {% set status = query.errors ? 'error' : ((query.slow ?? false) ? 'slow' : 'ok') %}
                             <tr id="graphql-orm-query-{{ loop.index }}"
                                 class="graphql-orm-row {{ status == 'error' ? 'status-error' : (status == 'slow' ? 'status-warning') }}"
@@ -354,6 +354,9 @@
                         {% endfor %}
                     </tbody>
                 </table>
+                {% if collector.queries|length > collector.detailedQueryLimit %}
+                    <p class="graphql-orm-warning">And {{ collector.queries|length - collector.detailedQueryLimit }} more queries, counted in the metrics: the profile keeps the detail of the first {{ collector.detailedQueryLimit }}.</p>
+                {% endif %}
                 <p class="graphql-orm-muted">Click a query to see its GraphQL, its variables, its AST and its hydration.</p>
             </div>
 
@@ -379,7 +382,7 @@
                         </div>
                         <span></span>
                     </div>
-                    {% for query in collector.queries %}
+                    {% for query in collector.queries|slice(0, collector.detailedQueryLimit) %}
                         {% set status = query.errors ? 'error' : ((query.slow ?? false) ? 'slow' : 'ok') %}
                         {% set kind = _self.originKind(query.origin ?? null)|trim %}
                         {% set hydration = query.hydration_duration ?? 0 %}
@@ -409,6 +412,9 @@
                         </a>
                     {% endfor %}
                 </div>
+                {% if collector.queries|length > collector.detailedQueryLimit %}
+                    <p class="graphql-orm-warning">And {{ collector.queries|length - collector.detailedQueryLimit }} more queries, not drawn: the profile keeps the detail of the first {{ collector.detailedQueryLimit }}.</p>
+                {% endif %}
                 <p class="graphql-orm-timeline-legend">
                     <span><i class="graphql-orm-swatch graphql-orm-kind-query"></i>Network</span>
                     <span><i class="graphql-orm-swatch graphql-orm-fill-hydration"></i>Hydration</span>

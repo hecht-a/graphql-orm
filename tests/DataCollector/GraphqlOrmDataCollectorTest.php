@@ -456,6 +456,28 @@ final class GraphqlOrmDataCollectorTest extends TestCase
     }
 
     #[Test]
+    public function itKeepsTheDetailOfTheFirstQueriesOnly(): void
+    {
+        $limit = $this->collector->getDetailedQueryLimit();
+
+        for ($index = 0; $index <= $limit; ++$index) {
+            $trace = self::trace(duration: 2.0, errors: null);
+            $trace->variables = ['id' => $index];
+            $this->collector->addQuery($trace);
+        }
+
+        $queries = $this->collector->getQueries();
+        self::assertCount($limit + 1, $queries);
+        self::assertTrue($queries[$limit - 1]['detailed']);
+        self::assertSame(['id' => $limit - 1], $queries[$limit - 1]['variables']);
+        self::assertFalse($queries[$limit]['detailed']);
+        self::assertSame('', $queries[$limit]['graphql']);
+        self::assertSame([], $queries[$limit]['variables']);
+        self::assertSame('query { tasks { id } }', $queries[$limit]['shape']);
+        self::assertEqualsWithDelta(($limit + 1) * 2.0, $this->collector->getTotalDuration(), 0.001);
+    }
+
+    #[Test]
     public function itDescribesTheEntitiesOfTheQueriesSentAfterTheResponse(): void
     {
         $collector = new GraphqlOrmDataCollector(metadataFactory: new GraphqlEntityMetadataFactory());
