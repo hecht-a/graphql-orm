@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `#[MapFrom('assignee.name')]`; one typed with a class maps a relation to a nested DTO, an array typed `list<Dto>` a
   collection. Neither identity map nor second-level cache; pagination, `indexBy()` and the result cache work as with
   entities. The profiler tells the queries hydrated as DTOs, with the DTO and the number created.
+- Type converters turn a scalar of the API into a value object (`Money`, `Email`, `Siret`) and back: a service
+  implementing `TypeConverterInterface`, autoconfigured, converts the properties typed with the class of its
+  `#[AsTypeConverter]`, or those whose `#[Field(converter: ...)]` names it. The values of the entities and of the DTOs
+  are converted, and the value objects of the filters, criteria and `indexBy` sent back.
 
 ## [5.6.0] — 2026-10-16
 

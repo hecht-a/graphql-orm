@@ -35,12 +35,13 @@ class Task
 
 ## `#[Field]`
 
-A field holding a value: a scalar, a date, an enum.
+A field holding a value: a scalar, a date, an enum, or a value object given by a [type converter](#type-converters).
 
 | Parameter          | Type                 | Description                                            |
 |--------------------|----------------------|--------------------------------------------------------|
 | `mappedFrom`       | `string\|null`       | Field name in the GraphQL schema; named by the [naming strategy](#naming-strategy) when omitted |
 | `ignoreValidation` | `bool`               | Ignore the schema validation                           |
+| `converter`        | `class-string\|null` | The [type converter](#type-converters) of the value, rather than the one of the type of the property |
 
 ## `#[Identifier]`
 
@@ -193,3 +194,53 @@ The attributes `#[GraphqlEntity]` and `#[GraphqlField]` of 4.8 are removed in 5.
 | `BackedEnum`        | Built with `::from()`; an unknown value throws `CastException` |
 
 Date fields are automatically cast from ISO 8601 strings or Unix timestamps (in milliseconds).
+
+## Type converters
+
+A type converter turns a scalar of the API into a value object, `Money`, `Email`, `Siret`, and back. It implements
+`TypeConverterInterface`, and `#[AsTypeConverter]` names the class it handles:
+
+```php
+use GraphqlOrm\Attribute\AsTypeConverter;
+use GraphqlOrm\Converter\TypeConverterInterface;
+
+#[AsTypeConverter(Money::class)]
+final class MoneyConverter implements TypeConverterInterface
+{
+    // An Int of the API, in cents
+    public function toPhp(mixed $value): Money
+    {
+        return Money::ofCents((int) $value);
+    }
+
+    public function toGraphql(mixed $value): int
+    {
+        return $value->cents;
+    }
+}
+```
+
+In Symfony, a service implementing `TypeConverterInterface` is registered by autoconfiguration, and every manager uses
+it. Each property typed with its class is then converted, unless its `#[Field]` names another converter:
+
+```php
+#[Field]
+public ?Money $price = null;          // MoneyConverter, by its type
+
+#[Field(converter: DecimalMoneyConverter::class)]
+public ?Money $discount = null;       // a Float of the API, as 12.5
+```
+
+- The values of the response are converted when the entity is hydrated, from the API or the second-level cache, and
+  for the parameters of a [DTO](query-builder.md#dto-results) typed with the class (the converter the entity names for
+  the field applies to a parameter of the same type).
+- The value objects of the filters, `where()` and `findBy()`, `count()` and the aggregates, are converted back, inline
+  or as variables, lists of `in()` included: `$qb->expr()->eq('price', Money::ofCents(1250))` sends `price: { eq: 1250 }`.
+  So is the value keying a result with `indexBy`.
+- `null` is never given to a converter: it stays `null`.
+- A converter named by `#[Field]` without dependencies needs no registration; one needing arguments must be a service,
+  or an `InvalidArgumentException` is thrown when it is used.
+- A converter receives the value of one field: a value object spread over several fields (an amount and its currency)
+  is mapped field by field.
+- Without Symfony, the converters are given to the manager: `new GraphqlManager(..., typeConverters: new
+  TypeConverterRegistry([new MoneyConverter()]))`.
