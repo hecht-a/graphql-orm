@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GraphqlOrm\Execution;
 
 use GraphqlOrm\Cache\GraphqlCache;
+use GraphqlOrm\Converter\TypeConverterRegistry;
 use GraphqlOrm\Dialect\DefaultDialect;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\Query\GraphqlQueryTrace;
@@ -42,6 +43,13 @@ final class GraphqlExecutionContext
      * @internal set by GraphqlManager
      */
     public ?GraphqlCache $entityCache = null;
+
+    /**
+     * Converts the values of the response into the value objects of the properties.
+     *
+     * @internal set by GraphqlManager
+     */
+    public ?TypeConverterRegistry $typeConverters = null;
 
     /**
      * The entities already kept in the second-level cache by this response, which may hold one several times.

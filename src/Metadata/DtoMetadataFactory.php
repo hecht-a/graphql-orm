@@ -108,6 +108,8 @@ final class DtoMetadataFactory
             $nested = $this->getMetadata($nestedClass, $field->relation, $nesting);
         }
 
+        $valueClass = GraphqlEntityMetadataFactory::valueClass($parameter->getType());
+
         return new DtoParameterMetadata(
             $parameter->getName(),
             $graphqlPath,
@@ -116,6 +118,9 @@ final class DtoMetadataFactory
             $parameter->isDefaultValueAvailable(),
             $nested,
             $field->isCollection,
+            // The converter the entity names for its field, when the parameter is typed as its property.
+            $field->converter !== null && $valueClass === $field->valueClass ? $field->converter : null,
+            $valueClass,
         );
     }
 

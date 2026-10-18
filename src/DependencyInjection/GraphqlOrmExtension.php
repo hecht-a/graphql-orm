@@ -8,6 +8,8 @@ use GraphqlOrm\Cache\CachePoolDescriber;
 use GraphqlOrm\Cache\GraphqlCache;
 use GraphqlOrm\Client\GraphqlClient;
 use GraphqlOrm\Client\GraphqlClientInterface;
+use GraphqlOrm\Converter\TypeConverterInterface;
+use GraphqlOrm\Converter\TypeConverterRegistry;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\EventListener\SchemaValidationListener;
@@ -78,6 +80,8 @@ final class GraphqlOrmExtension extends Extension
     ];
 
     private const REPOSITORY_TAG = 'graphql_orm.repository';
+    /** @internal the type converters of the application */
+    public const TYPE_CONVERTER_TAG = 'graphql_orm.type_converter';
 
     private const LOGGER = 'monolog.logger.graphql_orm';
 
@@ -92,6 +96,7 @@ final class GraphqlOrmExtension extends Extension
 
         // The repositories of the application, given by GraphqlManager::getRepository().
         $container->registerForAutoconfiguration(GraphqlEntityRepository::class)->addTag(self::REPOSITORY_TAG);
+        $container->registerForAutoconfiguration(TypeConverterInterface::class)->addTag(self::TYPE_CONVERTER_TAG);
 
         $debug = $container->hasParameter('kernel.debug') && $container->getParameter('kernel.debug') === true;
         $environment = $container->hasParameter('kernel.environment') ? $container->getParameter('kernel.environment') : null;
@@ -203,6 +208,7 @@ final class GraphqlOrmExtension extends Extension
                 '$slowQueryThreshold' => self::slowQueryThreshold($config),
                 '$repositories' => new ServiceLocatorArgument(new TaggedIteratorArgument(self::REPOSITORY_TAG, null, null, true)),
                 '$cache' => new Reference($id('cache')),
+                '$typeConverters' => new Reference(TypeConverterRegistry::class),
             ])
             ->setArgument('$name', $name)
             ->setArgument('$router', new Reference(ManagerRouter::class))

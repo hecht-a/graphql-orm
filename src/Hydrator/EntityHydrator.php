@@ -143,7 +143,7 @@ final class EntityHydrator
             $ghost = $this->lazyGhost($metadata, $identifier, $uniqueField, $context, $relation);
             $context->observer?->ghostCreated($metadata->class, $uniqueField, $relation);
             $property = $this->property($metadata->class, $identifier->property);
-            $property->setRawValueWithoutLazyInitialization($ghost, $this->normalizeValue($data[$identifier->mappedFrom], $property));
+            $property->setRawValueWithoutLazyInitialization($ghost, $this->normalizeValue($data[$identifier->mappedFrom], $property, $identifier, $context));
 
             return $context->identityMap[$metadata->class][$uniqueField] = $ghost;
         }
@@ -283,7 +283,7 @@ final class EntityHydrator
 
             $value = $field->isCollection && \is_array($value) && self::acceptsArrayCollection($property)
                 ? new ArrayCollection(array_values($value))
-                : $this->normalizeValue($value, $property);
+                : $this->normalizeValue($value, $property, $field, $context);
 
             if ($field->isCollection && is_countable($value)) {
                 self::countCollection($context, $metadata->class . '::$' . $field->property, $value);
@@ -603,8 +603,15 @@ final class EntityHydrator
         return false;
     }
 
-    private function normalizeValue(mixed $value, \ReflectionProperty $property): mixed
+    /**
+     * A value converted by the type converter of its field, or to the type of its property.
+     */
+    private function normalizeValue(mixed $value, \ReflectionProperty $property, GraphqlFieldMetadata $field, GraphqlExecutionContext $context): mixed
     {
-        return ValueCaster::cast($value, $property->getType());
+        $converter = $value !== null && $field->relation === null
+            ? $context->typeConverters?->converterFor($field->converter, $field->valueClass)
+            : null;
+
+        return $converter !== null ? $converter->toPhp($value) : ValueCaster::cast($value, $property->getType());
     }
 }

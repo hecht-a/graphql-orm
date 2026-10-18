@@ -234,7 +234,7 @@ final class GraphqlQueryBuilder
             ->entity($this->entityClass)
             ->root($metadata->name)
             ->options($options)
-            ->filter($this->filter !== null ? new GraphqlNamedFilter($this->filter, $metadata, $this->manager->getMetadataFactory()) : null)
+            ->filter($this->filter !== null ? new GraphqlNamedFilter($this->filter, $metadata, $this->manager->getMetadataFactory(), $this->manager->getTypeConverters()) : null)
             ->fields($fields, $manualSelect)
             ->with($this->with)
             ->build();

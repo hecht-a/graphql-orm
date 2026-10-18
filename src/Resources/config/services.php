@@ -11,7 +11,9 @@ use GraphqlOrm\Command\MakeGraphqlEntityCommand;
 use GraphqlOrm\Command\QueryCommand;
 use GraphqlOrm\Command\SchemaValidateCommand;
 use GraphqlOrm\Controller\EntityAutocompleteController;
+use GraphqlOrm\Converter\TypeConverterRegistry;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
+use GraphqlOrm\DependencyInjection\GraphqlOrmExtension;
 use GraphqlOrm\Doctrine\GraphqlReferenceListener;
 use GraphqlOrm\Form\GraphqlEntityType;
 use GraphqlOrm\Logging\QueryRedactor;
@@ -29,6 +31,7 @@ use Twig\Extension\AbstractExtension;
 
 use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
+use function Symfony\Component\DependencyInjection\Loader\Configurator\tagged_iterator;
 
 return static function (ContainerConfigurator $config) {
     $services = $config->services()
@@ -42,6 +45,10 @@ return static function (ContainerConfigurator $config) {
     $services->set(SnakeCaseNamingStrategy::class);
 
     $services->set(QueryRedactor::class);
+
+    // The type converters of the application, autoconfigured: shared by every manager.
+    $services->set(TypeConverterRegistry::class)
+        ->arg('$converters', tagged_iterator(GraphqlOrmExtension::TYPE_CONVERTER_TAG));
 
     // Before the request attribute resolver (priority 100), which would give the route parameter as is.
     $services->set(GraphqlEntityValueResolver::class)

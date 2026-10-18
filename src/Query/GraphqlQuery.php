@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Query;
 
+use GraphqlOrm\Converter\TypeConverterRegistry;
 use GraphqlOrm\Dialect\CursorPaginationDialect;
 use GraphqlOrm\Dialect\OffsetPaginationDialect;
 use GraphqlOrm\Exception\GraphqlRequestException;
@@ -270,7 +271,7 @@ final readonly class GraphqlQuery
 
             if ($this->dto !== null) {
                 $context->trace->hydratedAs = $this->dto->class;
-                $items = $this->dtos($metadata, $rows);
+                $items = $this->dtos($metadata, $rows, $context);
             } else {
                 /** @var T[] $items the rows are hydrated as instances of the queried entity */
                 $items = array_map(
@@ -284,7 +285,7 @@ final readonly class GraphqlQuery
             if ($this->options->indexBy !== null) {
                 $context->trace->indexBy = $this->options->indexBy;
                 // DTOs are keyed by their row, as they may not hold the field.
-                $items = $this->dto === null ? self::indexed($items, $this->options->indexBy) : $items;
+                $items = $this->dto === null ? self::indexed($items, $this->options->indexBy, $metadata, $context->typeConverters) : $items;
             }
 
             if (!$this->options->paginate) {
@@ -431,7 +432,7 @@ final readonly class GraphqlQuery
      *
      * @throws InvalidArgumentException when a row has no value usable as a key
      */
-    private function dtos(GraphqlEntityMetadata $metadata, array $rows): array
+    private function dtos(GraphqlEntityMetadata $metadata, array $rows, GraphqlExecutionContext $context): array
     {
         \assert($this->dto !== null);
         $key = $this->options->indexBy !== null ? $metadata->graphqlName($this->options->indexBy) : null;
@@ -439,7 +440,7 @@ final readonly class GraphqlQuery
 
         foreach ($rows as $row) {
             /** @var T $dto the rows are hydrated as instances of the DTO */
-            $dto = DtoHydrator::hydrate($this->dto, $this->withoutEnvelopes($metadata, $row));
+            $dto = DtoHydrator::hydrate($this->dto, $this->withoutEnvelopes($metadata, $row), $context->typeConverters);
 
             if ($key === null) {
                 $dtos[] = $dto;
@@ -574,12 +575,15 @@ final readonly class GraphqlQuery
      *
      * @throws InvalidArgumentException when an entity has no value usable as a key
      */
-    private static function indexed(array $entities, string $property): array
+    private static function indexed(array $entities, string $property, GraphqlEntityMetadata $metadata, ?TypeConverterRegistry $converters): array
     {
         $indexed = [];
+        $field = $metadata->field($property);
 
         foreach ($entities as $entity) {
             $value = (new \ReflectionProperty($entity, $property))->getValue($entity);
+            // A value object is keyed by the value of the API its type converter gives.
+            $value = $converters !== null ? $converters->toGraphql($field?->converter, $field?->valueClass, $value) : $value;
             $key = match (true) {
                 \is_int($value), \is_string($value) => $value,
                 $value instanceof \BackedEnum => $value->value,

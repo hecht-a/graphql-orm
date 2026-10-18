@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Query\Expr;
 
+use GraphqlOrm\Converter\TypeConverterRegistry;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 
 /**
  * A filter whose fields, named after their GraphQL name or their PHP property, are given their GraphQL name. A path
- * through relations (`user.name`) is nested, as GraphQL filters are: `{user: {name: {eq: ...}}}`.
+ * through relations (`user.name`) is nested, as GraphQL filters are: `{user: {name: {eq: ...}}}`. The value objects
+ * compared are converted by their type converter.
  *
  * @internal
  */
@@ -21,6 +23,7 @@ final readonly class GraphqlNamedFilter implements FilterExpressionInterface
         private FilterExpressionInterface $filter,
         private GraphqlEntityMetadata $metadata,
         private GraphqlEntityMetadataFactory $metadataFactory,
+        private TypeConverterRegistry $typeConverters = new TypeConverterRegistry(),
     ) {
     }
 
@@ -93,7 +96,7 @@ final readonly class GraphqlNamedFilter implements FilterExpressionInterface
         $name = $field->mappedFrom ?? $segment;
 
         if ($segments === []) {
-            return [$name => $comparison];
+            return [$name => $this->typeConverters->toGraphql($field?->converter, $field?->valueClass, $comparison)];
         }
 
         // An unmapped segment, or one that is no relation, is nested as written: the API tells whether it exists.

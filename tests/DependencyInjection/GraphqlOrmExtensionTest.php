@@ -31,6 +31,8 @@ use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Schema\SchemaIntrospector;
 use GraphqlOrm\Serializer\GraphqlEntityNormalizer;
 use GraphqlOrm\Test\MockGraphqlServer;
+use GraphqlOrm\Tests\Fixtures\Converter\Money;
+use GraphqlOrm\Tests\Fixtures\Converter\MoneyConverter;
 use GraphqlOrm\Tests\Fixtures\Crm\Contact;
 use GraphqlOrm\Tests\Fixtures\Depth\ChainA;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeEntityNamedByStrategy;
@@ -204,6 +206,19 @@ final class GraphqlOrmExtensionTest extends TestCase
         self::assertInstanceOf(GraphqlManager::class, $manager);
 
         self::assertInstanceOf(FakeProjectRepository::class, $manager->getRepository(FakeProject::class));
+    }
+
+    #[Test]
+    public function itGivesTheManagersTheTypeConvertersOfTheApplication(): void
+    {
+        $container = $this->createContainer(debug: false);
+        $container->register(MoneyConverter::class)->setAutoconfigured(true);
+        $container->compile();
+
+        $manager = $container->get(GraphqlManager::class);
+        self::assertInstanceOf(GraphqlManager::class, $manager);
+
+        self::assertInstanceOf(MoneyConverter::class, $manager->getTypeConverters()->converterFor(null, Money::class));
     }
 
     #[Test]

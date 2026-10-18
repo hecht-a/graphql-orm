@@ -8,6 +8,7 @@ use GraphqlOrm\Cache\GraphqlCache;
 use GraphqlOrm\Client\ConcurrentGraphqlClientInterface;
 use GraphqlOrm\Client\GraphqlClientInterface;
 use GraphqlOrm\Controller\EntityAutocompleteController;
+use GraphqlOrm\Converter\TypeConverterRegistry;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\BatchLoadingDialect;
 use GraphqlOrm\Dialect\DefaultDialect;
@@ -105,6 +106,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         private GraphqlCache $cache = new GraphqlCache(),
         private string $name = self::DEFAULT_NAME,
         private ?ManagerRouter $router = null,
+        private TypeConverterRegistry $typeConverters = new TypeConverterRegistry(),
     ) {
     }
 
@@ -269,6 +271,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         $context->lazyLoader = $this->loadCachedEntityRelationLazily(...);
         $context->observer = $this->collector;
         $context->lazyLoading = true;
+        $context->typeConverters = $this->typeConverters;
         $metadata = $this->metadataFactory->getMetadata($class);
         $entities = [];
 
@@ -345,6 +348,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         $context->lazyLoader = $this->loadLazily(...);
         $context->identityMap = $this->identityMap?->entities() ?? [];
         $context->observer = $this->collector;
+        $context->typeConverters = $this->typeConverters;
 
         return $this->identityMap !== null ? $this->referenceContext = $context : $context;
     }
@@ -388,6 +392,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         $context->observer = $this->collector;
         $context->lazyLoading = $this->lazyLoading;
         $context->entityCache = $this->cache;
+        $context->typeConverters = $this->typeConverters;
 
         if ($graphql instanceof QueryNode) {
             $compiledQuery = $this->compile($graphql, $options);
@@ -685,6 +690,11 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
     public function getHydrator(): EntityHydrator
     {
         return $this->hydrator;
+    }
+
+    public function getTypeConverters(): TypeConverterRegistry
+    {
+        return $this->typeConverters;
     }
 
     public function getMaxDepth(): int

@@ -20,6 +20,10 @@ final readonly class GraphqlFieldMetadata
         public bool $isIdentifier = false,
         public bool $ignoreValidation = false,
         public Fetch $fetch = Fetch::Eager,
+        /** @var class-string|null the type converter named by #[Field(converter: ...)] */
+        public ?string $converter = null,
+        /** @var class-string|null the class the property is typed with, whose type converter applies */
+        public ?string $valueClass = null,
     ) {
     }
 }

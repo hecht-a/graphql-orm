@@ -131,7 +131,7 @@ class GraphqlEntityRepository
         $query = (new GraphqlQueryStringBuilder($this->manager))
             ->entity($this->entityClass)
             ->root($metadata->name)
-            ->arguments($this->manager->getDialect()->applyCriteria($metadata->withGraphqlNames($criteria)))
+            ->arguments($this->manager->getDialect()->applyCriteria($this->criteria($metadata, $criteria)))
             ->options($options)
             ->build();
 
@@ -160,9 +160,28 @@ class GraphqlEntityRepository
         }
 
         $metadata = $this->manager->getMetadataFactory()->getMetadata($this->entityClass);
-        $field = $dialect->countField($metadata->name, $dialect->applyCriteria($metadata->withGraphqlNames($criteria)), $this->numericIdentifier($metadata));
+        $field = $dialect->countField($metadata->name, $dialect->applyCriteria($this->criteria($metadata, $criteria)), $this->numericIdentifier($metadata));
 
         return $this->executeInline($field, fn (array $data): int => $dialect->readCount($data, $field->name), array_keys($criteria));
+    }
+
+    /**
+     * The criteria keyed by GraphQL names, their value objects converted by their type converter.
+     *
+     * @param array<string, mixed> $criteria GraphQL field name or PHP property => expected value
+     *
+     * @return array<string, mixed>
+     */
+    private function criteria(GraphqlEntityMetadata $metadata, array $criteria): array
+    {
+        $converted = [];
+
+        foreach ($criteria as $name => $value) {
+            $field = $metadata->field($name);
+            $converted[$name] = $this->manager->getTypeConverters()->toGraphql($field?->converter, $field?->valueClass, $value);
+        }
+
+        return $metadata->withGraphqlNames($converted);
     }
 
     /**
@@ -258,7 +277,7 @@ class GraphqlEntityRepository
 
         $metadata = $this->manager->getMetadataFactory()->getMetadata($this->entityClass);
         $graphqlField = $metadata->graphqlName($field);
-        $root = $dialect->aggregateField($metadata->name, $dialect->applyCriteria($metadata->withGraphqlNames($criteria)), $aggregate, $graphqlField);
+        $root = $dialect->aggregateField($metadata->name, $dialect->applyCriteria($this->criteria($metadata, $criteria)), $aggregate, $graphqlField);
 
         return $this->executeInline(
             $root,

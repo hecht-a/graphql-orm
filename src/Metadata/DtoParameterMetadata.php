@@ -23,6 +23,10 @@ final readonly class DtoParameterMetadata
         public bool $hasDefault,
         public ?DtoMetadata $nested = null,
         public bool $isCollection = false,
+        /** @var class-string|null the type converter named by the #[Field] of the field, for the same type */
+        public ?string $converter = null,
+        /** @var class-string|null the class the parameter is typed with, whose type converter applies */
+        public ?string $valueClass = null,
     ) {
     }
 }

@@ -180,7 +180,26 @@ final class GraphqlEntityMetadataFactory
             mappedFrom: $attribute->mappedFrom ?? $this->namingStrategy->fieldName($property->getName()),
             isIdentifier: $isIdentifier,
             ignoreValidation: $attribute->ignoreValidation,
+            converter: $attribute->converter,
+            valueClass: self::valueClass($property->getType()),
         );
+    }
+
+    /**
+     * The class of a type, nullable or not: a value object, a date, an enum.
+     *
+     * @return class-string|null
+     */
+    public static function valueClass(?\ReflectionType $type): ?string
+    {
+        if (!$type instanceof \ReflectionNamedType || $type->isBuiltin()) {
+            return null;
+        }
+
+        /** @var class-string $class */
+        $class = $type->getName();
+
+        return $class;
     }
 
     /**
