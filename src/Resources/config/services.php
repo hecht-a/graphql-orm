@@ -12,6 +12,7 @@ use GraphqlOrm\Command\DebugEntityCommand;
 use GraphqlOrm\Command\EntityClassLocator;
 use GraphqlOrm\Command\FindCommand;
 use GraphqlOrm\Command\MakeGraphqlEntityCommand;
+use GraphqlOrm\Command\PhpstormMetaCommand;
 use GraphqlOrm\Command\QueryCommand;
 use GraphqlOrm\Command\SchemaValidateCommand;
 use GraphqlOrm\Controller\EntityAutocompleteController;
@@ -133,6 +134,9 @@ return static function (ContainerConfigurator $config) {
         ->tag('console.command');
 
     $services->set(CacheClearCommand::class)
+        ->tag('console.command');
+
+    $services->set(PhpstormMetaCommand::class)
         ->tag('console.command');
 
     // Its $cachePools are given by GraphqlOrmExtension, a CachePoolDescriber per manager.
