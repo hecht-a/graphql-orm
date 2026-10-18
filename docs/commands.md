@@ -148,7 +148,13 @@ php bin/console graphqlorm:query --manager=crm < contacts.graphql
   data, an HTTP error or an unknown manager are shown as an error.
 - The query goes through the manager: it is logged, and shown in the profiler of the command, its values masked there
   when `redact_query_values` is on. The response printed keeps its values.
-- Nothing is hydrated: neither identity map, nor cache.
+- Nothing is hydrated: neither identity map, nor cache. With `--hydrate=Task` (short name or FQCN), the response is
+  hydrated as the entity, whose root field the query must select, and printed as by `graphqlorm:find`: a table, or
+  JSON with `--format=json`. Write the values in the query: `--hydrate` takes no `--variables`.
+
+```bash
+php bin/console graphqlorm:query '{ tasks(filter: { done: { eq: false } }) { items { id title done due_date } } }' --hydrate=Task
+```
 
 ## Warm up the second-level cache
 

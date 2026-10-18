@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `$repository->with('assignee.company')` names the relations `find()`, `findOneBy()`, `findBy()` and `findAll()` load,
   as `with()` of the query builder: it gives a copy of the repository, which is left as it is.
+- `graphqlorm:query --hydrate=Task` hydrates the response as the entity and prints the entities as `graphqlorm:find`,
+  as a table or JSON (`--format=json`).
 
 ## [5.7.1] — 2026-10-18
 
