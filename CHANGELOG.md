@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   toolbar turns yellow (50 by default, as Doctrine), `max_query_time`, the milliseconds waited for GraphQL beyond which
   it does, and `repeated_queries`, the times from which repeated queries, lazy loads and entities worth the
   second-level cache are reported (3 by default).
+- An "Export JSON" button of the profiler downloads the metrics, the queries and the findings of a profile, their
+  values masked unless `redact_query_values` is false.
 
 ### Changed
 

@@ -171,6 +171,24 @@ The route answers in debug mode only (`kernel.debug`), with the profiler enabled
 a 404 otherwise. Headers are those of the manager now, given by its `headers_provider`, not those of the profiled
 request.
 
+## Export as JSON
+
+"Export JSON", next to the search of the queries, downloads the profile of the queries as `graphql-orm-<token>.json`:
+to attach to a ticket, or to compare a page before and after a change. It holds:
+
+- `summary`: the queries, those sent to the API, the different statements, the time waited for GraphQL and the
+  durations summed, the hydration time, the errors, the slow queries, the entities hydrated and the bytes received;
+- `thresholds`: `slow_query_threshold` and the `profiler` options;
+- `queries`: for each query detailed by the profile, its number, manager, origin, entity, root field, text and
+  variables, whether its values are masked, its caller, its start (milliseconds from the start of the request), its
+  durations, its response size, its entities hydrated, its result cache, its errors, and its sub-request or whether it
+  was sent after the response;
+- `findings`: the relations loaded one entity at a time, the repeated queries and the entities worth the second-level
+  cache.
+
+The values are masked as in the profiler, unless `redact_query_values` is false; neither the AST nor the responses are
+exported. `format` and `version` tell the structure, `version` changing when it does.
+
 ## N+1 and repeated queries
 
 A loop sending one query per entity is the classic N+1 problem. The "N+1 & repeated" tab of the panel shows two cases,
