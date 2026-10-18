@@ -251,6 +251,19 @@ final class ProfilerTemplateTest extends TestCase
     }
 
     #[Test]
+    public function itMarksTheQueriesSentAfterTheResponse(): void
+    {
+        $collector = new GraphqlOrmDataCollector();
+        $collector->collect(new Request(), new Response());
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { tasks { id } }';
+        $trace->origin = 'findBy';
+        $collector->addQuery($trace);
+
+        self::assertStringContainsString('findBy after the response', self::text($this->render($collector)));
+    }
+
+    #[Test]
     public function itShowsTheTimeBeforeTheFirstQuery(): void
     {
         $collector = new GraphqlOrmDataCollector();

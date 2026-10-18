@@ -456,6 +456,30 @@ final class GraphqlOrmDataCollectorTest extends TestCase
     }
 
     #[Test]
+    public function itDescribesTheEntitiesOfTheQueriesSentAfterTheResponse(): void
+    {
+        $collector = new GraphqlOrmDataCollector(metadataFactory: new GraphqlEntityMetadataFactory());
+        $collector->collect(new Request(), new Response());
+        $trace = self::traceOf('query { tasks { id } }');
+        $trace->entityClass = FakeTask::class;
+        $collector->addQuery($trace);
+
+        $collector->lateCollect();
+
+        self::assertSame([FakeTask::class], array_column($collector->getEntities(), 'class'));
+    }
+
+    #[Test]
+    public function itMarksTheQueriesSentAfterTheResponse(): void
+    {
+        $this->collector->addQuery(self::traceOf('query { tasks { id } }'));
+        $this->collector->collect(new Request(), new Response());
+        $this->collector->addQuery(self::traceOf('query { users { id } }'));
+
+        self::assertSame([false, true], array_column($this->collector->getQueries(), 'after_response'));
+    }
+
+    #[Test]
     public function itAddsTheEntitiesReadByTheQueriesToThoseOfTheMappingDirectory(): void
     {
         $collector = new GraphqlOrmDataCollector(metadataFactory: new GraphqlEntityMetadataFactory());

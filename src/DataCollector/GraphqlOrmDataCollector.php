@@ -16,11 +16,12 @@ use GraphqlOrm\Query\GraphqlQueryTrace;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\DataCollector\DataCollector;
+use Symfony\Component\HttpKernel\DataCollector\LateDataCollectorInterface;
 
 /**
  * @internal
  */
-final class GraphqlOrmDataCollector extends DataCollector implements HydrationObserver
+final class GraphqlOrmDataCollector extends DataCollector implements HydrationObserver, LateDataCollectorInterface
 {
     /**
      * Queries of a same shape sent this many times are reported, as the sign of a loop (an N+1 problem).
@@ -85,6 +86,8 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
             'index_by' => $trace->indexBy,
             'hydrated_as' => $trace->hydratedAs,
             'with' => $trace->with,
+            // Sent once the response was collected: by a kernel.terminate listener, or a streamed response
+            'after_response' => ($this->data['collected'] ?? false) === true,
             'result_cache' => $trace->resultCache,
             'manager' => $trace->manager,
             'result_cache_key' => $trace->resultCacheKey,
@@ -736,6 +739,21 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
         $this->data['cache_warnings'] = $this->cacheWarnings();
         $startedAt = $request->server->get('REQUEST_TIME_FLOAT');
         $this->data['request_started_at'] = \is_float($startedAt) || \is_int($startedAt) ? (float) $startedAt : null;
+        $this->data['collected'] = true;
+    }
+
+    /**
+     * Once the response is sent, before the profile is saved: the queries sent since (a kernel.terminate listener, a
+     * streamed response) are kept already, what is told of the entities they read is not.
+     */
+    public function lateCollect(): void
+    {
+        if (($this->data['collected'] ?? false) !== true) {
+            return;
+        }
+
+        $this->data['entities'] = $this->describeEntities();
+        $this->data['cache_warnings'] = $this->cacheWarnings();
     }
 
     public function reset(): void
