@@ -12,10 +12,22 @@ castor qa:cs:check          # coding standards (castor qa:cs:fix to fix them)
 castor qa:phpstan           # static analysis, level max on src/ and tests/
 castor qa:tests             # unit tests with PHP 8.4 and 8.5 (--php=8.4 for one, --filter=... for some tests)
 castor qa:integration       # integration tests, see below (--keep leaves the servers running)
+castor qa:infection         # mutation tests, see below (--filter=src/Query for some files)
 ```
 
 The tests of a PHP version installed on the host run as well with `vendor/bin/phpunit`. Test both versions before
 pushing: PHP 8.4 and 8.5 differ, on the lazy objects for instance.
+
+## Mutation tests
+
+`castor qa:infection` runs [Infection](https://infection.github.io): it changes the code of `src/` (a `>` into `>=`, a
+removed call...) and tells the changes no unit test notices. Infection is installed by the task in
+`.castor/vendor/.tools/infection`, apart from the dependencies of the bundle, and runs in the container of the tests,
+with pcov measuring the coverage. The whole run takes about a quarter of an hour: `--filter=src/Converter` checks the
+files of a change. The reports are written in `cache/infection/`.
+
+The CI runs it on each push to `main`, without failing the build: the Mutation Score Indicator (MSI) on the covered code
+was 80 % when it was introduced.
 
 ## Benchmarks
 
