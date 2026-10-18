@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace GraphqlOrm\Command;
 
 use GraphqlOrm\Exception\GraphqlOrmException;
-use GraphqlOrm\Metadata\GraphqlEntityMetadata;
-use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Query\Direction;
 use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use Symfony\Component\Console\Attribute\Argument;
@@ -30,10 +28,14 @@ final readonly class FindCommand
 {
     private const DEFAULT_LIMIT = 20;
 
+    private EntityTable $table;
+
     public function __construct(
         private GraphqlManagerRegistry $managers,
         private EntityClassLocator $entityClassLocator,
+        ?EntityTable $table = null,
     ) {
+        $this->table = $table ?? new EntityTable($managers);
     }
 
     /**
@@ -76,16 +78,11 @@ final readonly class FindCommand
         }
 
         $metadata = $this->managers->getManagerForClass($class)->getMetadataFactory()->getMetadata($class);
-        $rows = array_map(fn (object $entity) => $this->row($metadata, $entity, $format === 'json'), array_values($entities));
+        $this->table->print($io, $output, $metadata, array_values($entities), $format === 'json');
 
-        if ($format === 'json') {
-            $output->writeln(json_encode($rows, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
-
-            return Command::SUCCESS;
+        if ($format !== 'json') {
+            $io->writeln(\sprintf('%d %s found.', \count($entities), $metadata->name));
         }
-
-        $io->table(array_map(fn (GraphqlFieldMetadata $field) => $field->property, array_values($metadata->fields)), $rows);
-        $io->writeln(\sprintf('%d %s found.', \count($rows), $metadata->name));
 
         return Command::SUCCESS;
     }
@@ -126,72 +123,5 @@ final readonly class FindCommand
         } catch (\JsonException) {
             return $value;
         }
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function row(GraphqlEntityMetadata $metadata, object $entity, bool $json): array
-    {
-        $row = [];
-
-        foreach ($metadata->fields as $field) {
-            $property = new \ReflectionProperty($entity, $field->property);
-            $value = $property->isInitialized($entity) ? $property->getValue($entity) : null;
-            $row[$field->property] = $this->cell($field, $value, $json);
-        }
-
-        return $row;
-    }
-
-    /**
-     * A relation is shown by its identifier, a collection by its size (its identifiers in JSON).
-     */
-    private function cell(GraphqlFieldMetadata $field, mixed $value, bool $json): mixed
-    {
-        if (\is_array($value) && $field->relation !== null) {
-            $identifiers = array_map(fn (mixed $item) => \is_object($item) ? $this->identifier($item) : $item, array_values($value));
-
-            return $json ? $identifiers : \sprintf('%d %s', \count($value), $field->mappedFrom);
-        }
-
-        if (\is_object($value) && $field->relation !== null) {
-            $identifier = $this->identifier($value);
-
-            return $json ? $identifier : '#' . (\is_scalar($identifier) ? (string) $identifier : '?');
-        }
-
-        $value = match (true) {
-            $value instanceof \DateTimeInterface => $value->format(DATE_ATOM),
-            $value instanceof \BackedEnum => $value->value,
-            $value instanceof \UnitEnum => $value->name,
-            default => $value,
-        };
-
-        return $json ? $value : $this->text($value);
-    }
-
-    private function identifier(object $entity): mixed
-    {
-        $identifier = $this->managers->getManagerForClass($entity::class)->getMetadataFactory()->getMetadata($entity::class)->identifier;
-
-        if ($identifier === null) {
-            return null;
-        }
-
-        // A lazy ghost has its identifier set without being loaded: reading it sends no query.
-        $property = new \ReflectionProperty($entity, $identifier->property);
-
-        return $property->isInitialized($entity) ? $property->getValue($entity) : null;
-    }
-
-    private function text(mixed $value): string
-    {
-        return match (true) {
-            $value === null => 'null',
-            \is_bool($value) => $value ? 'true' : 'false',
-            \is_scalar($value) => (string) $value,
-            default => json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?: '?',
-        };
     }
 }

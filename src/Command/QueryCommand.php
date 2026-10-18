@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GraphqlOrm\Command;
 
 use GraphqlOrm\Exception\GraphqlOrmException;
+use GraphqlOrm\Query\Pagination\PaginatedResult;
 use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -30,6 +31,8 @@ final readonly class QueryCommand
 {
     public function __construct(
         private GraphqlManagerRegistry $managers,
+        private EntityClassLocator $entityClassLocator,
+        private EntityTable $table,
     ) {
     }
 
@@ -42,14 +45,23 @@ final readonly class QueryCommand
         ?string $variables = null,
         #[Option('The manager whose API is queried; the default one when unset')]
         ?string $manager = null,
+        #[Option('Hydrate the response as this entity (short name or FQCN) and print the entities, as graphqlorm:find')]
+        ?string $hydrate = null,
+        #[Option('With --hydrate, the output format: table or json', shortcut: 'f')]
+        string $format = 'table',
     ): int {
-        $errors = (new SymfonyStyle($input, $output))->getErrorStyle();
+        $io = new SymfonyStyle($input, $output);
+        $errors = $io->getErrorStyle();
         $query ??= $this->readStandardInput($input);
 
         if ($query === null || trim($query) === '') {
             $errors->error('No GraphQL query: pass it as argument, or on the standard input.');
 
             return Command::FAILURE;
+        }
+
+        if ($hydrate !== null) {
+            return $this->hydrate($io, $output, $query, $hydrate, $variables, $format);
         }
 
         try {
@@ -68,6 +80,43 @@ final readonly class QueryCommand
 
         // Partial data along with errors: printed, but the command fails as the query did in part.
         return isset($response['errors']) ? Command::FAILURE : Command::SUCCESS;
+    }
+
+    /**
+     * Sends the query through a query of the entity: its root field must be the one of the entity.
+     */
+    private function hydrate(SymfonyStyle $io, OutputInterface $output, string $query, string $entity, ?string $variables, string $format): int
+    {
+        $class = $this->entityClassLocator->resolve($entity);
+
+        if ($class === null) {
+            $io->getErrorStyle()->error(\sprintf('Entity "%s" not found. Available entities: %s', $entity, implode(', ', $this->entityClassLocator->available())));
+
+            return Command::FAILURE;
+        }
+
+        try {
+            if ($variables !== null && $this->variables($variables) !== []) {
+                throw new \InvalidArgumentException('--hydrate sends the query without variables: write their values in the query.');
+            }
+
+            $repository = $this->managers->getRepository($class);
+            $result = $repository->createQueryBuilder()->setGraphQL($query)->getQuery()->getResult();
+        } catch (\InvalidArgumentException|GraphqlOrmException $exception) {
+            $io->getErrorStyle()->error($exception->getMessage());
+
+            return Command::FAILURE;
+        }
+
+        $entities = array_values($result instanceof PaginatedResult ? $result->items : $result);
+        $metadata = $this->managers->getManagerForClass($class)->getMetadataFactory()->getMetadata($class);
+        $this->table->print($io, $output, $metadata, $entities, $format === 'json');
+
+        if ($format !== 'json') {
+            $io->writeln(\sprintf('%d %s hydrated as %s.', \count($entities), $metadata->name, $class));
+        }
+
+        return Command::SUCCESS;
     }
 
     /**

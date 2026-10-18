@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace GraphqlOrm\Tests\Command;
 
 use GraphqlOrm\Client\GraphqlClient;
+use GraphqlOrm\Command\EntityClassLocator;
+use GraphqlOrm\Command\EntityTable;
 use GraphqlOrm\Command\QueryCommand;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
 use GraphqlOrm\GraphqlManager;
@@ -147,9 +149,53 @@ final class QueryCommandTest extends TestCase
         self::assertStringNotContainsString('Task A', $logged);
     }
 
+    #[Test]
+    public function itHydratesTheResponseAsTheEntityNamed(): void
+    {
+        $server = (new MockGraphqlServer())->respond(['tasks' => ['items' => [
+            ['id' => 1, 'title' => 'Task A', 'done' => false, 'due_date' => null, 'user' => ['id' => 7, 'name' => 'User A', 'tasks' => ['items' => []]]],
+        ]]]);
+        $tester = $this->tester($this->registry($server));
+
+        $status = $tester->execute(['query' => '{ tasks { items { id title done due_date user { id name tasks { items { id } } } } } }', '--hydrate' => 'Task']);
+
+        self::assertSame(Command::SUCCESS, $status);
+        $display = (string) preg_replace('/\s+/', ' ', $tester->getDisplay());
+        self::assertStringContainsString('id title done dueDate user', $display);
+        self::assertStringContainsString('1 Task A false null #7', $display);
+        self::assertStringContainsString('1 tasks hydrated as GraphqlOrm\Tests\Integration\Entity\Task', $display);
+    }
+
+    #[Test]
+    public function itPrintsTheEntitiesHydratedAsJson(): void
+    {
+        $server = (new MockGraphqlServer())->respond(['tasks' => ['items' => [['id' => 1, 'title' => 'Task A', 'done' => true, 'due_date' => null, 'user' => null]]]]);
+        $tester = $this->tester($this->registry($server));
+
+        $tester->execute(['query' => '{ tasks { items { id title done due_date user { id } } } }', '--hydrate' => 'Task', '--format' => 'json']);
+
+        self::assertSame(
+            [['id' => 1, 'title' => 'Task A', 'done' => true, 'dueDate' => null, 'user' => null]],
+            json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR),
+        );
+    }
+
+    #[Test]
+    public function itFailsToHydrateAnUnknownEntity(): void
+    {
+        $server = new MockGraphqlServer();
+        $tester = $this->tester($this->registry($server));
+
+        self::assertSame(Command::FAILURE, $tester->execute(['query' => self::QUERY, '--hydrate' => 'Taks']));
+        self::assertStringContainsString('Entity "Taks" not found', $tester->getDisplay());
+        self::assertSame([], $server->requests());
+    }
+
     private function tester(GraphqlManagerRegistry $registry): CommandTester
     {
-        return new CommandTester((new Command('graphqlorm:query'))->setCode(new QueryCommand($registry)));
+        $locator = new EntityClassLocator(\dirname(__DIR__) . '/Integration/Entity', 'GraphqlOrm\\Tests\\Integration\\Entity');
+
+        return new CommandTester((new Command('graphqlorm:query'))->setCode(new QueryCommand($registry, $locator, new EntityTable($registry))));
     }
 
     private function registry(MockGraphqlServer $server, ?FakeLogger $logger = null): GraphqlManagerRegistry
