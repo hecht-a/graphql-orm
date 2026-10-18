@@ -15,6 +15,8 @@ use GraphqlOrm\Query\Aggregate;
 use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Ast\QueryNode;
 use GraphqlOrm\Query\Direction;
+use GraphqlOrm\Query\Expr\FilterExpressionInterface;
+use GraphqlOrm\Query\Expr\GraphqlNamedFilter;
 use GraphqlOrm\Query\GraphqlQuery;
 use GraphqlOrm\Query\GraphqlQueryBuilder;
 use GraphqlOrm\Query\GraphqlQueryCompiler;
@@ -191,6 +193,30 @@ class GraphqlEntityRepository
         $field = $dialect->countField($metadata->name, $dialect->applyCriteria($this->criteria($metadata, $criteria)), $this->numericIdentifier($metadata));
 
         return $this->executeInline($field, fn (array $data): int => $dialect->readCount($data, $field->name), array_keys($criteria));
+    }
+
+    /**
+     * Counts the entities a filter of the query builder matches, with a query of its own.
+     *
+     * @internal see GraphqlQueryBuilder::count()
+     *
+     * @throws LogicException          when the dialect cannot count
+     * @throws GraphqlRequestException when the query fails
+     */
+    public function countMatching(?FilterExpressionInterface $filter): int
+    {
+        $dialect = $this->manager->getDialect();
+
+        if (!$dialect instanceof CountingDialect) {
+            throw new LogicException(\sprintf('"%s" cannot count entities: count() needs a dialect implementing %s.', $dialect::class, CountingDialect::class));
+        }
+
+        $metadataFactory = $this->manager->getMetadataFactory();
+        $metadata = $metadataFactory->getMetadata($this->entityClass);
+        $arguments = $filter !== null ? $dialect->applyFilter(new GraphqlNamedFilter($filter, $metadata, $metadataFactory, $this->manager->getTypeConverters())) : [];
+        $field = $dialect->countField($metadata->name, $arguments, $this->numericIdentifier($metadata));
+
+        return $this->executeInline($field, fn (array $data): int => $dialect->readCount($data, $field->name), $filter !== null ? GraphqlNamedFilter::fieldNames($filter->toArray()) : []);
     }
 
     /**

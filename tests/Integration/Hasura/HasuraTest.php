@@ -13,6 +13,7 @@ use GraphqlOrm\Exception\NonUniqueResultException;
 use GraphqlOrm\Execution\IdentityMap;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\Naming\SnakeCaseNamingStrategy;
+use GraphqlOrm\Pagination\Pagerfanta\GraphqlOrmAdapter;
 use GraphqlOrm\Query\Direction;
 use GraphqlOrm\Query\GraphqlQuery;
 use GraphqlOrm\Query\Pagination\PaginatedResult;
@@ -28,6 +29,7 @@ use GraphqlOrm\Tests\Integration\Entity\User;
 use GraphqlOrm\Tests\Integration\Entity\UserWithLazyTasks;
 use GraphqlOrm\Tests\Integration\IntegrationTestCase;
 use GraphqlOrm\Tests\Integration\WritesEntities;
+use Pagerfanta\Pagerfanta;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -362,6 +364,18 @@ final class HasuraTest extends IntegrationTestCase
         self::assertSame([4], self::ids($secondPage->items ?? []));
         self::assertFalse($secondPage?->hasNextPage);
         self::assertSame([1, 2, 3], self::ids($backToFirst->items ?? []));
+    }
+
+    #[Test]
+    public function itPaginatesWithPagerfanta(): void
+    {
+        $queryBuilder = $this->repository(Task::class)->createQueryBuilder()->orderBy('id', Direction::Asc);
+
+        $pager = (new Pagerfanta(new GraphqlOrmAdapter($queryBuilder)))->setMaxPerPage(3)->setCurrentPage(2);
+
+        self::assertSame(4, $pager->getNbResults());
+        self::assertSame(2, $pager->getNbPages());
+        self::assertSame([4], self::ids($pager->getCurrentPageResults()));
     }
 
     #[Test]

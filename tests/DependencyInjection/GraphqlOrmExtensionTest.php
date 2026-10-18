@@ -25,6 +25,7 @@ use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\MetadataCacheWarmer;
 use GraphqlOrm\Metadata\Naming\SnakeCaseNamingStrategy;
+use GraphqlOrm\Pagination\KnpPaginator\QueryBuilderSubscriber;
 use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Schema\CountableFieldResolver;
@@ -450,6 +451,14 @@ final class GraphqlOrmExtensionTest extends TestCase
         $container->compile();
 
         self::assertInstanceOf(QueryRedactor::class, $this->managerRedactor($container));
+    }
+
+    #[Test]
+    public function itLetsKnpPaginatorPaginateTheQueryBuilders(): void
+    {
+        $container = $this->createContainer(debug: false);
+
+        self::assertArrayHasKey('kernel.event_subscriber', $container->getDefinition(QueryBuilderSubscriber::class)->getTags());
     }
 
     #[Test]

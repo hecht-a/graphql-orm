@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Query;
 
+use GraphqlOrm\Dialect\GraphqlQueryDialect;
+use GraphqlOrm\Exception\GraphqlRequestException;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\GraphqlManager;
@@ -13,6 +15,7 @@ use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Query\Expr\ExpressionBuilder;
 use GraphqlOrm\Query\Expr\FilterExpressionInterface;
 use GraphqlOrm\Query\Expr\GraphqlNamedFilter;
+use GraphqlOrm\Repository\GraphqlEntityRepository;
 
 /**
  * @template T of object
@@ -35,6 +38,33 @@ final class GraphqlQueryBuilder
         private readonly GraphqlManager $manager,
         private readonly QueryOptions $options = new QueryOptions(),
     ) {
+    }
+
+    /**
+     * A copy changing apart: its limit, ordering and pagination are its own.
+     */
+    public function __clone()
+    {
+        $this->options = clone $this->options;
+    }
+
+    /**
+     * Counts the entities the filter of where() matches, with a query of its own, as count() of the repository.
+     *
+     * @throws LogicException          when the dialect cannot count
+     * @throws GraphqlRequestException when the query fails
+     */
+    public function count(): int
+    {
+        return (new GraphqlEntityRepository($this->manager, $this->entityClass))->countMatching($this->filter);
+    }
+
+    /**
+     * @internal the dialect of the API queried, for the paginators
+     */
+    public function getDialect(): GraphqlQueryDialect
+    {
+        return $this->manager->getDialect();
     }
 
     /**

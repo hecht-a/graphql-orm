@@ -25,10 +25,12 @@ use GraphqlOrm\Form\GraphqlEntityType;
 use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\Naming\DefaultNamingStrategy;
 use GraphqlOrm\Metadata\Naming\SnakeCaseNamingStrategy;
+use GraphqlOrm\Pagination\KnpPaginator\QueryBuilderSubscriber;
 use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use GraphqlOrm\Serializer\GraphqlEntityNormalizer;
 use GraphqlOrm\Twig\GraphqlOrmTwigExtension;
 use GraphqlOrm\ValueResolver\GraphqlEntityValueResolver;
+use Knp\Component\Pager\Event\ItemsEvent;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Form\FormTypeInterface;
@@ -96,6 +98,13 @@ return static function (ContainerConfigurator $config) {
             ->arg('$collector', service(GraphqlOrmDataCollector::class)->nullOnInvalid())
             ->tag('controller.service_arguments')
             ->public();
+    }
+
+    // knplabs/knp-components is optional: KnpPaginator then paginates the query builders.
+    if (class_exists(ItemsEvent::class)) {
+        $services->set(QueryBuilderSubscriber::class)
+            ->autoconfigure(false)
+            ->tag('kernel.event_subscriber');
     }
 
     $services->set(ProfilerReplayController::class)
