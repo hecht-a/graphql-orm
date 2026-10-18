@@ -13,6 +13,8 @@ use GraphqlOrm\Tests\Fixtures\Converter\MoneyConverter;
 use GraphqlOrm\Tests\Fixtures\Converter\Product;
 use GraphqlOrm\Tests\Fixtures\Depth\ChainA;
 use GraphqlOrm\Tests\Fixtures\Depth\ChainB;
+use GraphqlOrm\Tests\Fixtures\Embedded\Money;
+use GraphqlOrm\Tests\Fixtures\Embedded\Order;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -362,7 +364,7 @@ final class GraphqlOrmDataCollectorTest extends TestCase
         self::assertSame([ChainA::class, 'chainAs', 1, 'id'], [$entity['class'], $entity['name'], $entity['queries'], $entity['identifier']]);
         self::assertIsArray($entity['fields']);
         self::assertSame(
-            ['property' => 'next', 'field' => 'next', 'relation' => ChainB::class, 'collection' => false, 'fetch' => 'Eager', 'converter' => null, 'converter_source' => null],
+            ['property' => 'next', 'field' => 'next', 'relation' => ChainB::class, 'collection' => false, 'fetch' => 'Eager', 'converter' => null, 'converter_source' => null, 'embedded' => null],
             $entity['fields'][2] ?? null,
         );
     }
@@ -387,6 +389,21 @@ final class GraphqlOrmDataCollectorTest extends TestCase
         self::assertSame([DecimalMoneyConverter::class, 'field'], [$converters['discount'], $sources['discount']]);
         self::assertNull($converters['contact']);
         self::assertNull($converters['name']);
+    }
+
+    #[Test]
+    public function itDescribesTheEmbeddedValueObjects(): void
+    {
+        $collector = new GraphqlOrmDataCollector(metadataFactory: new GraphqlEntityMetadataFactory(), entityClasses: [Order::class]);
+
+        $collector->collect(new Request(), new Response());
+
+        $fields = $collector->getEntities()[0]['fields'] ?? null;
+        self::assertIsArray($fields);
+        $embedded = array_column($fields, 'embedded', 'property');
+        self::assertSame(['class' => Money::class, 'fields' => ['price.amount', 'price.currency']], $embedded['price']);
+        self::assertSame(['class' => Money::class, 'fields' => ['total_amount', 'total_currency']], $embedded['total']);
+        self::assertNull($embedded['id']);
     }
 
     #[Test]

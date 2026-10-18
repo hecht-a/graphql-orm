@@ -8,6 +8,8 @@ use Doctrine\Common\Collections\Collection;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Exception\NotAGraphqlEntityException;
 use GraphqlOrm\Exception\TooManyIdentifiersException;
+use GraphqlOrm\Mapping\Embeddable;
+use GraphqlOrm\Mapping\Embedded;
 use GraphqlOrm\Mapping\Entity;
 use GraphqlOrm\Mapping\Field;
 use GraphqlOrm\Mapping\Identifier;
@@ -127,6 +129,7 @@ final class GraphqlEntityMetadataFactory
     {
         $value = $property->getAttributes(Field::class)[0] ?? null;
         $relation = $property->getAttributes(Relation::class)[0] ?? null;
+        $embedded = $property->getAttributes(Embedded::class)[0] ?? null;
         $isIdentifier = $property->getAttributes(Identifier::class) !== [];
         $name = $class . '::$' . $property->getName();
 
@@ -138,7 +141,13 @@ final class GraphqlEntityMetadataFactory
             throw new InvalidArgumentException(\sprintf('"%s" is mapped with both #[Field] and #[Relation]: map a relation with #[Relation] only.', $name));
         }
 
+        // #[Identifier] needs #[Field]: refused with #[Embedded] as well.
+        if ($embedded !== null && ($value !== null || $relation !== null)) {
+            throw new InvalidArgumentException(\sprintf('"%s" is mapped with #[Embedded] and #[Field], #[Relation] or #[Identifier]: an embedded value object is mapped with #[Embedded] only.', $name));
+        }
+
         return match (true) {
+            $embedded !== null => $this->embeddedField($name, $property, $embedded->newInstance()),
             $relation !== null => $this->relationField($name, $property, $relation->newInstance()),
             $value !== null => $this->valueField($name, $property, $value->newInstance(), $isIdentifier),
             default => null,
@@ -163,6 +172,35 @@ final class GraphqlEntityMetadataFactory
             isCollection: $isCollection,
             ignoreValidation: $attribute->ignoreValidation,
             fetch: $attribute->fetch,
+        );
+    }
+
+    /**
+     * @throws InvalidArgumentException when the type of the property is no #[Embeddable] class
+     */
+    private function embeddedField(string $name, \ReflectionProperty $property, Embedded $attribute): GraphqlFieldMetadata
+    {
+        $class = self::valueClass($property->getType());
+
+        if ($class === null || (new \ReflectionClass($class))->getAttributes(Embeddable::class) === []) {
+            throw new InvalidArgumentException(\sprintf('"%s" is mapped with #[Embedded] but "%s" has no #[Embeddable].', $name, $class ?? (string) $property->getType()));
+        }
+
+        $fields = [];
+
+        foreach ((new \ReflectionClass($class))->getProperties() as $embeddableProperty) {
+            $field = $embeddableProperty->getAttributes(Field::class)[0] ?? null;
+
+            if ($field !== null) {
+                $fields[] = $this->valueField($class . '::$' . $embeddableProperty->getName(), $embeddableProperty, $field->newInstance(), false);
+            }
+        }
+
+        return new GraphqlFieldMetadata(
+            property: $property->getName(),
+            mappedFrom: $attribute->mappedFrom ?? $this->namingStrategy->fieldName($property->getName()),
+            valueClass: $class,
+            embedded: new GraphqlEmbeddedMetadata($class, $attribute->prefix, $fields),
         );
     }
 

@@ -163,6 +163,12 @@ final class GraphqlQueryStringBuilder
                     ->getMetadata($entityClass);
 
             foreach ($metadata->fields as $field) {
+                if ($field->embedded !== null) {
+                    $this->addEmbedded($selection, $field);
+
+                    continue;
+                }
+
                 if ($field->relation !== null) {
                     if ($depth >= $this->manager->getMaxDepth() || $field->fetch === Fetch::Lazy) {
                         $selection->add($this->relationFallbackAst($field));
@@ -260,6 +266,13 @@ final class GraphqlQueryStringBuilder
                 continue;
             }
 
+            if ($field->embedded !== null) {
+                unset($children['__explicit']);
+                $this->addEmbedded($selection, $field, $children !== [] ? array_map(strval(...), array_keys($children)) : null);
+
+                continue;
+            }
+
             if ($field->relation === null) {
                 $selection->add(new FieldNode($field->mappedFrom, isCollection: $field->isCollection));
 
@@ -337,7 +350,9 @@ final class GraphqlQueryStringBuilder
         foreach ($metadata->fields as $field) {
             if ($field->relation === null) {
                 if (!$relationsOnly) {
-                    $selection->add(new FieldNode($field->mappedFrom, isCollection: $field->isCollection));
+                    $field->embedded !== null
+                        ? $this->addEmbedded($selection, $field)
+                        : $selection->add(new FieldNode($field->mappedFrom, isCollection: $field->isCollection));
                 }
 
                 continue;
@@ -381,6 +396,37 @@ final class GraphqlQueryStringBuilder
                 $this->mergeAst($same->selectionSet, $field->selectionSet);
             }
         }
+    }
+
+    /**
+     * The fields of an embedded value object: a GraphQL object, or prefixed fields of the entity.
+     *
+     * @param list<string>|null $only the fields selected, GraphQL names or PHP properties; every field when null
+     */
+    private function addEmbedded(SelectionSetNode $selection, GraphqlFieldMetadata $field, ?array $only = null): void
+    {
+        $embedded = $field->embedded;
+        \assert($embedded !== null);
+        $fields = array_filter(
+            $embedded->fields,
+            static fn (GraphqlFieldMetadata $embeddedField): bool => $only === null || \in_array($embeddedField->mappedFrom, $only, true) || \in_array($embeddedField->property, $only, true),
+        );
+
+        if ($embedded->prefix !== null) {
+            foreach ($fields as $embeddedField) {
+                $selection->add(new FieldNode($embedded->graphqlName($embeddedField), isCollection: $embeddedField->isCollection));
+            }
+
+            return;
+        }
+
+        $object = new SelectionSetNode();
+
+        foreach ($fields as $embeddedField) {
+            $object->add(new FieldNode($embeddedField->mappedFrom, isCollection: $embeddedField->isCollection));
+        }
+
+        $selection->add(new FieldNode($field->mappedFrom, [], $object));
     }
 
     private function relationFallbackAst(GraphqlFieldMetadata $field): FieldNode

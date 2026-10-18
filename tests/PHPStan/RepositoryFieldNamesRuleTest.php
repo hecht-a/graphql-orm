@@ -60,4 +60,10 @@ final class RepositoryFieldNamesRuleTest extends RuleTestCase
             [\sprintf('Field "due_dat" is not mapped on %s. Did you mean "due_date"?', FakeEntityNamedByStrategy::class), 16, self::UNMAPPED_TIP],
         ]);
     }
+
+    #[Test]
+    public function itAcceptsTheFieldsOfAValueObjectOfPrefixedFields(): void
+    {
+        $this->analyse([__DIR__ . '/data/embedded-field-names.php'], []);
+    }
 }

@@ -461,7 +461,11 @@
                                             <tr>
                                                 <td>{{ field.property }}{% if field.property == entity.identifier %} <span class="badge">identifier</span>{% endif %}</td>
                                                 <td><code>{{ field.field }}</code></td>
-                                                <td>{% if field.relation %}<span title="{{ field.relation }}">{{ field.relation|split('\\')|last }}{{ field.collection ? '[]' }}</span>{% else %}<span class="graphql-orm-muted">-</span>{% endif %}</td>
+                                                <td>
+                                                    {% if field.relation %}<span title="{{ field.relation }}">{{ field.relation|split('\\')|last }}{{ field.collection ? '[]' }}</span>
+                                                    {% elseif field.embedded ?? null %}<span title="{{ field.embedded.class }}: {{ field.embedded.fields|join(', ') }}">{{ field.embedded.class|split('\\')|last }}</span> <span class="graphql-orm-muted">embedded, {{ field.embedded.fields|join(', ') }}</span>
+                                                    {% else %}<span class="graphql-orm-muted">-</span>{% endif %}
+                                                </td>
                                                 <td>{{ field.fetch ?? '-' }}</td>
                                                 <td>
                                                     {% if field.converter ?? null %}

@@ -24,6 +24,8 @@ final readonly class GraphqlFieldMetadata
         public ?string $converter = null,
         /** @var class-string|null the class the property is typed with, whose type converter applies */
         public ?string $valueClass = null,
+        /** The value object of an #[Embedded] property, whose response key is $mappedFrom once its fields are nested */
+        public ?GraphqlEmbeddedMetadata $embedded = null,
     ) {
     }
 }

@@ -27,6 +27,8 @@ final readonly class DtoParameterMetadata
         public ?string $converter = null,
         /** @var class-string|null the class the parameter is typed with, whose type converter applies */
         public ?string $valueClass = null,
+        /** The value object the parameter maps, created as the one of an entity */
+        public ?GraphqlEmbeddedMetadata $embedded = null,
     ) {
     }
 }

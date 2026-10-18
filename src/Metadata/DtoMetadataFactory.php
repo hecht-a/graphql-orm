@@ -89,6 +89,15 @@ final class DtoMetadataFactory
                 break;
             }
 
+            // A field of a value object, nested under its key in the rows: the last name of the path.
+            if ($field->embedded !== null && $index === \count($names) - 2) {
+                $field = $field->embedded->field($names[$index + 1])
+                    ?? throw new InvalidArgumentException(\sprintf('"%s::$%s" maps "%s", but "%s" is not a field of "%s".', $dtoClass, $parameter->getName(), $path, $names[$index + 1], $field->embedded->class));
+                $graphqlPath[] = $field->mappedFrom;
+
+                break;
+            }
+
             if ($field->relation === null || $field->isCollection) {
                 throw new InvalidArgumentException(\sprintf('"%s::$%s" maps "%s" through "%s", which is not a relation to one entity of "%s".', $dtoClass, $parameter->getName(), $path, $name, $class));
             }
@@ -121,6 +130,7 @@ final class DtoMetadataFactory
             // The converter the entity names for its field, when the parameter is typed as its property.
             $field->converter !== null && $valueClass === $field->valueClass ? $field->converter : null,
             $valueClass,
+            $field->embedded,
         );
     }
 

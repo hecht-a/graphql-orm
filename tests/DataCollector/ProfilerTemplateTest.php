@@ -13,6 +13,7 @@ use GraphqlOrm\Tests\Fixtures\Converter\MoneyConverter;
 use GraphqlOrm\Tests\Fixtures\Converter\Product;
 use GraphqlOrm\Tests\Fixtures\Dto\Task;
 use GraphqlOrm\Tests\Fixtures\Dto\TaskSummary;
+use GraphqlOrm\Tests\Fixtures\Embedded\Order;
 use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use GraphqlOrm\Twig\GraphqlOrmTwigExtension;
 use PHPUnit\Framework\Attributes\Test;
@@ -385,6 +386,21 @@ final class ProfilerTemplateTest extends TestCase
 
         self::assertStringContainsString('price price - - MoneyConverter by type', $text);
         self::assertStringContainsString('discount discount - - DecimalMoneyConverter by #[Field]', $text);
+    }
+
+    #[Test]
+    public function itShowsTheEmbeddedValueObjectsOfAnEntity(): void
+    {
+        $collector = new GraphqlOrmDataCollector(metadataFactory: new GraphqlEntityMetadataFactory(), entityClasses: [Order::class]);
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { orders { id } }';
+        $collector->addQuery($trace);
+        $collector->collect(new Request(), new Response());
+
+        $text = self::text($this->render($collector));
+
+        self::assertStringContainsString('price price Money embedded, price.amount, price.currency', $text);
+        self::assertStringContainsString('total total Money embedded, total_amount, total_currency', $text);
     }
 
     #[Test]

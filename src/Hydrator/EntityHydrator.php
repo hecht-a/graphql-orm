@@ -106,6 +106,7 @@ final class EntityHydrator
             $context->trace->hydrationMaxDepth,
             $depth
         );
+        $data = self::embeddedNested($metadata, $data);
 
         $identifier = $this->findUniqueField($metadata);
         $idField = $identifier?->mappedFrom;
@@ -246,6 +247,19 @@ final class EntityHydrator
 
             $value = $data[$field->mappedFrom];
 
+            if ($field->embedded !== null) {
+                $property = $this->property($metadata->class, $field->property);
+                $value = \is_array($value)
+                    ? EmbeddedRows::create($field->embedded, $value, fn (mixed $value, \ReflectionProperty $embeddedProperty, GraphqlFieldMetadata $embeddedField): mixed => $this->normalizeValue($value, $embeddedProperty, $embeddedField, $context))
+                    : null;
+
+                $this->isUninitializedGhost($entity)
+                    ? $property->setRawValueWithoutLazyInitialization($entity, $value)
+                    : $property->setValue($entity, $value);
+
+                continue;
+            }
+
             if ($field->relation !== null && \is_array($value)) {
                 $relationMetadata = $this
                     ->metadataFactory
@@ -293,6 +307,33 @@ final class EntityHydrator
                 ? $property->setRawValueWithoutLazyInitialization($entity, $value)
                 : $property->setValue($entity, $value);
         }
+    }
+
+    /**
+     * The row, its embedded value objects nested under their key, and left out when it does not hold every field they
+     * need: the property is then not selected, as a partial selection of them would build none.
+     *
+     * @param array<string|int, mixed> $data
+     *
+     * @return array<string|int, mixed>
+     */
+    private static function embeddedNested(GraphqlEntityMetadata $metadata, array $data): array
+    {
+        $data = EmbeddedRows::nest($metadata, $data);
+
+        foreach ($metadata->fields as $field) {
+            if ($field->embedded === null) {
+                continue;
+            }
+
+            $values = $data[$field->mappedFrom] ?? null;
+
+            if (\is_array($values) && !EmbeddedRows::isComplete($field->embedded, $values)) {
+                unset($data[$field->mappedFrom]);
+            }
+        }
+
+        return $data;
     }
 
     /**

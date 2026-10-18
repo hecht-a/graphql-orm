@@ -205,7 +205,7 @@ class GraphqlEntityRepository
         $converted = [];
 
         foreach ($criteria as $name => $value) {
-            $field = $metadata->field($name);
+            $field = $metadata->valueField($name);
             $converted[$name] = $this->manager->getTypeConverters()->toGraphql($field?->converter, $field?->valueClass, $value);
         }
 

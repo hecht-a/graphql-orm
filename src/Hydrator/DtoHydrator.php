@@ -9,6 +9,7 @@ use GraphqlOrm\Exception\CastException;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Metadata\DtoMetadata;
 use GraphqlOrm\Metadata\DtoParameterMetadata;
+use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 
 /**
  * Creates DTOs through their constructor from the rows of a response, their collection envelopes removed: no identity
@@ -61,6 +62,16 @@ final class DtoHydrator
         }
 
         $nested = $parameter->nested;
+
+        if ($parameter->embedded !== null) {
+            return \is_array($value)
+                ? EmbeddedRows::create($parameter->embedded, $value, static function (mixed $value, \ReflectionProperty $property, GraphqlFieldMetadata $field) use ($converters): mixed {
+                    $converter = $value !== null ? $converters?->converterFor($field->converter, $field->valueClass) : null;
+
+                    return $converter !== null ? $converter->toPhp($value) : ValueCaster::cast($value, $property->getType());
+                })
+                : null;
+        }
 
         if ($nested === null) {
             $converter = $value !== null ? $converters?->converterFor($parameter->converter, $parameter->valueClass) : null;

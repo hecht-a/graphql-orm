@@ -16,6 +16,7 @@ use GraphqlOrm\Exception\NoResultException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\DtoHydrator;
+use GraphqlOrm\Hydrator\EmbeddedRows;
 use GraphqlOrm\Metadata\DtoMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Query\Ast\FieldNode;
@@ -440,7 +441,7 @@ final readonly class GraphqlQuery
 
         foreach ($rows as $row) {
             /** @var T $dto the rows are hydrated as instances of the DTO */
-            $dto = DtoHydrator::hydrate($this->dto, $this->withoutEnvelopes($metadata, $row), $context->typeConverters);
+            $dto = DtoHydrator::hydrate($this->dto, $this->withoutEnvelopes($metadata, $row, nestEmbedded: true), $context->typeConverters);
 
             if ($key === null) {
                 $dtos[] = $dto;
@@ -483,8 +484,11 @@ final readonly class GraphqlQuery
      *
      * @return array<mixed>
      */
-    private function withoutEnvelopes(GraphqlEntityMetadata $metadata, array $row): array
+    private function withoutEnvelopes(GraphqlEntityMetadata $metadata, array $row, bool $nestEmbedded = false): array
     {
+        // The prefixed fields of the value objects nested under their key, as the rows of the entities.
+        $row = $nestEmbedded ? EmbeddedRows::nest($metadata, $row) : $row;
+
         foreach ($metadata->fields as $field) {
             $value = $row[$field->mappedFrom] ?? null;
 
@@ -496,10 +500,10 @@ final readonly class GraphqlQuery
 
             $row[$field->mappedFrom] = $field->isCollection
                 ? array_map(
-                    fn (array $item) => $this->withoutEnvelopes($relationMetadata, $item),
+                    fn (array $item) => $this->withoutEnvelopes($relationMetadata, $item, $nestEmbedded),
                     $this->rows($value)
                 )
-                : $this->withoutEnvelopes($relationMetadata, $value);
+                : $this->withoutEnvelopes($relationMetadata, $value, $nestEmbedded);
         }
 
         return $row;

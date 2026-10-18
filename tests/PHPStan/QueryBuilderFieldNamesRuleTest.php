@@ -6,6 +6,8 @@ namespace GraphqlOrm\Tests\PHPStan;
 
 use GraphqlOrm\PHPStan\FieldNameChecker;
 use GraphqlOrm\PHPStan\QueryBuilderFieldNamesRule;
+use GraphqlOrm\Tests\Fixtures\Embedded\Money;
+use GraphqlOrm\Tests\Fixtures\Embedded\Order;
 use GraphqlOrm\Tests\Integration\Entity\Task;
 use GraphqlOrm\Tests\Integration\Entity\User;
 use PHPStan\Rules\Rule;
@@ -42,6 +44,14 @@ final class QueryBuilderFieldNamesRuleTest extends RuleTestCase
 
         $this->analyse([__DIR__ . '/data/query-builder-field-names.php'], [
             [\sprintf('Field "title" of %s is not a relation: "title.length" cannot be selected.', Task::class), 18],
+        ]);
+    }
+
+    #[Test]
+    public function itAcceptsTheFieldsOfTheEmbeddedValueObjects(): void
+    {
+        $this->analyse([__DIR__ . '/data/embedded-field-names.php'], [
+            [\sprintf('Field "amont" is not mapped on %s, embedded in %s::$total. Did you mean "amount"?', Money::class, Order::class), 18, self::UNMAPPED_TIP],
         ]);
     }
 }

@@ -167,6 +167,16 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
                 'collection' => $field->isCollection,
                 'fetch' => $field->relation !== null ? $field->fetch->name : null,
                 ...$this->describeConverter($field),
+                // The value object and the response fields holding it
+                'embedded' => $field->embedded !== null ? [
+                    'class' => $field->embedded->class,
+                    'fields' => array_map(
+                        static fn (GraphqlFieldMetadata $embeddedField): string => $field->embedded->prefix !== null
+                            ? $field->embedded->graphqlName($embeddedField)
+                            : $field->mappedFrom . '.' . $embeddedField->mappedFrom,
+                        $field->embedded->fields,
+                    ),
+                ] : null,
             ], array_values($metadata->fields)),
             'error' => null,
         ];
@@ -183,7 +193,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
             return ['converter' => $field->converter, 'converter_source' => 'field'];
         }
 
-        $converter = $field->relation === null ? $this->typeConverters?->converterFor(null, $field->valueClass) : null;
+        $converter = $field->relation === null && $field->embedded === null ? $this->typeConverters?->converterFor(null, $field->valueClass) : null;
 
         return $converter !== null
             ? ['converter' => $converter::class, 'converter_source' => 'type']

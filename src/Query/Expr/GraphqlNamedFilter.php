@@ -99,6 +99,17 @@ final readonly class GraphqlNamedFilter implements FilterExpressionInterface
             return [$name => $this->typeConverters->toGraphql($field?->converter, $field?->valueClass, $comparison)];
         }
 
+        // A field of a value object: a field of the entity when prefixed, of its GraphQL object otherwise.
+        $embeddedField = \count($segments) === 1 ? $field?->embedded?->field($segments[0]) : null;
+
+        if ($field?->embedded !== null && $embeddedField !== null) {
+            $converted = $this->typeConverters->toGraphql($embeddedField->converter, $embeddedField->valueClass, $comparison);
+
+            return $field->embedded->prefix !== null
+                ? [$field->embedded->graphqlName($embeddedField) => $converted]
+                : [$name => [$embeddedField->mappedFrom => $converted]];
+        }
+
         // An unmapped segment, or one that is no relation, is nested as written: the API tells whether it exists.
         $target = $field?->relation !== null ? $this->metadataFactory->getMetadata($field->relation) : null;
 

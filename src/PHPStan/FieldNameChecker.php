@@ -7,6 +7,7 @@ namespace GraphqlOrm\PHPStan;
 use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Metadata\Naming\DefaultNamingStrategy;
 use GraphqlOrm\Metadata\Naming\NamingStrategy;
 use PHPStan\Rules\IdentifierRuleError;
@@ -19,6 +20,8 @@ use PHPStan\Rules\RuleErrorBuilder;
  */
 final class FieldNameChecker
 {
+    private const MAX_SUGGESTION_DISTANCE = 3;
+
     /** @var array<string, GraphqlEntityMetadata|null> */
     private array $metadata = [];
 
@@ -49,7 +52,8 @@ final class FieldNameChecker
     {
         $metadata = $this->metadata($entityClass);
 
-        if ($metadata === null || $metadata->field($name) !== null) {
+        // A field of a value object of prefixed fields is named by its path: total.amount
+        if ($metadata === null || $metadata->valueField($name) !== null) {
             return [];
         }
 
@@ -81,6 +85,14 @@ final class FieldNameChecker
                 return [];
             }
 
+            if ($field->embedded !== null) {
+                $embeddedName = $segments[$index + 1];
+
+                return $index + 1 === \count($segments) - 1 && $field->embedded->field($embeddedName) !== null
+                    ? []
+                    : $this->unmappedEmbedded($metadata, $field, $embeddedName);
+            }
+
             if ($field->relation === null) {
                 return [RuleErrorBuilder::message(\sprintf('Field "%s" of %s is not a relation: "%s" cannot be selected.', $segment, $metadata->class, $path))
                     ->identifier('graphqlOrm.notARelation')
@@ -105,6 +117,35 @@ final class FieldNameChecker
         $suggestion = $metadata->closestField($name);
 
         return [RuleErrorBuilder::message(\sprintf('Field "%s" is not mapped on %s.%s', $name, $metadata->class, $suggestion !== null ? \sprintf(' Did you mean "%s"?', $suggestion) : ''))
+            ->identifier('graphqlOrm.unmappedField')
+            ->tip('A field of the API that the entity does not map can be allowed with @phpstan-ignore graphqlOrm.unmappedField, or every such field with the graphqlOrm.reportUnmappedFields parameter.')
+            ->build()];
+    }
+
+    /**
+     * @return list<IdentifierRuleError>
+     */
+    private function unmappedEmbedded(GraphqlEntityMetadata $metadata, GraphqlFieldMetadata $field, string $name): array
+    {
+        $embedded = $field->embedded;
+
+        if (!$this->reportUnmappedFields || $embedded === null) {
+            return [];
+        }
+
+        $suggestion = null;
+        $distance = self::MAX_SUGGESTION_DISTANCE + 1;
+
+        foreach ($embedded->fields as $embeddedField) {
+            foreach ([$embeddedField->property, $embeddedField->mappedFrom] as $candidate) {
+                if (levenshtein($name, $candidate) < $distance) {
+                    $suggestion = $candidate;
+                    $distance = levenshtein($name, $candidate);
+                }
+            }
+        }
+
+        return [RuleErrorBuilder::message(\sprintf('Field "%s" is not mapped on %s, embedded in %s::$%s.%s', $name, $embedded->class, $metadata->class, $field->property, $suggestion !== null ? \sprintf(' Did you mean "%s"?', $suggestion) : ''))
             ->identifier('graphqlOrm.unmappedField')
             ->tip('A field of the API that the entity does not map can be allowed with @phpstan-ignore graphqlOrm.unmappedField, or every such field with the graphqlOrm.reportUnmappedFields parameter.')
             ->build()];

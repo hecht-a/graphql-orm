@@ -76,6 +76,13 @@ final readonly class SchemaValidator
             if ($field->ignoreValidation) {
                 continue;
             }
+
+            if ($field->embedded !== null && $field->embedded->prefix !== null) {
+                $violations = [...$violations, ...$this->validateEmbedded($metadata->class, $field, $schemaFields, $typeName)];
+
+                continue;
+            }
+
             if (!isset($schemaFields[$field->mappedFrom])) {
                 $suggestion = $this->suggestField($field->mappedFrom, array_keys($schemaFields));
                 $didYouMean = $suggestion !== null ? \sprintf(' Did you mean "%s"?', $suggestion) : '';
@@ -93,6 +100,14 @@ final readonly class SchemaValidator
             }
 
             $schemaField = $schemaFields[$field->mappedFrom];
+
+            if ($field->embedded !== null) {
+                $objectType = $schemaField['name'] ?? '';
+                $violations = [...$violations, ...$this->validateEmbedded($metadata->class, $field, $schemaTypes[$objectType]['fields'] ?? [], $objectType)];
+
+                continue;
+            }
+
             $violations = [...$violations, ...$this->validateNullability($metadata->class, $field, $schemaField)];
 
             if ($field->relation !== null) {
@@ -116,6 +131,44 @@ final readonly class SchemaValidator
             $violations = [
                 ...$violations,
                 ...$this->validateScalar($metadata->class, $field->property, $field->mappedFrom, $schemaField['name']),
+            ];
+        }
+
+        return $violations;
+    }
+
+    /**
+     * The fields of a value object: those of the entity for prefixed ones, of its GraphQL object for the others.
+     *
+     * @param class-string                                                                        $entityClass
+     * @param array<string, array{kind: string, name: string|null, nullable?: bool, list?: bool}> $schemaFields the fields holding them
+     *
+     * @return string[]
+     */
+    private function validateEmbedded(string $entityClass, GraphqlFieldMetadata $field, array $schemaFields, string $typeName): array
+    {
+        $embedded = $field->embedded;
+        \assert($embedded !== null);
+        $violations = [];
+
+        foreach ($embedded->fields as $embeddedField) {
+            $name = $embedded->graphqlName($embeddedField);
+            $schemaField = $schemaFields[$name] ?? null;
+
+            if ($schemaField === null) {
+                $violations[] = \sprintf('[%s] Field "%s.%s" (mapped from "%s") does not exist on GraphQL type "%s".', $entityClass, $field->property, $embeddedField->property, $name, $typeName);
+
+                continue;
+            }
+
+            if ($schemaField['kind'] !== 'SCALAR' && $schemaField['kind'] !== 'ENUM') {
+                continue;
+            }
+
+            $violations = [
+                ...$violations,
+                ...($this->validateConverter($entityClass, $embeddedField, $schemaField['name'])
+                    ?? $this->validateScalar($entityClass, $embeddedField->property, $name, $schemaField['name'], $embedded->class)),
             ];
         }
 
@@ -259,18 +312,20 @@ final readonly class SchemaValidator
     }
 
     /**
-     * @param class-string $entityClass
+     * @param class-string      $entityClass
+     * @param class-string|null $declaringClass the class declaring the property, an embedded value object, if not the entity
      *
      * @return string[]
      */
-    private function validateScalar(string $entityClass, string $property, string $mappedFrom, ?string $graphqlScalar, ): array
+    private function validateScalar(string $entityClass, string $property, string $mappedFrom, ?string $graphqlScalar, ?string $declaringClass = null): array
     {
         if ($graphqlScalar === null) {
             return [];
         }
 
         try {
-            $reflection = new \ReflectionProperty($entityClass, $property);
+            // The property of an embedded value object is declared by its class.
+            $reflection = new \ReflectionProperty($declaringClass ?? $entityClass, $property);
         } catch (\ReflectionException) {
             return [];
         }

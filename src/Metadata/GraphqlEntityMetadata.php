@@ -68,9 +68,53 @@ final readonly class GraphqlEntityMetadata
         throw new InvalidArgumentException(\sprintf('"%s" is not a field of "%s"%s.', $name, $this->class, $closest !== null ? \sprintf(': did you mean "%s"?', $closest) : ''));
     }
 
+    /**
+     * The GraphQL name of a field named after its GraphQL name or its PHP property, or of a field of a value object of
+     * prefixed fields (`total.amount` gives `total_amount`); an unknown name is kept as is.
+     *
+     * @throws InvalidArgumentException for a field of a value object nested in a GraphQL object, which the ordering and
+     *                                  the criteria of the dialects do not name
+     */
     public function graphqlName(string $name): string
     {
-        return $this->field($name)->mappedFrom ?? $name;
+        $field = $this->field($name);
+
+        if ($field !== null || !str_contains($name, '.')) {
+            return $field->mappedFrom ?? $name;
+        }
+
+        [$embedded, $embeddedField] = $this->embeddedField($name) ?? [null, null];
+
+        if ($embedded === null || $embeddedField === null) {
+            return $name;
+        }
+
+        if ($embedded->embedded?->prefix === null) {
+            throw new InvalidArgumentException(\sprintf('"%s" is a field of the value object "%s", a GraphQL object: filter on it with the query builder, the ordering and the criteria name fields of the entity.', $name, $embedded->property));
+        }
+
+        return $embedded->embedded->graphqlName($embeddedField);
+    }
+
+    /**
+     * The field of a value object named by its path (`total.amount`), with the field holding the value object, or a
+     * field of the entity.
+     */
+    public function valueField(string $name): ?GraphqlFieldMetadata
+    {
+        return $this->field($name) ?? ($this->embeddedField($name)[1] ?? null);
+    }
+
+    /**
+     * @return array{GraphqlFieldMetadata, GraphqlFieldMetadata}|null the field holding the value object, and its field
+     */
+    private function embeddedField(string $path): ?array
+    {
+        [$name, $embeddedName] = explode('.', $path, 2) + [1 => ''];
+        $field = $this->field($name);
+        $embeddedField = $field?->embedded?->field($embeddedName);
+
+        return $field !== null && $embeddedField !== null ? [$field, $embeddedField] : null;
     }
 
     /**
