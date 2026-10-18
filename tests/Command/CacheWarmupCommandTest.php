@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GraphqlOrm\Tests\Command;
 
 use GraphqlOrm\Cache\GraphqlCache;
+use GraphqlOrm\Command\CachedEntities;
 use GraphqlOrm\Command\CacheWarmupCommand;
 use GraphqlOrm\Command\EntityClassLocator;
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
@@ -144,10 +145,10 @@ final class CacheWarmupCommandTest extends TestCase
             cache: $this->cache,
             router: $router,
         );
+        $managers = new GraphqlManagerRegistry(new ServiceLocator(['default' => static fn () => $manager]), $router);
         $command = new CacheWarmupCommand(
-            new GraphqlManagerRegistry(new ServiceLocator(['default' => static fn () => $manager]), $router),
-            new EntityClassLocator(\dirname(__DIR__) . '/Fixtures/Cache', 'GraphqlOrm\\Tests\\Fixtures\\Cache'),
-            ['default' => $entityClasses],
+            $managers,
+            new CachedEntities($managers, new EntityClassLocator(\dirname(__DIR__) . '/Fixtures/Cache', 'GraphqlOrm\\Tests\\Fixtures\\Cache'), ['default' => $entityClasses]),
         );
 
         return new CommandTester((new Command('graphqlorm:cache:warmup'))->setCode($command));

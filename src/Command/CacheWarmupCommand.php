@@ -16,7 +16,6 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
  * Loads the entities marked #[Cache] from the API, page by page, so that the second-level cache keeps them: find(),
@@ -32,14 +31,9 @@ final readonly class CacheWarmupCommand
 {
     private const DEFAULT_BATCH_SIZE = 100;
 
-    /**
-     * @param array<string, class-string[]> $managerEntityClasses the entities of each manager, by name
-     */
     public function __construct(
         private GraphqlManagerRegistry $managers,
-        private EntityClassLocator $entityClassLocator,
-        #[Autowire('%graphql_orm.manager_entity_classes%')]
-        private array $managerEntityClasses = [],
+        private CachedEntities $cachedEntities,
     ) {
     }
 
@@ -56,7 +50,7 @@ final readonly class CacheWarmupCommand
         $io = new SymfonyStyle($input, $output);
 
         try {
-            $targets = $entity !== null ? $this->entityTarget($entity, $manager) : $this->cachedEntities($manager);
+            $targets = $entity !== null ? [$this->cachedEntities->entity($entity, $manager)] : $this->cachedEntities->all($manager);
         } catch (\InvalidArgumentException|GraphqlOrmException $exception) {
             $io->error($exception->getMessage());
 
@@ -102,54 +96,6 @@ final readonly class CacheWarmupCommand
         $io->success(\sprintf('%d entities kept in the second-level cache.', $kept));
 
         return Command::SUCCESS;
-    }
-
-    /**
-     * @return list<array{string, class-string}> the manager and the class
-     *
-     * @throws \InvalidArgumentException when the entity is unknown, of another manager, or not kept in the cache
-     */
-    private function entityTarget(string $entity, ?string $manager): array
-    {
-        $class = $this->entityClassLocator->resolve($entity)
-            ?? throw new \InvalidArgumentException(\sprintf('Entity "%s" not found. Available entities: %s', $entity, implode(', ', $this->entityClassLocator->available())));
-        $name = $this->managers->getManagerForClass($class)->getName();
-
-        if ($manager !== null && $this->managers->getManager($manager)->getName() !== $name) {
-            throw new \InvalidArgumentException(\sprintf('"%s" belongs to the manager "%s", not "%s".', $class, $name, $manager));
-        }
-
-        $cache = $this->managers->getManager($name)->getCache();
-
-        if (!$cache->keepsEntities()) {
-            throw new \InvalidArgumentException(\sprintf('The second-level cache of the manager "%s" is disabled: enable graphql_orm.second_level_cache.', $name));
-        }
-
-        if (!$cache->caches($class)) {
-            throw new \InvalidArgumentException(\sprintf('"%s" is not kept in the second-level cache: mark it with #[Cache].', $class));
-        }
-
-        return [[$name, $class]];
-    }
-
-    /**
-     * @return list<array{string, class-string}> the manager and the class of each entity marked #[Cache]
-     */
-    private function cachedEntities(?string $manager): array
-    {
-        $targets = [];
-
-        foreach ($manager !== null ? [$this->managers->getManager($manager)->getName()] : $this->managers->getManagerNames() as $name) {
-            $cache = $this->managers->getManager($name)->getCache();
-
-            foreach ($this->managerEntityClasses[$name] ?? [] as $class) {
-                if ($cache->caches($class)) {
-                    $targets[] = [$name, $class];
-                }
-            }
-        }
-
-        return $targets;
     }
 
     /**
