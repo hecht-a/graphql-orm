@@ -29,6 +29,12 @@ final class GraphqlCache implements ResetInterface
     /** The generation of a class is part of the key of its entities: a new one evicts them all, with any pool. */
     private const GENERATION_KEY_PREFIX = 'graphql_orm.entity_generation.';
 
+    /** The generation of the results of a manager, part of their key in the same way. */
+    private const RESULT_GENERATION_KEY_PREFIX = 'graphql_orm.result_generation.';
+
+    /** The generation of the results read during the request. */
+    private ?int $resultsGeneration = null;
+
     /** @var array<class-string, int> the generations read during the request */
     private array $generations = [];
 
@@ -63,11 +69,48 @@ final class GraphqlCache implements ResetInterface
     {
         if ($this->results !== null) {
             $results = $this->results;
-            $resultKey = self::resultKey($key, $this->namespace);
+            $resultKey = self::resultKey($key, $this->namespace, $this->resultsGeneration());
             $this->measured(self::RESULT_CACHE, 'delete', static fn () => $results->deleteItem($resultKey));
         }
 
         $this->collector?->cacheEvicted(__FUNCTION__, $key, self::caller());
+    }
+
+    /**
+     * Drops every result of the manager, whatever the pool, even shared: they are no longer read, and expire. Another
+     * process sees it from its next request.
+     *
+     * @return int the new generation of the results, 0 without result cache
+     */
+    public function evictQueryResults(): int
+    {
+        $this->collector?->cacheEvicted(__FUNCTION__, $this->namespace !== '' ? $this->namespace : 'every result', self::caller());
+
+        if ($this->results === null) {
+            return 0;
+        }
+
+        $results = $this->results;
+        $item = $results->getItem($this->resultGenerationKey());
+        $generation = (\is_int($item->get()) ? $item->get() : 0) + 1;
+        $this->measured(self::RESULT_CACHE, 'write', static fn () => $results->save($item->set($generation)));
+
+        return $this->resultsGeneration = $generation;
+    }
+
+    /**
+     * How many times every result of the manager was evicted: part of their key.
+     *
+     * @internal
+     */
+    public function resultsGeneration(): int
+    {
+        if ($this->resultsGeneration === null) {
+            $generation = $this->results?->getItem($this->resultGenerationKey())->get();
+            $this->resultsGeneration = \is_int($generation) ? $generation : 0;
+        }
+
+        return $this->resultsGeneration;
     }
 
     /**
@@ -125,6 +168,7 @@ final class GraphqlCache implements ResetInterface
     public function reset(): void
     {
         $this->generations = [];
+        $this->resultsGeneration = null;
     }
 
     /**
@@ -133,9 +177,17 @@ final class GraphqlCache implements ResetInterface
      *
      * @internal
      */
-    public static function resultKey(string $key, string $namespace = ''): string
+    public static function resultKey(string $key, string $namespace = '', int $generation = 0): string
     {
-        return self::RESULT_KEY_PREFIX . hash('xxh128', $namespace === '' ? $key : $namespace . "\0" . $key);
+        $scoped = $namespace === '' ? $key : $namespace . "\0" . $key;
+
+        // The results kept before any eviction keep their key.
+        return self::RESULT_KEY_PREFIX . hash('xxh128', $generation === 0 ? $scoped : $generation . "\0" . $scoped);
+    }
+
+    private function resultGenerationKey(): string
+    {
+        return self::RESULT_GENERATION_KEY_PREFIX . hash('xxh128', $this->namespace);
     }
 
     /**
@@ -159,7 +211,7 @@ final class GraphqlCache implements ResetInterface
             : $graphql . "\0" . json_encode($variables, \JSON_THROW_ON_ERROR);
 
         $results = $this->results;
-        $key = self::resultKey($key, $this->namespace);
+        $key = self::resultKey($key, $this->namespace, $this->resultsGeneration());
 
         return $this->measured(self::RESULT_CACHE, 'read', static fn () => $results->getItem($key));
     }

@@ -120,6 +120,56 @@ final class ResultCacheTest extends TestCase
     }
 
     #[Test]
+    public function itEvictsEveryResultOfTheManager(): void
+    {
+        $client = new FakeGraphqlClient(self::TASKS, self::TASKS, self::TASKS, self::TASKS);
+        $manager = $this->manager($client, new DefaultDialect());
+        $tasks = new GraphqlEntityRepository($manager, FakeTask::class);
+        $tasks->createQueryBuilder()->getQuery()->enableResultCache(key: 'tasks')->getResult();
+        $tasks->createQueryBuilder()->limit(1)->getQuery()->enableResultCache()->getResult();
+
+        self::assertSame(1, $manager->getCache()->evictQueryResults());
+        $tasks->createQueryBuilder()->getQuery()->enableResultCache(key: 'tasks')->getResult();
+        $tasks->createQueryBuilder()->limit(1)->getQuery()->enableResultCache()->getResult();
+
+        self::assertSame(4, $client->callCount);
+    }
+
+    #[Test]
+    public function itEvictsTheResultsOfOneManagerOfASharedPool(): void
+    {
+        $mainClient = new FakeGraphqlClient(self::TASKS, self::TASKS);
+        $crmClient = new FakeGraphqlClient(self::TASKS, self::TASKS);
+        $metadataFactory = new GraphqlEntityMetadataFactory();
+        $main = new GraphqlManager($metadataFactory, $mainClient, new EntityHydrator($metadataFactory), null, 1, cache: new GraphqlCache($this->pool, namespace: 'main'));
+        $crm = new GraphqlManager($metadataFactory, $crmClient, new EntityHydrator($metadataFactory), null, 1, cache: new GraphqlCache($this->pool, namespace: 'crm'));
+        $query = static fn (GraphqlManager $manager) => (new GraphqlEntityRepository($manager, FakeTask::class))->createQueryBuilder()->getQuery()->enableResultCache()->getResult();
+        $query($main);
+        $query($crm);
+
+        $main->getCache()->evictQueryResults();
+        $query($main);
+        $query($crm);
+
+        self::assertSame([2, 1], [$mainClient->callCount, $crmClient->callCount]);
+    }
+
+    #[Test]
+    public function itSeesTheResultsEvictedByAnotherProcessFromItsNextRequest(): void
+    {
+        $client = new FakeGraphqlClient(self::TASKS, self::TASKS);
+        $manager = $this->manager($client, new DefaultDialect());
+        $tasks = new GraphqlEntityRepository($manager, FakeTask::class);
+        $tasks->createQueryBuilder()->getQuery()->enableResultCache()->getResult();
+
+        (new GraphqlCache($this->pool))->evictQueryResults();
+        $manager->getCache()->reset();
+        $tasks->createQueryBuilder()->getQuery()->enableResultCache()->getResult();
+
+        self::assertSame(2, $client->callCount);
+    }
+
+    #[Test]
     public function itKeepsEachPageApartUnderAGivenKey(): void
     {
         $page = static fn (int $id, bool $next) => ['data' => ['tasks' => [
