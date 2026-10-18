@@ -43,6 +43,10 @@ The identifier is the `id` field, or else the first field of type `ID`. Interfac
 command lists the relation targets that do not exist yet, with the command generating them. Review the generated
 entity: enums are generated as strings, and fields you do not need can be removed.
 
+A custom scalar of the API that a [type converter](entity-mapping.md#type-converters) tells with
+`#[AsTypeConverter(Siret::class, scalars: ['Siret'])]` is typed with its value object (`?Siret`, imported). The
+standard scalars keep their PHP type, whatever converter tells them: `Int` stays `int`.
+
 ## Debug an entity
 
 ```bash

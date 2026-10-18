@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The profiler tells the relations a query loads: those named by `with()`, or up to `max_depth`.
 - The schema validation reports a property typed with a value object that no type converter converts, and checks the
   fields a converter converts use one of the scalars of its `#[AsTypeConverter(..., scalars: ['Int'])]`.
+- `graphqlorm:make:entity --from-schema` types a custom scalar of the API with the value object of the type converter
+  telling it (`scalars: ['Siret']`).
 
 ## [5.7.1] — 2026-10-18
 
