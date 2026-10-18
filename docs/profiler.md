@@ -81,7 +81,9 @@ Click a query to see its detail:
 - **Variables**
 - **Response**: the first 2 KB of the response, indented, values masked unless `redact_query_values` is false
 - **AST**: an interactive viewer of the query built by the ORM
-- **Hydration**: hydrated as entities or as a DTO, entities, relations, collections, root result count (and the field indexing it, with `indexBy`) and
+- **Hydration**: hydrated as entities or as a DTO, the relations loaded (those named by
+  [`with()`](query-builder.md#loading-relations), or up to `max_depth`), entities, relations, collections, root result
+  count (and the field indexing it, with `indexBy`) and
   depth used; the collections by relation, with their type (`array` or `ArrayCollection`), how many and their items
 - The "Copy" and "Copy as cURL" buttons (see [below](#copy-as-curl)), the caller (file and line that triggered the
   query) and the endpoint
