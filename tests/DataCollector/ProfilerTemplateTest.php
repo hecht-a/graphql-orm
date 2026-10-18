@@ -20,6 +20,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Twig\Environment;
 use Twig\Extension\DebugExtension;
@@ -266,6 +267,21 @@ final class ProfilerTemplateTest extends TestCase
 
         self::assertSame($collector->getDetailedQueryLimit(), substr_count($html, 'class="graphql-orm-row'));
         self::assertStringContainsString('And 3 more queries, counted in the metrics: the profile keeps the detail of the first 500.', self::text($html));
+    }
+
+    #[Test]
+    public function itTellsTheSubRequestOfAQuery(): void
+    {
+        $requests = new RequestStack();
+        $requests->push(Request::create('/tasks'));
+        $requests->push(Request::create('/_fragment/sidebar'));
+        $collector = new GraphqlOrmDataCollector(requestStack: $requests);
+        $trace = new GraphqlQueryTrace();
+        $trace->graphql = 'query { labels { code } }';
+        $trace->origin = 'findAll';
+        $collector->addQuery($trace);
+
+        self::assertStringContainsString('findAll sub-request /_fragment/sidebar', self::text($this->render($collector)));
     }
 
     #[Test]

@@ -14,6 +14,7 @@ use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Query\GraphqlQueryTrace;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\DataCollector\DataCollector;
 use Symfony\Component\HttpKernel\DataCollector\LateDataCollectorInterface;
@@ -58,6 +59,8 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
         private readonly array $entityClasses = [],
         private readonly ?CachePoolDescriber $cachePools = null,
         private readonly ?TypeConverterRegistry $typeConverters = null,
+        // Tells the sub-requests (fragments, forwards) apart from the main request, which they share the collector with
+        private readonly ?RequestStack $requestStack = null,
     ) {
     }
 
@@ -94,6 +97,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
             'with' => $trace->with,
             // Sent once the response was collected: by a kernel.terminate listener, or a streamed response
             'after_response' => ($this->data['collected'] ?? false) === true,
+            'sub_request' => $this->subRequestPath(),
             'detailed' => true,
             'result_cache' => $trace->resultCache,
             'manager' => $trace->manager,
@@ -767,7 +771,20 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
         $this->data['cache_warnings'] = $this->cacheWarnings();
         $startedAt = $request->server->get('REQUEST_TIME_FLOAT');
         $this->data['request_started_at'] = \is_float($startedAt) || \is_int($startedAt) ? (float) $startedAt : null;
-        $this->data['collected'] = true;
+        // A sub-request is collected as well, before the end of the main request.
+        if ($this->requestStack === null || $this->requestStack->getMainRequest() === null || $this->requestStack->getMainRequest() === $request) {
+            $this->data['collected'] = true;
+        }
+    }
+
+    /**
+     * The path of the sub-request (a fragment, a forward) sending a query now, null during the main request.
+     */
+    private function subRequestPath(): ?string
+    {
+        $current = $this->requestStack?->getCurrentRequest();
+
+        return $current !== null && $current !== $this->requestStack->getMainRequest() ? $current->getPathInfo() : null;
     }
 
     /**

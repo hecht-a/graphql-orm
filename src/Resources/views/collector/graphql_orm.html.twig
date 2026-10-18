@@ -1139,6 +1139,7 @@
         {% if (query.result_cache ?? null) == 'hit' %}<span class="graphql-orm-origin graphql-orm-origin-count" title="Answered by the result cache, without being sent">result cache</span>{% endif %}
         {% if query.from_cached_entity ?? false %}<span class="graphql-orm-origin graphql-orm-origin-lazy" title="A relation of an entity read from the second-level cache">from cached entity</span>{% endif %}
         {% if query.during_serialization ?? false %}<span class="graphql-orm-origin graphql-orm-origin-lazy" title="Sent while the serializer was writing an entity">serializer</span>{% endif %}
+        {% if query.sub_request ?? null %}<span class="graphql-orm-origin graphql-orm-origin-introspection" title="Sent by a sub-request (a fragment, a forward), whose own profile holds it as well">sub-request {{ query.sub_request }}</span>{% endif %}
         {% if query.after_response ?? false %}<span class="graphql-orm-origin graphql-orm-origin-lazy" title="Sent once the response was sent: by a kernel.terminate listener, or a streamed response">after the response</span>{% endif %}
     {% else %}
         <span class="graphql-orm-muted">-</span>

@@ -19,6 +19,7 @@ use GraphqlOrm\Tests\Fixtures\FakeEntity\FakeTask;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 
 final class GraphqlOrmDataCollectorTest extends TestCase
@@ -475,6 +476,39 @@ final class GraphqlOrmDataCollectorTest extends TestCase
         self::assertSame([], $queries[$limit]['variables']);
         self::assertSame('query { tasks { id } }', $queries[$limit]['shape']);
         self::assertEqualsWithDelta(($limit + 1) * 2.0, $this->collector->getTotalDuration(), 0.001);
+    }
+
+    #[Test]
+    public function itMarksAfterTheResponseOnlyTheQueriesSentOnceTheMainRequestIsCollected(): void
+    {
+        $requests = new RequestStack();
+        $main = Request::create('/tasks');
+        $requests->push($main);
+        $collector = new GraphqlOrmDataCollector(requestStack: $requests);
+        $sidebar = Request::create('/_fragment/sidebar');
+        $requests->push($sidebar);
+        $collector->collect($sidebar, new Response());
+        $requests->pop();
+
+        $collector->addQuery(self::traceOf('query { tasks { id } }'));
+        $collector->collect($main, new Response());
+        $collector->addQuery(self::traceOf('query { users { id } }'));
+
+        self::assertSame([false, true], array_column($collector->getQueries(), 'after_response'));
+    }
+
+    #[Test]
+    public function itTellsTheSubRequestSendingAQuery(): void
+    {
+        $requests = new RequestStack();
+        $requests->push(Request::create('/tasks'));
+        $collector = new GraphqlOrmDataCollector(requestStack: $requests);
+        $requests->push(Request::create('/_fragment/sidebar'));
+        $collector->addQuery(self::traceOf('query { labels { code } }'));
+        $requests->pop();
+        $collector->addQuery(self::traceOf('query { tasks { id } }'));
+
+        self::assertSame(['/_fragment/sidebar', null], array_column($collector->getQueries(), 'sub_request'));
     }
 
     #[Test]
