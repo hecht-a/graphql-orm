@@ -14,8 +14,15 @@ Launches an interactive wizard that generates:
 Supports scalar fields, nullable fields, object relations, and collection relations. Existing entities are suggested
 with autocomplete when defining relations.
 
-With [several APIs](multiple-apis.md), `--manager=crm` writes the entity and its repository in the mapping of the manager
-`crm`, and `--from-schema` reads the schema of its API.
+| Option           | Description                                                                            |
+|------------------|----------------------------------------------------------------------------------------|
+| `--root`         | the GraphQL root query field, the plural of the entity by default (`tasks` for `Task`) |
+| `--force`, `-f`  | overwrite the entity and the repository when their files exist                         |
+| `--from-schema`  | generate the properties from the GraphQL schema instead of asking them                 |
+| `--manager`      | the manager whose mapping and API are used, the default one when unset                 |
+
+With [several APIs](multiple-apis.md), `--manager=crm` writes the entity and its repository in the mapping of the
+manager `crm`, and `--from-schema` reads the schema of its API.
 
 ### From the GraphQL schema
 
@@ -25,23 +32,26 @@ php bin/console graphqlorm:make:entity Task --from-schema --root=allTasks
 ```
 
 Introspects the API instead of asking questions: the type returned by the root query field (`--root`, `tasks` by
-default for `Task`), unwrapped from its Data API Builder connection, gives the properties.
+default for `Task`), unwrapped from its connection (`items` of Data API Builder, or Relay `edges { node }`), gives the
+properties.
 
-| GraphQL                                      | Generated property                                     |
-|----------------------------------------------|--------------------------------------------------------|
-| `Int`, `Byte`, `Short`, `Long`               | `int`                                                  |
-| `Float`, `Single`, `Decimal`                 | `float`                                                |
-| `Boolean`                                    | `bool`                                                 |
-| `DateTime`, `Date`                           | `\DateTimeImmutable`                                   |
-| other scalars and enums                      | `string`                                               |
-| list of scalars                              | `array`                                                |
-| object                                       | relation (`?Target`)                                   |
-| list of objects, connection                  | collection relation (`Target[]`)                       |
-| `T!`                                         | not nullable                                           |
+| GraphQL                                                             | Generated property               |
+|---------------------------------------------------------------------|----------------------------------|
+| `Int`, `Byte`, `Short`, `Long`, `bigint`, `smallint`, `integer`     | `int`                            |
+| `Float`, `Single`, `Decimal`, `numeric`, `float8`, `float4`         | `float`                          |
+| `Boolean`                                                           | `bool`                           |
+| `DateTime`, `Date`, `Datetime`, `timestamptz`, `timestamp`, `date`  | `\DateTimeImmutable`             |
+| other scalars and enums                                             | `string`                         |
+| list of scalars                                                     | `array`                          |
+| object                                                              | relation (`?Target`)             |
+| list of objects, connection                                         | collection relation (`Target[]`) |
+| `T!`                                                                | not nullable                     |
 
-The identifier is the `id` field, or else the first field of type `ID`. Interface and union fields are skipped. The
-command lists the relation targets that do not exist yet, with the command generating them. Review the generated
-entity: enums are generated as strings, and fields you do not need can be removed.
+Besides the standard scalars, those of Data API Builder, Hasura and PostGraphile are known. The identifier is the `id`
+field, or else the first field of type `ID`. Interface and union fields are skipped. A type named after its table
+(Hasura: `task_categories`) gives a singular PascalCase class name (`TaskCategory`). The command lists the relation
+targets that do not exist yet, with the command generating them. Review the generated entity: enums are generated as
+strings, and fields you do not need can be removed.
 
 A custom scalar of the API that a [type converter](entity-mapping.md#type-converters) tells with
 `#[AsTypeConverter(Siret::class, scalars: ['Siret'])]` is typed with its value object (`?Siret`, imported). The
@@ -67,6 +77,7 @@ GraphQL ORM — Entity "Task"
 General
 -------
 FQCN:          App\GraphQL\Entity\Task
+Manager:       default
 GraphQL root:  tasks
 Repository:    App\GraphQL\Repository\TaskRepository
 Identifier:    id → id
@@ -142,10 +153,12 @@ php bin/console graphqlorm:query --manager=crm < contacts.graphql
 }
 ```
 
-| Option          | Description                                                       |
-|-----------------|-------------------------------------------------------------------|
-| `--variables`   | the variables of the query, as a JSON object: `'{"id": 3}'`       |
-| `--manager`     | the manager whose API is queried, the default one when unset      |
+| Option           | Description                                                  |
+|------------------|--------------------------------------------------------------|
+| `--variables`    | the variables of the query, as a JSON object: `'{"id": 3}'`  |
+| `--manager`      | the manager whose API is queried, the default one when unset |
+| `--hydrate`      | hydrate the response as this entity (short name or FQCN)     |
+| `--format`, `-f` | with `--hydrate`: `table` (default) or `json`                |
 
 - The JSON goes to the standard output alone, the errors of the command to the error output: it can be piped to `jq`.
 - A response holding errors fails the command (exit code 1), its partial data printed with the errors; errors without

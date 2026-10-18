@@ -69,6 +69,8 @@ The documentation is published at **https://hecht-a.github.io/graphql-orm/**, an
 - [Forms](docs/forms.md) — `GraphqlEntityType`, a choice among entities
 - [Serializer](docs/serializer.md) — entities written without loading their lazy relations
 - [Doctrine](docs/doctrine.md) — Doctrine entities referencing GraphQL entities
+- [Caching](docs/caching.md) — result cache and second-level cache
+- [Several APIs](docs/multiple-apis.md) — a manager for each API
 - [Console commands](docs/commands.md)
 - [PHPStan rules](docs/phpstan.md) — field names checked at analysis time
 - [Testing](docs/testing.md) — `MockGraphqlServer`, a GraphQL server for the tests of your application

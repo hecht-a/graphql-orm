@@ -4,7 +4,7 @@ GraphQL ORM logs every query to a dedicated Monolog channel.
 
 ## Setup
 
-Declare the channel in your Monolog configuration:
+Declare the channel in your Monolog configuration (without it, the bundle logs nothing):
 
 ```yaml
 # config/packages/monolog.yaml
@@ -15,7 +15,11 @@ monolog:
 
 Logs are written to your environment's default log file (`var/log/dev.log`, etc.) at the following levels:
 
-- `debug` — successful queries (endpoint, duration, hydrated entities, query string, caller)
+- `debug` — successful queries (endpoint, duration, response size, hydrated entities and relations, caller, query
+  string)
+- `warning` — [slow queries](#slow-queries), introspections that failed (types of the
+  [variables](configuration.md#variables), countable fields of Data API Builder) and
+  [schema violations](schema-validation.md) in `warning` mode
 - `error` — queries that returned GraphQL errors
 
 ## Example log entries
@@ -33,8 +37,9 @@ Logs are written to your environment's default log file (`var/log/dev.log`, etc.
 
 [error] GraphQL query returned errors {
     "endpoint": "http://localhost:4000/graphql",
-    "errors": [{ "message": "Field 'foo' does not exist" }],
-    "query": "query { tasks { foo } }"
+    ...
+    "query": "query { tasks { foo } }",
+    "errors": [{ "message": "Field 'foo' does not exist" }]
 }
 ```
 
@@ -50,7 +55,7 @@ graphql_orm:
 ```
 
 ```
-app.WARNING: Slow GraphQL query {"duration_ms":1007.4,"slow_query_threshold_ms":500.0,"caller":...,"query":"..."}
+graphql_orm.WARNING: Slow GraphQL query {"duration_ms":1007.4,...,"slow_query_threshold_ms":500.0}
 ```
 
 The profiler counts them in the toolbar and marks each of them, see [profiler.md](profiler.md). The duration is

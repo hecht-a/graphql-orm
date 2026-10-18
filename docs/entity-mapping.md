@@ -3,28 +3,28 @@
 ## Define an entity
 
 ```php
-use GraphqlOrm\Mapping\Entity;
-use GraphqlOrm\Mapping\Field;
-use GraphqlOrm\Mapping\Identifier;
-use GraphqlOrm\Mapping\Relation;
+use GraphqlOrm\Mapping as GraphqlOrm;
 
-#[Entity(name: 'tasks', repositoryClass: TaskRepository::class)]
+#[GraphqlOrm\Entity(name: 'tasks', repositoryClass: TaskRepository::class)]
 class Task
 {
-    #[Field(mappedFrom: 'id')]
-    #[Identifier]
+    #[GraphqlOrm\Field(mappedFrom: 'id')]
+    #[GraphqlOrm\Identifier]
     public int $id;
 
-    #[Field(mappedFrom: 'title')]
+    #[GraphqlOrm\Field(mappedFrom: 'title')]
     public string $title;
 
-    #[Field(mappedFrom: 'dueDate')]
+    #[GraphqlOrm\Field(mappedFrom: 'dueDate')]
     public ?DateTimeImmutable $dueDate = null;
 
-    #[Relation(mappedFrom: 'user')]
+    #[GraphqlOrm\Relation(mappedFrom: 'user')]
     public ?User $user = null;
 }
 ```
+
+The attributes are imported through a namespace alias, as with Doctrine `use Doctrine\ORM\Mapping as ORM;`: a class
+mapped with Doctrine too can hold both `Entity` attributes.
 
 ## `#[Entity]`
 
@@ -32,6 +32,9 @@ class Task
 |-------------------|----------------------|----------------------------------------------|
 | `name`            | `string`             | GraphQL root query field name (e.g. `tasks`) |
 | `repositoryClass` | `class-string\|null` | Associated repository class                  |
+| `manager`         | `string\|null`       | The manager of its API, when not the one whose entity namespace holds it, see [several APIs](multiple-apis.md#the-manager-of-an-entity) |
+
+`#[GraphqlOrm\Cache]` on the class keeps its entities in the [second-level cache](caching.md#second-level-cache).
 
 ## `#[Field]`
 
@@ -46,12 +49,12 @@ A field holding a value: a scalar, a date, an enum, or a value object given by a
 ## `#[Identifier]`
 
 Marks the field identifying the entity, declared with `#[Field]`, as Doctrine `#[Id]`. `find()`, the identity
-map, the lazy relations and the form type need it. An entity has one at most, and `#[Identifier]` without
-`#[Field]` throws an `InvalidArgumentException`.
+map, the lazy relations and the form type need it. An entity has one at most: a second one throws a
+`TooManyIdentifiersException`, and `#[Identifier]` without `#[Field]` an `InvalidArgumentException`.
 
 ```php
-#[Field(mappedFrom: 'id')]
-#[Identifier]
+#[GraphqlOrm\Field(mappedFrom: 'id')]
+#[GraphqlOrm\Identifier]
 public int $id;
 ```
 
@@ -67,8 +70,8 @@ A relation to another entity, or a collection of them, as Doctrine `#[ManyToOne]
 | `fetch`            | `Fetch`              | `Fetch::Eager` (default) or `Fetch::Lazy`, see [lazy relations](#lazy-relations) |
 | `ignoreValidation` | `bool`               | Ignore the schema validation                           |
 
-A property mapped with both `#[Field]` and `#[Relation]`, or a `#[Relation]` whose type is no entity, throws an
-`InvalidArgumentException`.
+A property mapped with both `#[Field]` and `#[Relation]`, a `#[Relation]` whose type is no entity, or a `#[Field]`
+holding an entity, throws an `InvalidArgumentException`.
 
 ## Lazy relations
 
@@ -76,13 +79,13 @@ A relation is selected with its entity, up to `max_depth`. One read rarely, or h
 Doctrine `fetch: LAZY`:
 
 ```php
-use GraphqlOrm\Mapping\Fetch;
+use GraphqlOrm\Mapping as GraphqlOrm;
 
-#[Relation(mappedFrom: 'user', fetch: Fetch::Lazy)]
+#[GraphqlOrm\Relation(mappedFrom: 'user', fetch: GraphqlOrm\Fetch::Lazy)]
 public ?User $user = null;
 
 /** @var Task[] */
-#[Relation(mappedFrom: 'tasks', fetch: Fetch::Lazy)]
+#[GraphqlOrm\Relation(mappedFrom: 'tasks', fetch: GraphqlOrm\Fetch::Lazy)]
 public array $tasks = [];
 ```
 
@@ -111,17 +114,17 @@ graphql_orm:
 ```
 
 ```php
-#[Entity(name: 'tasks')]
+#[GraphqlOrm\Entity(name: 'tasks')]
 class Task
 {
-    #[Field]
-    #[Identifier]
+    #[GraphqlOrm\Field]
+    #[GraphqlOrm\Identifier]
     public int $id;
 
-    #[Field] // due_date
+    #[GraphqlOrm\Field] // due_date
     public ?DateTimeImmutable $dueDate = null;
 
-    #[Field(mappedFrom: 'deadline_at')]
+    #[GraphqlOrm\Field(mappedFrom: 'deadline_at')]
     public ?DateTimeImmutable $deadline = null;
 }
 ```
@@ -136,20 +139,20 @@ The related entity is read from the PHP type of the property:
 
 ```php
 // From the type
-#[Relation(mappedFrom: 'user')]
+#[GraphqlOrm\Relation(mappedFrom: 'user')]
 public User $user;
 
 // Explicit declaration
-#[Relation(mappedFrom: 'user', targetEntity: User::class)]
+#[GraphqlOrm\Relation(mappedFrom: 'user', targetEntity: User::class)]
 public mixed $user;
 
 // Collection: the item type is read from the docblock (`Task[]`, `list<Task>`, `array<int, Task>`)
 /** @var Task[] */
-#[Relation(mappedFrom: 'tasks')]
+#[GraphqlOrm\Relation(mappedFrom: 'tasks')]
 public array $tasks = [];
 
 // Collection with an explicit target
-#[Relation(mappedFrom: 'tasks', targetEntity: Task::class)]
+#[GraphqlOrm\Relation(mappedFrom: 'tasks', targetEntity: Task::class)]
 public array $tasks = [];
 ```
 
@@ -164,7 +167,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 
 /** @var Collection<int, Task> */
-#[Relation]
+#[GraphqlOrm\Relation]
 public Collection $tasks;
 
 $project->tasks->filter(fn (Task $task) => !$task->done)->count();
@@ -183,17 +186,21 @@ The attributes `#[GraphqlEntity]` and `#[GraphqlField]` of 4.8 are removed in 5.
 
 ## Supported PHP types
 
-| PHP type            | GraphQL scalars                                            |
-|---------------------|------------------------------------------------------------|
-| `int`               | `Int`, `ID`, `Byte`, `Short`, `Long`                       |
-| `float`             | `Float`, `Single`, `Decimal`                               |
-| `string`            | `String`, `ID`, `Date`, `DateTime`, `Time`, `JSON`, `UUID` |
-| `bool`              | `Boolean`                                                  |
-| `DateTimeImmutable` | `DateTime`, `Date`, `Time`, `String`                       |
+| PHP type            | GraphQL scalars                                                                   |
+|---------------------|-----------------------------------------------------------------------------------|
+| `int`               | `Int`, `ID`, `Byte`, `Short`, `Long`, `bigint`, `smallint`, `integer`             |
+| `float`             | `Float`, `Single`, `Decimal`, `numeric`, `float8`, `float4`                       |
+| `string`            | `String`, `ID`, `Time`, `JSON`, `UUID`, `uuid`, `text`, and the date scalars      |
+| `bool`              | `Boolean`                                                                         |
+| `DateTimeImmutable` | `DateTime`, `Datetime`, `Date`, `timestamptz`, `timestamp`, `date`, `Time`, `String` |
 | `DateTime`, `DateTimeInterface` | Same as `DateTimeImmutable` (`DateTimeInterface` gets a `DateTimeImmutable`) |
-| `BackedEnum`        | Built with `::from()`; an unknown value throws `CastException` |
+| `BackedEnum`        | Built with `::from()`; an unknown value throws `CastException`                    |
 
-Date fields are automatically cast from ISO 8601 strings or Unix timestamps (in milliseconds).
+The lowercase scalars are those of Hasura and Data API Builder. The [schema validation](schema-validation.md) checks the
+scalars of the `int`, `float`, `string`, `bool` and `DateTimeImmutable` properties.
+
+Date fields are automatically cast from ISO 8601 strings or Unix timestamps (in milliseconds); a value that is no date
+throws a `CastException`.
 
 ## Type converters
 
@@ -224,10 +231,10 @@ In Symfony, a service implementing `TypeConverterInterface` is registered by aut
 it. Each property typed with its class is then converted, unless its `#[Field]` names another converter:
 
 ```php
-#[Field]
+#[GraphqlOrm\Field]
 public ?Money $price = null;          // MoneyConverter, by its type
 
-#[Field(converter: DecimalMoneyConverter::class)]
+#[GraphqlOrm\Field(converter: DecimalMoneyConverter::class)]
 public ?Money $discount = null;       // a Float of the API, as 12.5
 ```
 
@@ -235,8 +242,8 @@ public ?Money $discount = null;       // a Float of the API, as 12.5
   for the parameters of a [DTO](query-builder.md#dto-results) typed with the class (the converter the entity names for
   the field applies to a parameter of the same type).
 - The value objects of the filters, `where()` and `findBy()`, `count()` and the aggregates, are converted back, inline
-  or as variables, lists of `in()` included: `$qb->expr()->eq('price', Money::ofCents(1250))` sends `price: { eq: 1250 }`.
-  So is the value keying a result with `indexBy`.
+  or as variables, lists of `in()` included: `$qb->expr()->eq('price', Money::ofCents(1250))` sends
+  `price: { eq: 1250 }`. So is the value keying a result with `indexBy`.
 - `null` is never given to a converter: it stays `null`.
 - `#[AsTypeConverter(Money::class, scalars: ['Int'])]` tells the GraphQL scalars the converter reads and writes: the
   [schema validation](schema-validation.md) checks the fields it converts use one of them. It reports as well a
@@ -254,28 +261,27 @@ A value object spread over several fields, as the embeddables of Doctrine: the c
 fields mapped with `#[Field]`, and the property holding it with `#[Embedded]`.
 
 ```php
-use GraphqlOrm\Mapping\Embeddable;
-use GraphqlOrm\Mapping\Embedded;
+use GraphqlOrm\Mapping as GraphqlOrm;
 
-#[Embeddable]
+#[GraphqlOrm\Embeddable]
 final readonly class Money
 {
     public function __construct(
-        #[Field] public int $amount,
-        #[Field] public string $currency,
+        #[GraphqlOrm\Field] public int $amount,
+        #[GraphqlOrm\Field] public string $currency,
     ) {
     }
 }
 
-#[Entity(name: 'orders')]
+#[GraphqlOrm\Entity(name: 'orders')]
 class Order
 {
     // A GraphQL object: price { amount currency }
-    #[Embedded]
+    #[GraphqlOrm\Embedded]
     public ?Money $price = null;
 
     // Fields of the entity itself: total_amount, total_currency
-    #[Embedded(prefix: 'total_')]
+    #[GraphqlOrm\Embedded(prefix: 'total_')]
     public ?Money $total = null;
 }
 ```
@@ -294,8 +300,11 @@ class Order
   give for fields of the entity, name the fields of prefixed value objects only: `findBy(['total.currency' =>
   'EUR'], ['total.amount' => Direction::Desc])`.
 - It is kept in the second-level cache with its entity, and hydrated as well for a parameter of a
-  [DTO](query-builder.md#dto-results) typed with it, or mapped to one of its fields with `#[MapFrom('price.amount')]`.
+  [DTO](query-builder.md#dto-results) typed with it, or mapped to one of its fields with
+  `#[GraphqlOrm\MapFrom('price.amount')]`.
 - The schema validation checks its fields, the profiler lists them in the "Entities" tab, and the PHPStan rules accept
   their paths.
 - An embedded value object holds no relation nor other embedded value object; a filter compares its fields, not the
   value object as a whole.
+- `#[Embedded]` with `#[Field]`, `#[Relation]` or `#[Identifier]`, or on a property whose class has no `#[Embeddable]`,
+  throws an `InvalidArgumentException`.

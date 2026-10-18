@@ -12,8 +12,8 @@ Dialects adapt query generation and response parsing to a specific GraphQL API f
 | Hasura           | `HasuraDialect`         | Hasura and APIs following its `where` / `order_by` conventions |
 | PostGraphile     | `PostGraphileDialect`   | PostGraphile: Relay connections, `condition`, `orderBy` enums |
 
-Standard GraphQL defines no ordering nor pagination arguments: `DefaultDialect` throws a `LogicException` when
-`orderBy()` or `paginate()` is used, instead of silently ignoring it. Use a dialect matching your API, or write one
+Standard GraphQL defines no ordering nor pagination arguments: `DefaultDialect` throws a `LogicException` when a query
+uses `orderBy()` or `paginate()`, instead of silently ignoring it. Use a dialect matching your API, or write one
 (see below). `limit()` is sent as a `first` argument.
 
 ## Configure a dialect
@@ -26,7 +26,7 @@ graphql_orm:
 ## Data API Builder dialect
 
 The `DataApiBuilderDialect` wraps results in an `items` envelope and supports cursor-based pagination with `hasNextPage`
-and `endCursor`:
+and `endCursor`. Filters and criteria are sent in a `filter` argument, orderings in `orderBy` (`orderBy: { id: DESC }`):
 
 ```graphql
 query {
@@ -108,12 +108,14 @@ query {
 | Query builder                                      | Hasura                           |
 |----------------------------------------------------|----------------------------------|
 | `eq`, `neq`, `in`, `isNull`                        | `_eq`, `_neq`, `_in`, `_is_null` |
+| `gt`, `gte`, `lt`, `lte`                           | `_gt`, `_gte`, `_lt`, `_lte`     |
 | `contains`, `startsWith`, `endsWith`               | `_like` with `%` wildcards       |
 | `notContains`                                      | `_nlike` with `%` wildcards      |
 | `andX`, `orX`                                      | `_and`, `_or`                    |
+| `notIn`                                            | `_and` of `_neq`                 |
 
 `%` and `_` in a searched value are escaped, so they match literally. `findBy()` criteria are sent in `where` as
-`_eq` (`_is_null` for `null`). Hasura paginates with an offset: `paginate()` needs a `limit()`, and the cursor of a page
+`_eq` (`_is_null` for `null`, `_in` for a list). Hasura paginates with an offset: `paginate()` needs a `limit()`, and the cursor of a page
 is the offset of the next one (see [pagination](pagination.md)).
 
 ## PostGraphile dialect
@@ -134,8 +136,9 @@ query {
 }
 ```
 
-Entities map the names PostGraphile gives: `#[Entity('allTasks')]`, `dueDate`, `userByUserId` for a foreign
-key, `tasksByUserId` for the reverse connection. A `null` criterion matches `IS NULL`. The query builder filters need
+Entities map the names PostGraphile gives: `#[GraphqlOrm\Entity('allTasks')]`, `dueDate`, `userByUserId` for a foreign
+key, `tasksByUserId` for the reverse connection. A `null` criterion matches `IS NULL`; a list criterion throws a
+`LogicException`, a condition matching a single value. The query builder filters need
 [postgraphile-plugin-connection-filter](https://github.com/graphile-contrib/postgraphile-plugin-connection-filter),
 which core PostGraphile does not provide: `where()` throws a `LogicException`, and lazy relations are loaded one query
 each.
@@ -146,6 +149,9 @@ Implement `GraphqlQueryDialect` to support any API:
 
 ```php
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
+use GraphqlOrm\Query\Expr\FilterExpressionInterface;
+use GraphqlOrm\Query\QueryOptions;
+use GraphqlOrm\Query\Walker\GraphqlWalkerInterface;
 
 final class MyDialect implements GraphqlQueryDialect
 {
@@ -157,9 +163,17 @@ final class MyDialect implements GraphqlQueryDialect
 }
 ```
 
+`extractCollection()` reads the rows of a collection field, `applyQueryOptions()` turns the limit, ordering and
+pagination into root arguments, `applyFilter()` the query builder filter, and `applyCriteria()` the equality criteria
+of the find methods.
+
 To support `count()`, implement `CountingDialect`: `countField()` builds the root field selecting the count, printed
-without collection envelope, and `readCount()` reads it from the response. `countField()` receives the GraphQL name of the identifier,
-or `null` when the entity has none or its property is typed with neither `int` nor `float`.
+without collection envelope, and `readCount()` reads it from the response. `countField()` receives the GraphQL name of
+the identifier, or `null` when the entity has none or its property is typed with neither `int` nor `float`.
+
+To support `sum()`, `avg()`, `min()` and `max()`, implement `AggregatingDialect` the same way: `aggregateField()`
+builds the root field selecting the `Aggregate` of a field, and `readAggregate()` reads it, `null` when no entity
+matches.
 
 If the filter of your API supports `in()` on the identifier, implement the `BatchLoadingDialect` marker interface: the
 lazy relations of a response are then loaded with one query per class instead of one per entity.
@@ -171,5 +185,9 @@ For an offset pagination, implement the `OffsetPaginationDialect` marker interfa
 cursor as offset, as `HasuraDialect::withPagination()` does; the extra row tells a next page exists and is dropped.
 
 For cursor pagination, also implement `CursorPaginationDialect` (`hasNextPage()`, `endCursor()`) to tell where the
-page information lies; without it, they are read on the root field, as Data API Builder returns them. A walker
-extending `AbstractGraphqlWalker` can override `walkCollection()` to print the envelope of nested collections.
+page information lies; without it, they are read on the root field, as Data API Builder returns them.
+
+The root arguments are computed once, when the query is built, and every page reuses them: the walker of a paginated
+dialect applies the cursor of the page being fetched (`QueryOptions::$cursor`) when it prints the root field, as
+`RelayGraphqlWalker` and `HasuraGraphqlWalker` do. A walker extending `AbstractGraphqlWalker` can also override
+`walkCollection()` to print the envelope of nested collections.

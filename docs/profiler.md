@@ -2,27 +2,30 @@
 
 GraphQL ORM integrates with the **Symfony Web Debug Toolbar** and Profiler.
 
-The toolbar sums up the request as Doctrine does: the APIs when there are [several](multiple-apis.md), queries, queries sent to the API (those not answered by the result
-cache), different statements (their values aside), query time, hydration time, errors, invalid entities (the violations
-of the [schema validation](schema-validation.md)), entities hydrated, and the hits of the result cache and of the
-second-level cache with the adapter of their pools (`Redis`, `Filesystem`...), or `disabled`.
+The toolbar sums up the request as Doctrine does: the APIs when there are [several](multiple-apis.md), queries,
+queries sent to the API (those not answered by the result cache), different statements (their values aside), query
+time, hydration time, errors, invalid entities (the violations of the [schema validation](schema-validation.md)),
+entities hydrated (and those served from the identity map), and the hits of the result cache and of the second-level
+cache with the adapter of their pools (`Redis`, `Filesystem`...), or `disabled`. When there are any, it also counts the
+cache warnings, the slow queries, the N+1 relations and the repeated queries, in yellow; an error turns it red.
 
 For each request, the panel shows:
 
 - **Metrics**: number of queries, time spent in GraphQL (measured via Symfony Stopwatch), time spent hydrating the
-  responses, slow queries when
-  `slow_query_threshold` is set (see [logging.md](logging.md#slow-queries)), errors, entities hydrated and bytes
-  received.
+  responses, slow queries when `slow_query_threshold` is set (see [logging.md](logging.md#slow-queries)), errors,
+  entities hydrated, queries served by the result cache and entities served by the identity map (when there are any),
+  and bytes received.
 - **An alert** for each relation loaded one entity at a time, and when queries are repeated (see
   [below](#n-1-and-repeated-queries)).
 - **The queries**, one row each: origin, root field and entity, caller, duration bar (the network, then the hydration
-  in grey: whether the time goes to the API or to the mapping), response size, entities
-  hydrated and status (an error in red, a slow query in yellow). Filter them by status, or search their text. A query in
-  error is shown open.
+  in grey: whether the time goes to the API or to the mapping), response size, entities hydrated and status (an error
+  in red, a slow query in yellow). Filter them by status (all, slow, errors), or search their text. A query in error is
+  shown open.
 - **The entities**: those of the mapping directory and those read by the queries of the request (first), as the bundle
   maps them: root field, identifier, repository, and for each property its GraphQL field, the target of a relation
-  (`[]` for a collection), its fetch mode and its [type converter](entity-mapping.md#type-converters), named by its
-  `#[Field]` or found by type. An entity whose mapping fails shows the error.
+  (`[]` for a collection) or its embedded value object, its fetch mode and its
+  [type converter](entity-mapping.md#type-converters), named by its `#[Field]` or found by type. An entity whose
+  mapping fails shows the error.
 - **The lazy loading**: the entities left to be loaded on first access (`Fetch::Lazy`, `lazy_loading`, the references
   of Doctrine entities), by relation: how many, how many were loaded and by which queries, how many were never read and
   so cost no query.
@@ -60,6 +63,10 @@ For each request, the panel shows:
 - **A timeline** of the queries during the request: overlapping bars are queries sent together, e.g. by
   `GraphqlQuery::concurrently()`.
 
+Besides the metrics and the alerts, each part is a tab of the panel: "Queries", "Timeline", "Configuration", and, when
+they have something to show, "Entities", "Lazy loading", "Partial entities", "Serializer", "Cache", "Autocomplete",
+"Identity map" and "N+1 & repeated".
+
 The introspection queries of the bundle (typed variables, schema validation, the countable fields of Data API Builder)
 are listed too, with the origin `introspection`: they count in the time of the request, once per cache lifetime.
 
@@ -82,9 +89,10 @@ Click a query to see its detail:
 - **Response**: the first 2 KB of the response, indented, values masked unless `redact_query_values` is false
 - **AST**: an interactive viewer of the query built by the ORM
 - **Hydration**: hydrated as entities or as a DTO, the relations loaded (those named by
-  [`with()`](query-builder.md#loading-relations), or up to `max_depth`), entities, relations, collections, root result
-  count (and the field indexing it, with `indexBy`) and
-  depth used; the collections by relation, with their type (`array` or `ArrayCollection`), how many and their items
+  [`with()`](query-builder.md#loading-relations), or up to `max_depth`), the hydration time apart from the network,
+  entities, relations, collections, root result count (and the field indexing it, with `indexBy`) and depth used; the
+  collections by relation, with their type (`array` or `ArrayCollection`), how many and their items
+- **Cache**, for a query going through the result cache: hit or miss, its key, its lifetime and the pool
 - The "Copy" and "Copy as cURL" buttons (see [below](#copy-as-curl)), the caller (file and line that triggered the
   query) and the endpoint
 

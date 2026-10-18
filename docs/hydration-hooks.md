@@ -16,18 +16,16 @@ capture fields that are not mapped (e.g. `__typename`, pagination metadata).
 
 ```php
 use GraphqlOrm\Attribute\BeforeHydrate;
-use GraphqlOrm\Mapping\Entity;
-use GraphqlOrm\Mapping\Field;
-use GraphqlOrm\Mapping\Identifier;
+use GraphqlOrm\Mapping as GraphqlOrm;
 
-#[Entity(name: 'products', repositoryClass: ProductRepository::class)]
+#[GraphqlOrm\Entity(name: 'products', repositoryClass: ProductRepository::class)]
 class Product
 {
-    #[Field(mappedFrom: 'id')]
-    #[Identifier]
+    #[GraphqlOrm\Field(mappedFrom: 'id')]
+    #[GraphqlOrm\Identifier]
     public int $id;
 
-    #[Field(mappedFrom: 'name')]
+    #[GraphqlOrm\Field(mappedFrom: 'name')]
     public string $name;
 
     // Populated from raw data — not a mapped field
@@ -46,9 +44,12 @@ class Product
 
 ### Rules
 
-- The method must be **public** and accept a **single `array` parameter**
+- The method must be **public** and accept a **single `array` parameter**: a method that is not public is ignored
 - Multiple `#[BeforeHydrate]` methods are supported — all are called
-- Always runs when the entity is first created — no partial hydration check
+- `$data` is the row of the entity, keyed by the GraphQL field names
+- Runs once, when the entity is created from a row — no partial hydration check. An entity already known (the
+  identity map) that gets the fields of another row does not run it again; a [lazy](entity-mapping.md#lazy-relations)
+  ghost runs it when it is loaded
 - At the time the hook runs, no fields are assigned yet
 
 ---
@@ -59,21 +60,19 @@ Called after all fields have been assigned. Use it to compute virtual fields or 
 
 ```php
 use GraphqlOrm\Attribute\AfterHydrate;
-use GraphqlOrm\Mapping\Entity;
-use GraphqlOrm\Mapping\Field;
-use GraphqlOrm\Mapping\Identifier;
+use GraphqlOrm\Mapping as GraphqlOrm;
 
-#[Entity(name: 'tasks', repositoryClass: TaskRepository::class)]
+#[GraphqlOrm\Entity(name: 'tasks', repositoryClass: TaskRepository::class)]
 class Task
 {
-    #[Field(mappedFrom: 'id')]
-    #[Identifier]
+    #[GraphqlOrm\Field(mappedFrom: 'id')]
+    #[GraphqlOrm\Identifier]
     public int $id;
 
-    #[Field(mappedFrom: 'title')]
+    #[GraphqlOrm\Field(mappedFrom: 'title')]
     public string $title;
 
-    #[Field(mappedFrom: 'dueDate')]
+    #[GraphqlOrm\Field(mappedFrom: 'dueDate')]
     public ?\DateTimeImmutable $dueDate = null;
 
     // Virtual field — not in the GraphQL schema
@@ -90,16 +89,20 @@ class Task
 
 ### Rules
 
-- The method must be **public** and take **no arguments**
+- The method must be **public** and take **no arguments**: a method that is not public is ignored
 - Multiple `#[AfterHydrate]` methods are supported — all are called
-- **Skipped** if any mapped field (`#[Field]`) is not initialized — this happens on partial hydration (e.g. a
-  nested relation with only a subset of fields selected)
-- Virtual fields (no `#[Field]`) are ignored in this check — they are meant to be set by the hook
+- **Skipped** if any mapped property (`#[Field]`, `#[Relation]`, `#[Embedded]`) is not initialized — this happens on
+  partial hydration (e.g. a nested relation with only a subset of fields selected)
+- Run later, once the missing fields are assigned: when the entity is met again in a row holding them, or when a
+  lazy ghost is loaded
+- Virtual fields (no mapping attribute) are ignored in this check — they are meant to be set by the hook — and so
+  are the mapped properties having a default value or no type
 
 ### Partial hydration
 
-When a relation is loaded with only a subset of fields, `#[AfterHydrate]` is skipped to avoid accessing uninitialized
-properties:
+When an entity is loaded with only a subset of its fields, a relation or a
+[selection of the query builder](query-builder.md#field-selection), `#[AfterHydrate]` is skipped to avoid accessing
+uninitialized properties:
 
 ```graphql
 query {
@@ -124,17 +127,21 @@ The two hooks can coexist on the same entity. Execution order is always: **Befor
 AfterHydrate**.
 
 ```php
-#[Entity(name: 'products', repositoryClass: ProductRepository::class)]
+use GraphqlOrm\Attribute\AfterHydrate;
+use GraphqlOrm\Attribute\BeforeHydrate;
+use GraphqlOrm\Mapping as GraphqlOrm;
+
+#[GraphqlOrm\Entity(name: 'products', repositoryClass: ProductRepository::class)]
 class Product
 {
-    #[Field(mappedFrom: 'id')]
-    #[Identifier]
+    #[GraphqlOrm\Field(mappedFrom: 'id')]
+    #[GraphqlOrm\Identifier]
     public int $id;
 
-    #[Field(mappedFrom: 'price')]
+    #[GraphqlOrm\Field(mappedFrom: 'price')]
     public float $price;
 
-    #[Field(mappedFrom: 'taxRate')]
+    #[GraphqlOrm\Field(mappedFrom: 'taxRate')]
     public float $taxRate;
 
     public string $graphqlType = '';

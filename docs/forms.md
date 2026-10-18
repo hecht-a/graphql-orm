@@ -24,7 +24,7 @@ another query.
 | `query_builder` | `null`: `findAll()`                         | callable receiving the repository and returning a query builder     |
 | `choice_label`  | `__toString()`, otherwise the identifier    | property path or callable, as with `ChoiceType`                     |
 | `autocomplete`  | `false`                                     | search the entities as the user types (see [below](#autocomplete))  |
-| `search_fields` | `null`                                      | fields searched by an autocomplete field                           |
+| `search_fields` | `null`                                      | fields searched by an autocomplete field, required with it          |
 
 The other options are those of `ChoiceType` (`multiple`, `expanded`, `placeholder`...).
 
@@ -43,8 +43,9 @@ service when the entity names one in its `repositoryClass`, a generic `GraphqlEn
 
 The choices are loaded once the form needs them (rendering or submission), with one query. On submission, only the
 submitted entities are loaded, by their identifier, within the restriction of `query_builder`. With `choice_lazy` (a
-`ChoiceType` option), the list itself is never loaded: only the selected entities are rendered. Mind the page size of your
-API: Data API Builder returns 100 rows by default (`runtime.pagination.default-page-size`), so limit the choices with `query_builder` or raise the page size.
+`ChoiceType` option), the list itself is never loaded: only the selected entities are rendered. Mind the page size of
+your API: Data API Builder returns 100 rows by default (`runtime.pagination.default-page-size`), so limit the choices
+with `query_builder` or raise the page size.
 
 ## Autocomplete
 
@@ -72,8 +73,10 @@ $builder->add('client', GraphqlEntityType::class, [
 
 The field sends what the user types to the endpoint of the bundle (`/_graphql_orm/autocomplete`), which answers with
 the first entities whose `search_fields` contain it, as many as the `max_results` option of UX Autocomplete (10 by
-default, 100 at most); typing more narrows the results, which are not paginated. Only
-the selected entity is loaded to render or submit the form (`choice_lazy` is on).
+default, 20 when the option is not given, 100 at most); typing more narrows the results, which are not paginated. Only the selected entity is loaded to
+render or submit the form (`choice_lazy` is on). The search queries every entity of the class, without the
+`query_builder` restriction, and labels the results with `choice_label` when it is a property path, with
+`__toString()` or the identifier otherwise.
 
 The URL of the search is signed with the `UriSigner` of FrameworkBundle: the endpoint only queries the entity, the
 fields and the label a form of the application asked for. Restrict the endpoint as the pages using it are, e.g. with an

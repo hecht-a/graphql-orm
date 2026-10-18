@@ -9,8 +9,11 @@ decorating the GraphQL client.
 | `QueryExecutedEvent` | once the response is hydrated                    | + endpoint, duration, response size, hydration stats |
 | `QueryFailedEvent`   | when sending or hydrating fails, before rethrow  | as available at the failure, + `$exception`          |
 
-All of them extend `QueryEvent`: listen to it to receive the three. The `trace->id` is shared by the events of a same
-query, e.g. to match the start and the end of a tracing span.
+All of them extend `QueryEvent`, which holds the `trace` (a `GraphqlQueryTrace`). They are dispatched under their own
+class name: a listener of `QueryEvent` itself is never called, so register one method for each event, or one method
+typed `QueryEvent` several times, e.g. `#[AsEventListener(event: QueryExecutedEvent::class)]` and
+`#[AsEventListener(event: QueryFailedEvent::class)]`. The `trace->id` is shared by the events of a same query, e.g. to
+match the start and the end of a tracing span.
 
 ```php
 use GraphqlOrm\Event\QueryExecutedEvent;

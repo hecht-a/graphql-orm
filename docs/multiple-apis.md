@@ -52,8 +52,8 @@ nothing.
 
 An entity belongs to the manager:
 
-1. its `#[Entity]` names, e.g. `#[Entity(name: 'contacts', manager: 'crm')]`, for an entity outside the namespace of its
-   manager;
+1. its `#[Entity]` names, e.g. `#[GraphqlOrm\Entity(name: 'contacts', manager: 'crm')]`, for an entity outside the
+   namespace of its manager (a manager that does not exist throws an `InvalidArgumentException`);
 2. otherwise, whose `mapping.entity.namespace` holds it (the most precise when they nest);
 3. otherwise, the default manager.
 
@@ -62,7 +62,8 @@ Map the identifier of the other entity, and load it from its own manager.
 
 ## Getting a manager
 
-`GraphqlManagerRegistry`, as the `ManagerRegistry` of Doctrine, gives a manager by its name or by the class of an entity:
+`GraphqlManagerRegistry`, as the `ManagerRegistry` of Doctrine, gives a manager by its name or by the class of an
+entity:
 
 ```php
 use GraphqlOrm\Registry\GraphqlManagerRegistry;
@@ -78,6 +79,9 @@ $this->registry->getManagerNames();                                     // ["mai
 A manager is also autowired by the name of its argument, and the default one without name:
 
 ```php
+use GraphqlOrm\Cache\GraphqlCache;
+use GraphqlOrm\GraphqlManagerInterface;
+
 public function __construct(
     private GraphqlManagerInterface $manager,      // the default manager
     private GraphqlManagerInterface $crmManager,   // graphql_orm.managers.crm
@@ -115,11 +119,11 @@ entity of another API: give it the manager of its API by name (`GraphqlManager $
 
 ## Everything else follows the entity
 
-The controller arguments ([`#[MapGraphqlEntity]`](repositories.md)), the [form fields and their autocomplete
-search](forms.md), the [serializer](serializer.md), the [references of Doctrine entities](doctrine.md) and
-`graphqlorm:find` use the manager of the entity they handle. Each API keeps its own introspection (types of the
-variables, countable fields), [schema validation](schema-validation.md), identity map and [caches](caching.md): two
-APIs sharing a pool keep their results apart.
+The controller arguments ([`#[MapGraphqlEntity]`](repositories.md#in-a-controller)), the
+[form fields and their autocomplete search](forms.md), the [serializer](serializer.md), the
+[references of Doctrine entities](doctrine.md) and `graphqlorm:find` use the manager of the entity they handle. Each API
+keeps its own introspection (types of the variables, countable fields), [schema validation](schema-validation.md),
+identity map and [caches](caching.md): two APIs sharing a pool keep their results apart.
 
 The commands take the manager of the API to work with:
 

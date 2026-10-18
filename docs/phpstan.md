@@ -28,15 +28,18 @@ $tasks->createQueryBuilder()->select('title.length');
 // Field "title" of App\GraphQL\Entity\Task is not a relation: "title.length" cannot be selected.
 ```
 
-| Call                                         | Keys or arguments checked | Expected name                  |
-|----------------------------------------------|---------------------------|--------------------------------|
-| `findBy()`, `findOneBy()`, `count()`         | criteria and ordering keys | GraphQL or PHP property name  |
-| `GraphqlQueryBuilder::orderBy()`             | field                      | GraphQL or PHP property name  |
-| `GraphqlQueryBuilder::select()`, `addSelect()` | paths, segment by segment | GraphQL or PHP property name |
+| Call                                           | Keys or arguments checked      | Expected name                |
+|------------------------------------------------|--------------------------------|------------------------------|
+| `findBy()`, `findOneBy()`                      | criteria and ordering keys     | GraphQL or PHP property name |
+| `count()`                                      | criteria keys                  | GraphQL or PHP property name |
+| `sum()`, `avg()`, `min()`, `max()`             | field, and criteria keys       | GraphQL or PHP property name |
+| `GraphqlQueryBuilder::orderBy()`               | field                          | GraphQL or PHP property name |
+| `GraphqlQueryBuilder::select()`, `addSelect()` | paths, segment by segment      | GraphQL or PHP property name |
 
+A field of an [embedded value object](entity-mapping.md#embedded-value-objects) is named by its path (`total.amount`).
 Only constant values are checked: a field name computed at runtime is not. The entity is taken from the generic type
-of the repository or query builder, so repositories must declare it (`@extends GraphqlEntityRepository<Task>`, as
-the generated ones do).
+of the repository or query builder, so repositories must declare it (`@extends ServiceGraphqlEntityRepository<Task>`,
+as the generated ones do, or `@extends GraphqlEntityRepository<Task>`).
 
 ## Fields that the entity does not map
 

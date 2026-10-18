@@ -30,20 +30,16 @@ class Task
 }
 
 // 4.9 and 5.0
-use GraphqlOrm\Mapping\Entity;
-use GraphqlOrm\Mapping\Fetch;
-use GraphqlOrm\Mapping\Field;
-use GraphqlOrm\Mapping\Identifier;
-use GraphqlOrm\Mapping\Relation;
+use GraphqlOrm\Mapping as GraphqlOrm;
 
-#[Entity(name: 'tasks')]
+#[GraphqlOrm\Entity(name: 'tasks')]
 class Task
 {
-    #[Field(mappedFrom: 'id')]
-    #[Identifier]
+    #[GraphqlOrm\Field(mappedFrom: 'id')]
+    #[GraphqlOrm\Identifier]
     public int $id;
 
-    #[Relation(mappedFrom: 'user', fetch: Fetch::Lazy)]
+    #[GraphqlOrm\Relation(mappedFrom: 'user', fetch: GraphqlOrm\Fetch::Lazy)]
     public ?User $user = null;
 }
 ```
@@ -60,8 +56,9 @@ In 5.0, a class still mapped with the old attributes is no entity anymore: using
 `NotAGraphqlEntityException`. `graphqlorm:make:entity` generates the new attributes.
 
 The metadata being cached outside debug mode, 4.9 reports the deprecations of the mapping when the cache is built:
-after `cache:clear`, or in the test environment. A class mapped with Doctrine too would have two `Entity` attributes:
-import one namespace with an alias, as `use GraphqlOrm\Mapping as GraphqlOrm;` then `#[GraphqlOrm\Entity]`.
+after `cache:clear`, or in the test environment. The attributes are imported through a namespace alias,
+`use GraphqlOrm\Mapping as GraphqlOrm;` then `#[GraphqlOrm\Entity]`, as Doctrine ones with `ORM`: a class mapped with
+Doctrine too can hold both `Entity` attributes.
 
 ## Default values
 

@@ -38,12 +38,13 @@ dialect loading lazy relations in batches. An identifier the API no longer knows
 first access. The profiler names the property (`Invoice::$client`) as the relation of the lazy load, in its "Lazy
 loading" tab and in its N+1 detection.
 
-Before the first persist of an entity, the identifier column is filled from the reference set. Doctrine sees no change
-of a property it does not map: to change the reference of a stored entity, change its identifier column too, as
-`setClient()` above does.
+Before the first persist of an entity, the identifier column, when still `null`, is filled from the reference set.
+Doctrine sees no change of a property it does not map: to change the reference of a stored entity, change its
+identifier column too, as `setClient()` above does.
 
 The target is read from the type of the property; give it with `#[GraphqlReference(identifier: 'clientId', targetEntity:
-Client::class)]` otherwise. The listener is registered when `doctrine/persistence` is installed (DoctrineBundle tags it).
+Client::class)]` otherwise. The listener is registered when `doctrine/persistence` is installed (DoctrineBundle tags
+it).
 
 ## References
 

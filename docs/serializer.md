@@ -19,7 +19,9 @@ Without it, the `ObjectNormalizer` reads every property, and so loads each lazy 
 problem hidden in a JSON response), or fails on a field the query did not select.
 
 The entities held in full are left to the other normalizers, `ObjectNormalizer` included, with their groups, name
-converters and context as usual. The properties are written under their PHP names. Select the relations you want
+converters and context as usual. `GraphqlEntityNormalizer` writes the mapped properties already loaded only, under
+their PHP names, without groups nor name converters; their values (a loaded relation, a date...) go through the other
+normalizers. Select the relations you want
 written in full (raise `max_depth`, or select their fields with the query builder).
 
 The [profiler](profiler.md) counts, in its "Serializer" tab, the relations written as identifiers and the partial

@@ -15,6 +15,7 @@ The bundle then registers the server as a public service, fetched by the tests f
 
 ```php
 use GraphqlOrm\Test\MockGraphqlServer;
+use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class TaskServiceTest extends KernelTestCase
@@ -40,8 +41,9 @@ final class TaskServiceTest extends KernelTestCase
 | `respondWithErrors($errors, $data)`    | GraphQL errors, with the partial data given if any             |
 | `respondWithHttpStatus($statusCode)`   | an HTTP error, e.g. `503`                                      |
 
-`requests()` returns the requests received, each with its `query` and its `variables`. A query sent once every queued
-response is used fails with a `LogicException` showing it.
+The methods queuing a response return the server, so that they can be chained. `requests()` returns the requests
+received, in order, as `RecordedRequest` objects with their `query` and their `variables`. A query sent once every
+queued response is used fails with a `GraphqlOrm\Exception\LogicException` showing it.
 
 The responses are written in the shape of your API: `items` for Data API Builder, `edges`/`node` for Relay... The
 introspection queries of the bundle (typed `variables`, `schema_validation`) are answered by the server itself, with an

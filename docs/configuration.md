@@ -60,8 +60,8 @@ graphql_orm:
 | `redact_query_values`             | `true`                   | Mask query values in logs and profiler (see [logging.md](logging.md#masked-values)) |
 | `http_client`                     | `null`                   | HTTP client service id; defaults to the autowired `HttpClientInterface` |
 | `dialect`                         | `DefaultDialect`         | GraphQL dialect to use                  |
-| `headers`                         | `[]`                     | HTTP headers sent with every request    |
-| `naming_strategy`                 | `DefaultNamingStrategy`  | Names the fields without `mappedFrom` (see [naming strategy](entity-mapping.md#naming-strategy)) |
+| `headers`                         | `[]`                     | HTTP headers sent with every request; those of a manager are added to those of the root |
+| `naming_strategy`                 | `DefaultNamingStrategy`  | Service id of the `NamingStrategy` naming the fields without `mappedFrom` (see [naming strategy](entity-mapping.md#naming-strategy)) |
 | `result_cache.pool`               | `cache.app`              | Cache pool of the [result cache](caching.md#result-cache); `null` disables it |
 | `second_level_cache.enabled`      | `false`                  | Keep the entities marked `#[Cache]` (see [second-level cache](caching.md#second-level-cache)); ignored until enabled |
 | `second_level_cache.pool`         | `cache.app`              | Cache pool of the entities without region |
@@ -72,9 +72,9 @@ graphql_orm:
 | `http_client_options.verify_host` | `true`                   | TLS host verification                   |
 | `http_client_options.verify_peer` | `true`                   | TLS peer verification                   |
 | `schema_validation.mode`          | `warning` in the dev environment, `disabled` otherwise | `exception`, `warning`, or `disabled` |
-| `mapping.entity.dir`              | `src/GraphQL/Entity`     | Directory where entities are stored     |
+| `mapping.entity.dir`              | `%kernel.project_dir%/src/GraphQL/Entity` | Directory where entities are stored     |
 | `mapping.entity.namespace`        | `App\GraphQL\Entity`     | Namespace for entities                  |
-| `mapping.repository.dir`          | `src/GraphQL/Repository` | Directory where repositories are stored |
+| `mapping.repository.dir`          | `%kernel.project_dir%/src/GraphQL/Repository` | Directory where repositories are stored |
 | `mapping.repository.namespace`    | `App\GraphQL\Repository` | Namespace for repositories              |
 
 ## Lazy loading
@@ -170,9 +170,10 @@ above, makes them retried as well.
 ## Metadata cache
 
 Entity metadata comes from attributes and docblocks. Outside debug mode it is kept in the `metadata_cache_pool`
-(`cache.system` by default) and built for every entity of `mapping.entity.dir` by `cache:warmup`, so that no request
-pays for it. In debug mode it is only kept for the current request, so mapping changes are seen without clearing the
-cache. After a deployment, `cache:clear` (or `cache:warmup`) refreshes it, as for the rest of the Symfony cache.
+(`cache.system` by default) and built for every entity of `mapping.entity.dir` (the classes directly in it, not in its
+subdirectories) by `cache:warmup`, so that no request pays for it. In debug mode it is only kept for the current
+request, so mapping changes are seen without clearing the cache. After a deployment, `cache:clear` (or
+`cache:warmup`) refreshes it, as for the rest of the Symfony cache.
 
 ## Dynamic headers
 

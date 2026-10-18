@@ -40,7 +40,8 @@ environment chooses where it lives.
 ## Result cache
 
 ```php
-$tasks = $repository->createQueryBuilder()
+$qb = $repository->createQueryBuilder();
+$tasks = $qb
     ->where($qb->expr()->eq('done', false))
     ->getQuery()
     ->enableResultCache(lifetime: 300, key: 'tasks.open')
@@ -48,20 +49,21 @@ $tasks = $repository->createQueryBuilder()
 ```
 
 The response is kept as received, unless it holds errors, and hydrated again when read, through the identity map of the
-request. The key defaults to a hash of the query and its variables; give one to evict the
-result, or to share it between queries. `lifetime` defaults to the default lifetime of the pool. Each page of a
-paginated query is kept apart, so `toIterable()` goes through every page.
+request. The key defaults to a hash of the query and its variables; give one to evict the result, or to share it
+between queries. `lifetime` defaults to the default lifetime of the pool. Each page of a paginated query is kept apart,
+so `toIterable()` goes through every page.
 
-`disableResultCache()` sends the query anyway. A query served from the result cache does not keep its entities in the
-second-level cache: they are as old as the result.
+`disableResultCache()` sends the query anyway. With `result_cache.pool: null`, a query calling `enableResultCache()`
+throws a `LogicException`. A query served from the result cache does not keep its entities in the second-level cache:
+they are as old as the result.
 
 ## Second-level cache
 
 ```php
-use GraphqlOrm\Mapping\Cache;
+use GraphqlOrm\Mapping as GraphqlOrm;
 
-#[Entity(name: 'labels')]
-#[Cache(region: 'reference_data')]
+#[GraphqlOrm\Entity(name: 'labels')]
+#[GraphqlOrm\Cache(region: 'reference_data')]
 class Label
 {
     // ...
@@ -75,14 +77,14 @@ An entity marked `#[Cache]` is kept when a query hydrates it **in full** (every 
 is not. It is then read from the cache by:
 
 - `find()`, after the identity map of the request;
-- the references (`getReference()`, `#[GraphqlReference]` of Doctrine entities) and the lazy loads (`Fetch::Lazy`,
-  `lazy_loading`): only the identifiers not kept are queried.
+- the references (`getReference()`, `#[GraphqlReference]` of Doctrine entities) and the lazy loads
+  (`GraphqlOrm\Fetch::Lazy`, `lazy_loading`): only the identifiers not kept are queried.
 
 Its relations are kept by their identifier, and loaded on first access, as lazy ghosts, whatever `lazy_loading` says: an
 entity read from the cache may need a query more than one read from the API. A collection is kept as the identifiers of
 its entities.
 
-`#[Cache(lifetime: 600)]` overrides the lifetime of the region. Without region, the entity is kept in
+`#[GraphqlOrm\Cache(lifetime: 600)]` overrides the lifetime of the region. Without region, the entity is kept in
 `second_level_cache.pool` for `default_lifetime`; a region the configuration does not declare throws a `LogicException`.
 Reading an entity from the cache does not prolong it.
 
@@ -111,8 +113,9 @@ php bin/console graphqlorm:cache:warmup --manager=crm --batch-size=500
 
 The entities are loaded page by page, `--batch-size` (100 by default) a query, with the memory of a single page; with a
 dialect that cannot paginate, they are loaded by one query, which the command tells. "Kept" counts those now in the
-cache: an entity hydrated in part, or whose relation has no identifier, is not kept. An entity not marked `#[Cache]`, or
-a second-level cache disabled, fails the command.
+cache: an entity hydrated in part, or whose relation has no identifier, is not kept. Naming an entity not marked
+`#[Cache]`, or of a manager whose second-level cache is disabled, fails the command; without an entity named, the
+command only warns when no entity is kept in the second-level cache.
 
 ## Eviction
 

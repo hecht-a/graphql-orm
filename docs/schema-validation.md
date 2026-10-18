@@ -10,13 +10,14 @@ php bin/console graphqlorm:schema:validate
 ```
 
 The command introspects the schema, lists every violation and exits with a non-zero code when the mapping does not
-match or when the schema cannot be introspected. Run it in CI against an environment where the API is reachable.
+match or when the schema cannot be introspected. With [several APIs](multiple-apis.md), it validates each of them, or
+the one named with `--manager=crm`. Run it in CI against an environment where the API is reachable.
 
 ## What is validated
 
 - Every mapped entity has a corresponding GraphQL type in the schema. The type is the one returned by the root query
-  field (`#[Entity(name: ...)]`); for a connection (Data API Builder `items`, Relay `edges { node }`), the type of
-  its entities is used. If the root field is not found, the type name is guessed from the root name (`tasks` → `Task`)
+  field (`#[GraphqlOrm\Entity(name: ...)]`); for a connection (Data API Builder `items`, Relay `edges { node }`), the
+  type of its entities is used. If the root field is not found, the type name is guessed from the root name (`tasks` → `Task`)
 - Every mapped field exists on that type
 - Scalar types are compatible between PHP and GraphQL (e.g. `int` ↔ `Int`, `string` ↔ `String`, `\DateTimeImmutable`
   ↔ `DateTime` or `timestamptz`)
@@ -27,6 +28,9 @@ match or when the schema cannot be introspected. Run it in CI against an environ
   property fails with a `TypeError`, as soon as the API returns it
 - A relation returns the GraphQL type of its target entity, as a list or connection for a collection (`array`
   property) and as a single object otherwise; a relation mapped on a scalar is reported too
+
+A field or relation that the schema cannot describe is skipped with `ignoreValidation: true`, e.g.
+`#[GraphqlOrm\Field(ignoreValidation: true)]`.
 
 When a field is not found, the error message suggests the closest match:
 
@@ -60,13 +64,15 @@ graphql_orm:
 | `warning`   | Logs violations as warnings without interrupting execution (default in the dev environment) |
 | `disabled`  | No validation (default in the other environments, tests included)                 |
 
-Entity classes are discovered automatically from `mapping.entity.dir` — no manual list needed.
+Entity classes are discovered automatically from `mapping.entity.dir` (the classes directly in it, not in its
+subdirectories) — no manual list needed.
 
 The outcome is cached with the other introspections, in `variables.cache_pool` for `variables.ttl` seconds: when each
 request runs a container of its own, as PHP does without a worker, the schema is not introspected on every request.
 Editing an entity checks the mapping again at once; a change of the schema of the API is seen once the cache expires
-(`cache:pool:clear cache.app` to see it sooner). The outcome is reported on every request, in the logs and in the
-"Configuration" tab of the profiler.
+(`cache:pool:clear cache.app`, the default pool, to see it sooner). The outcome is logged when the mapping is checked,
+and shown on every request in the "Configuration" tab of the profiler.
 
-> Schema validation requires the GraphQL API to be reachable at boot time. Use `disabled` in environments where the API
-> may not be available (CI, offline dev, etc.).
+> Schema validation on the first request requires the GraphQL API to be reachable then: in `exception` mode an
+> unreachable API fails the request, in `warning` mode it is logged as a warning. Use `disabled` in environments where
+> the API may not be available (CI, offline dev, etc.).

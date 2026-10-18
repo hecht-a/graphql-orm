@@ -19,7 +19,9 @@ features:
   - title: Several GraphQL dialects
     details: Data API Builder, Hasura, PostGraphile, Relay connections and standard GraphQL, each tested against a real server.
   - title: Hydration
-    details: Relations, collections, dates and enums, an identity map, hooks, and lazy relations loaded in batches.
+    details: Relations, collections, dates, enums and value objects, an identity map, hooks, and lazy relations loaded in batches.
+  - title: Caching and several APIs
+    details: A result cache, a second-level cache of entities like the one of Doctrine, and a manager for each API.
   - title: Safety
     details: Schema validation in CI, PHPStan rules for field names, typed GraphQL variables, values masked in logs.
   - title: Symfony integration

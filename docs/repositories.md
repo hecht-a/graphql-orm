@@ -48,6 +48,8 @@ change how lazy relations are loaded.
 ## Built-in methods
 
 ```php
+use GraphqlOrm\Query\Direction;
+
 // Fetch all entities
 $tasks = $repository->findAll();
 
@@ -70,6 +72,12 @@ $task = $repository->findOneBy(['status' => 'active'], ['createdAt' => Direction
 // Number of entities matching the criteria
 $count = $repository->count(['status' => 'active']);
 
+// The class of its entities, as Doctrine getClassName()
+$class = $repository->getClassName(); // Task::class
+
+// A copy loading these relations in place of max_depth (see query-builder.md#loading-relations)
+$tasks = $repository->with('assignee')->findBy(['status' => 'active']);
+
 // Custom query via Query Builder
 $qb = $repository->createQueryBuilder();
 $tasks = $qb
@@ -89,10 +97,15 @@ with Doctrine (`findBy(['id' => [1, 3]])`, an empty list matching nothing); the 
 |-------------------------|-----------------------------------------------------------------------------|
 | `DefaultDialect`        | `tasks(status: "active", deletedAt: null)`                                  |
 | `DataApiBuilderDialect` | `tasks(filter: { status: { eq: "active" }, deletedAt: { isNull: true } })` |
+| `HasuraDialect`         | `tasks(where: { status: { _eq: "active" }, deletedAt: { _is_null: true } })` |
+| `PostGraphileDialect`   | `allTasks(condition: { status: "active", deletedAt: null })`               |
 
-`find()` requires an identifier (`#[Identifier]`) and throws a `LogicException` otherwise.
-Ordering is not supported by `DefaultDialect` (see [dialects](dialects.md)). Use the query builder for anything other
-than equalities.
+`RelayDialect` sends them as `DefaultDialect` does. A list is sent as `in` (Data API Builder) or `_in` (Hasura);
+PostGraphile conditions matching a single value, a list throws a `LogicException` there.
+
+`find()` requires an identifier (`#[Identifier]`) and throws a `LogicException` otherwise. An ordering must be a
+`Direction`, an `InvalidArgumentException` telling otherwise. Ordering is supported by neither `DefaultDialect` nor
+`RelayDialect` (see [dialects](dialects.md)). Use the query builder for anything other than equalities.
 
 ## Counting
 
@@ -108,7 +121,7 @@ than equalities.
 
 Data API Builder only counts the values of a numeric field that are not null. `count()` counts on the identifier when
 its property is typed `int` or `float`. Otherwise, as for an identifier typed `string` or an entity without identifier,
-it introspects the schema once (cached as the [variables](configuration.md), in the `variables.cache_pool` for
+it introspects the schema once (cached as the [variables](configuration.md#variables), in the `variables.cache_pool` for
 `variables.ttl` seconds) and counts on the first numeric field of the entity that is never null (`Int!`, `Float!`...):
 every entity has a value there, so that the count is exact. A `LogicException` tells when the entity has no such field,
 or when the schema cannot be introspected.
@@ -151,7 +164,8 @@ they are only pointed out when the query fails. The [PHPStan rules](phpstan.md) 
 
 ## In a controller
 
-An argument typed with an entity receives the entity whose identifier is in the route, found with `find()`:
+An argument typed with an entity receives the entity whose identifier is in the route, found with `findOneBy()` on its
+identifier:
 
 ```php
 #[Route('/tasks/{id}')]

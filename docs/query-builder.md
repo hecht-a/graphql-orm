@@ -104,6 +104,13 @@ $expr->andX($expr->eq('status', 'active'), $expr->isNull('dueDate'))
 $expr->orX($expr->eq('priority', 'high'), $expr->eq('priority', 'critical'))
 ```
 
+`where()` replaces the filter of the previous calls; `andWhere()` adds a condition to it, as Doctrine `andWhere()`:
+
+```php
+$qb->where($expr->eq('done', false))
+    ->andWhere($expr->eq('priority', 'high')); // done = false and priority = high
+```
+
 Fields are named after their GraphQL name or their PHP property, as in the find methods, and dates and enums are sent
 as in the variables: the tasks overdue are
 
@@ -144,7 +151,9 @@ $qb
     ->limit(20);
 ```
 
-Ordering requires a dialect that supports it, see [dialects.md](dialects.md).
+The field is a GraphQL name or a PHP property; each call adds an ordering to those of the previous ones. Ordering
+requires a dialect that supports it (`DefaultDialect` and `RelayDialect` throw a `LogicException`), see
+[dialects.md](dialects.md).
 
 ## Keyed result
 
@@ -205,7 +214,7 @@ use GraphqlOrm\Query\GraphqlQuery;
 
 Each query is recorded in the profiler, the logs and the events as usual. When some fail, the others still complete,
 then the first failure is thrown. The concurrency is the one of the Symfony HTTP client (curl): a client implementing
-only `GraphqlClientInterface` runs the queries one after the other.
+`GraphqlClientInterface` but not `ConcurrentGraphqlClientInterface` runs the queries one after the other.
 
 ## Batched queries
 
@@ -255,7 +264,7 @@ the rows of the requested page.
 `NEW` in Doctrine DQL. The query selects the fields of the DTO only:
 
 ```php
-use GraphqlOrm\Mapping\MapFrom;
+use GraphqlOrm\Mapping as GraphqlOrm;
 
 final readonly class TaskSummary
 {
@@ -263,7 +272,7 @@ final readonly class TaskSummary
         public int $id,
         public string $title,
         public ?\DateTimeImmutable $dueDate,
-        #[MapFrom('assignee.name')]
+        #[GraphqlOrm\MapFrom('assignee.name')]
         public ?string $assigneeName = null,
     ) {
     }
@@ -310,7 +319,7 @@ query {
 - The DTOs are not entities: neither identity map, nor second-level cache, nor lazy loading, nor partial entities.
 - `getResult()`, `getOneOrNullResult()`, `getSingleResult()`, `paginate()`, `toIterable()`, `indexBy()` (on a field of
   the entity, selected if the DTO does not map it) and the result cache work as with entities. `select()` and `with()`
-  cannot be used with it: the DTO tells the fields.
+  cannot be used with it, the DTO telling the fields: `getQuery()` throws a `LogicException`.
 - A parameter mapping no field of the entity, or a relation without a class to hydrate, throws an
   `InvalidArgumentException` when `hydrateAs()` is called, suggesting the closest field.
 
@@ -324,7 +333,7 @@ $graphql = $qb
     ->getQuery()
     ->getGraphQL();
 
-// outputs:
+// outputs, with DefaultDialect:
 // query {
 //   tasks(id: { eq: 1 }) {
 //     id
@@ -332,3 +341,10 @@ $graphql = $qb
 //   }
 // }
 ```
+
+`getGraphQL()` writes the values in the query, even when they are sent as [variables](configuration.md#variables).
+
+## Result cache
+
+`getQuery()->enableResultCache()` keeps the response between requests, as Doctrine `Query::enableResultCache()`; see
+[caching](caching.md#result-cache).
