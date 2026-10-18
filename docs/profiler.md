@@ -13,9 +13,9 @@ For each request, the panel shows:
 
 - **Metrics**: number of queries, time spent in GraphQL (measured via Symfony Stopwatch), the queries sent together
   (`GraphqlQuery::concurrently()`) counted once as the request waited for them at the same time, their sum shown apart,
-  time spent hydrating the responses, slow queries when `slow_query_threshold` is set (see [logging.md](logging.md#slow-queries)), errors,
-  entities hydrated, queries served by the result cache and entities served by the identity map (when there are any),
-  and bytes received.
+  time spent hydrating the responses, slow queries when `slow_query_threshold` is set (see
+  [logging.md](logging.md#slow-queries)), errors, entities hydrated, queries served by the result cache and entities
+  served by the identity map (when there are any), and bytes received.
 - **An alert** for each relation loaded one entity at a time, and when queries are repeated (see
   [below](#n-1-and-repeated-queries)).
 - **The queries**, one row each: origin, root field and entity, caller, duration bar (the network, then the hydration
@@ -61,14 +61,17 @@ For each request, the panel shows:
   the violations found on the first request. The caches of the introspection results (the types of the variables, the
   countable fields of `count()`, the schema validation) tell whether they served the request or introspected the
   schema, with the time spent.
+- **The callers**: the queries grouped by the line of the application sending them, the costliest first, with their
+  number, duration, origins and entities: a template or a controller sending many queries is the place to load their
+  entities at once.
 - **A timeline** of the queries during the request, counted from its start: each query with its origin, its entity and
   its duration, a bar for the network and one for the hydration, on a graduated axis. A hatched area shows the time
   before the first query (the kernel, the routing, the controller...); overlapping bars are queries sent together, e.g.
   by `GraphqlQuery::concurrently()`.
 
-Besides the metrics and the alerts, each part is a tab of the panel: "Queries", "Timeline", "Configuration", and, when
-they have something to show, "Entities", "Lazy loading", "Partial entities", "Serializer", "Cache", "Autocomplete",
-"Identity map" and "N+1 & repeated".
+Besides the metrics and the alerts, each part is a tab of the panel: "Queries", "Timeline", "Callers", "Configuration",
+and, when they have something to show, "Entities", "Lazy loading", "Partial entities", "Serializer", "Cache",
+"Autocomplete", "Identity map" and "N+1 & repeated".
 
 The introspection queries of the bundle (typed variables, schema validation, the countable fields of Data API Builder)
 are listed too, with the origin `introspection`: they count in the time of the request, once per cache lifetime.
