@@ -14,6 +14,8 @@ use GraphqlOrm\Dialect\BatchLoadingDialect;
 use GraphqlOrm\Dialect\DefaultDialect;
 use GraphqlOrm\Dialect\GraphqlQueryDialect;
 use GraphqlOrm\Dialect\MutationDialect;
+use GraphqlOrm\Event\PostFlushEvent;
+use GraphqlOrm\Event\PreFlushEvent;
 use GraphqlOrm\Event\QueryExecutedEvent;
 use GraphqlOrm\Event\QueryFailedEvent;
 use GraphqlOrm\Event\QueryStartedEvent;
@@ -25,6 +27,7 @@ use GraphqlOrm\Execution\IdentityMap;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Persistence\Lifecycle;
 use GraphqlOrm\Persistence\UnitOfWork;
 use GraphqlOrm\Query\Ast\AstExporter;
 use GraphqlOrm\Query\Ast\QueryNode;
@@ -92,6 +95,9 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
     private array $genericRepositories = [];
 
     private ?UnitOfWork $unitOfWork = null;
+
+    /** @var array<class-string, array<string, list<\ReflectionMethod>>> the lifecycle callbacks of the entities, by step */
+    private array $lifecycleCallbacks = [];
 
     public function __construct(
         private GraphqlEntityMetadataFactory $metadataFactory,
@@ -376,26 +382,64 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
     public function flush(): void
     {
         $dialect = $this->dialect;
+        $this->eventDispatcher?->dispatch(new PreFlushEvent($this));
 
         if (!$dialect instanceof MutationDialect) {
             if ($this->unitOfWork?->hasWork() === true) {
                 throw new LogicException(\sprintf('"%s" cannot write the entities: flush() needs a dialect implementing %s.', $dialect::class, MutationDialect::class));
             }
-
-            return;
+        } else {
+            $this->unitOfWork()->flush($dialect, fn (QueryNode $mutation): array => $this->execute($mutation, static fn (array $response): array => $response));
         }
 
-        $this->unitOfWork()->flush(
-            $dialect,
-            fn (QueryNode $mutation): array => $this->execute($mutation, static fn (array $response): array => $response),
-            fn (object $entity, int|string $identifier) => $this->identityMap?->add($entity, $identifier),
-            fn (object $entity, int|string $identifier) => $this->identityMap?->remove($entity, $identifier),
-        );
+        $this->eventDispatcher?->dispatch(new PostFlushEvent($this));
     }
 
     private function unitOfWork(): UnitOfWork
     {
-        return $this->unitOfWork ??= new UnitOfWork($this->metadataFactory, $this->typeConverters);
+        return $this->unitOfWork ??= new UnitOfWork($this->metadataFactory, $this->typeConverters, $this->lifecycle(...));
+    }
+
+    /**
+     * A step of the lifecycle of an entity written: the identity map and the second-level cache follow it, then the
+     * callbacks of the entity and the listeners are called.
+     *
+     * @param list<string> $changedProperties
+     */
+    private function lifecycle(Lifecycle $step, object $entity, int|string|null $identifier, array $changedProperties): void
+    {
+        if ($identifier !== null) {
+            match ($step) {
+                Lifecycle::PostPersist => $this->identityMap?->add($entity, $identifier),
+                Lifecycle::PostRemove => $this->identityMap?->remove($entity, $identifier),
+                default => null,
+            };
+
+            // The entity kept is no longer the one of the API.
+            if (\in_array($step, [Lifecycle::PostUpdate, Lifecycle::PostRemove], true) && $this->cache->caches($entity::class)) {
+                $this->cache->evictEntity($entity::class, $identifier);
+            }
+        }
+
+        foreach ($this->lifecycleCallbacks[$entity::class][$step->name] ??= self::callbacks($entity::class, $step->attribute()) as $callback) {
+            $callback->invoke($entity);
+        }
+
+        $this->eventDispatcher?->dispatch($step->event($entity, $this, $changedProperties));
+    }
+
+    /**
+     * @param class-string $class
+     * @param class-string $attribute
+     *
+     * @return list<\ReflectionMethod>
+     */
+    private static function callbacks(string $class, string $attribute): array
+    {
+        return array_values(array_filter(
+            (new \ReflectionClass($class))->getMethods(\ReflectionMethod::IS_PUBLIC),
+            static fn (\ReflectionMethod $method): bool => $method->getAttributes($attribute) !== [],
+        ));
     }
 
     /**

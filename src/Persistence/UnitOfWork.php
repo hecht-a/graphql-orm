@@ -36,9 +36,17 @@ final class UnitOfWork
     /** @var array<int, object> the entities removed, by object id */
     private array $deletes = [];
 
+    private bool $flushing = false;
+
+    /**
+     * @param \Closure(Lifecycle, object, int|string|null, list<string>): void $lifecycle told of each step of an entity
+     *                                                                                    written, with its identifier when known
+     *                                                                                    and the properties an update writes
+     */
     public function __construct(
         private readonly GraphqlEntityMetadataFactory $metadataFactory,
         private readonly TypeConverterRegistry $typeConverters,
+        private readonly \Closure $lifecycle,
     ) {
         $this->originals = new \WeakMap();
     }
@@ -69,8 +77,9 @@ final class UnitOfWork
         $this->assertEntity($entity);
         unset($this->deletes[spl_object_id($entity)]);
 
-        if (!isset($this->originals[$entity])) {
+        if (!isset($this->originals[$entity]) && !isset($this->inserts[spl_object_id($entity)])) {
             $this->inserts[spl_object_id($entity)] = $entity;
+            ($this->lifecycle)(Lifecycle::PrePersist, $entity, null, []);
         }
     }
 
@@ -91,22 +100,59 @@ final class UnitOfWork
             throw new InvalidArgumentException(\sprintf('This "%s" was not read from the API: only an entity read by a query can be removed.', $entity::class));
         }
 
-        $this->deletes[spl_object_id($entity)] = $entity;
+        if (!isset($this->deletes[spl_object_id($entity)])) {
+            $this->deletes[spl_object_id($entity)] = $entity;
+            ($this->lifecycle)(Lifecycle::PreRemove, $entity, $this->identifier($entity, $this->metadataFactory->getMetadata($entity::class)), []);
+        }
     }
 
     /**
      * Sends the mutations, a document per entity created whose identifier another needs.
      *
-     * @param \Closure(QueryNode): array<string, mixed> $send    sends a mutation document and gives its response
-     * @param \Closure(object, int|string): void        $written records an entity created in the identity map
-     * @param \Closure(object, int|string): void        $deleted forgets an entity deleted
+     * @param \Closure(QueryNode): array<string, mixed> $send sends a mutation document and gives its response
+     *
+     * @throws LogicException when an entity cannot be written, or a flush is running
+     * @throws FlushException when a mutation fails
+     */
+    public function flush(MutationDialect $dialect, \Closure $send): void
+    {
+        if ($this->flushing) {
+            throw new LogicException('flush() was called while the entities were being written: call it once the flush is done, e.g. from a PostFlushEvent listener.');
+        }
+
+        $this->flushing = true;
+
+        try {
+            $this->write($dialect, $send);
+        } finally {
+            $this->flushing = false;
+        }
+    }
+
+    /**
+     * @param \Closure(QueryNode): array<string, mixed> $send
      *
      * @throws LogicException when an entity cannot be written
      * @throws FlushException when a mutation fails
      */
-    public function flush(MutationDialect $dialect, \Closure $send, \Closure $written, \Closure $deleted): void
+    private function write(MutationDialect $dialect, \Closure $send): void
     {
         $operations = $this->operations();
+        $updated = false;
+
+        foreach ($operations as $operation) {
+            if ($operation->kind === Operation::UPDATE) {
+                $properties = array_map(fn (string $name): string => $operation->metadata->field($name)->property ?? $name, $operation->changed);
+                ($this->lifecycle)(Lifecycle::PreUpdate, $operation->entity, $operation->identifier, $properties);
+                $updated = true;
+            }
+        }
+
+        // What the callbacks and the listeners of the updates changed is written as well.
+        if ($updated) {
+            $operations = $this->operations();
+        }
+
         $applied = 0;
 
         foreach ($this->waves($operations) as $wave) {
@@ -139,7 +185,7 @@ final class UnitOfWork
                     continue;
                 }
 
-                $this->applied($operation, $row, $written, $deleted);
+                $this->applied($operation, $row);
                 ++$applied;
             }
 
@@ -322,11 +368,9 @@ final class UnitOfWork
     /**
      * Records an operation the API applied: the identifier of an entity created, and the values the API now has.
      *
-     * @param array<string, mixed>               $row
-     * @param \Closure(object, int|string): void $written
-     * @param \Closure(object, int|string): void $deleted
+     * @param array<string, mixed> $row
      */
-    private function applied(Operation $operation, array $row, \Closure $written, \Closure $deleted): void
+    private function applied(Operation $operation, array $row): void
     {
         $entity = $operation->entity;
         $identifierField = $operation->metadata->identifier;
@@ -334,7 +378,7 @@ final class UnitOfWork
 
         if ($operation->kind === Operation::DELETE) {
             unset($this->originals[$entity]);
-            $deleted($entity, $operation->identifier ?? '');
+            ($this->lifecycle)(Lifecycle::PostRemove, $entity, $operation->identifier, []);
 
             return;
         }
@@ -354,9 +398,7 @@ final class UnitOfWork
 
         $this->originals[$entity] = $known;
 
-        if ($operation->kind === Operation::CREATE) {
-            $written($entity, $this->identifier($entity, $operation->metadata));
-        }
+        ($this->lifecycle)($operation->kind === Operation::CREATE ? Lifecycle::PostPersist : Lifecycle::PostUpdate, $entity, $this->identifier($entity, $operation->metadata), []);
     }
 
     /**
