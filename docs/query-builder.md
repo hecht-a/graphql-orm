@@ -332,6 +332,10 @@ query {
 
 ## Inspecting the generated query
 
+`name()` names the operation (`query dashboard_open_tasks { ... }`), to tell the query apart in the logs of the API; a
+name that is no GraphQL name throws an `InvalidArgumentException`. See also
+[operation names](configuration.md#operation-names).
+
 ```php
 $qb = $repository->createQueryBuilder();
 $graphql = $qb

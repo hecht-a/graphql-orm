@@ -58,6 +58,7 @@ graphql_orm:
 | `identity_map`                    | `true`                   | Share the entities between the queries of a request (see [shared identity map](#shared-identity-map)) |
 | `read_only`                       | `false`                  | Only read the API: `persist()`, `remove()` and `flush()` throw, and the entities read are not tracked (see [read-only](writing.md#read-only)) |
 | `persisted_queries`               | `false`                  | Send the queries as the hash of their text, as Apollo automatic persisted queries (see [persisted queries](#persisted-queries)) |
+| `operation_names`                 | `false`                  | Name each query after its entity and the method sending it, e.g. `query Task_findBy` (see [operation names](#operation-names)) |
 | `slow_query_threshold`            | `null`                   | Milliseconds from which a query is logged as a warning and highlighted in the profiler; `null` reports none, also for a manager whose root sets one (see [slow queries](logging.md#slow-queries)) |
 | `redact_query_values`             | `true`                   | Mask query values in logs and profiler (see [logging.md](logging.md#masked-values)) |
 | `http_client`                     | `null`                   | HTTP client service id; defaults to the autowired `HttpClientInterface` |
@@ -273,4 +274,36 @@ query does not change with its values, and is asked for once; with values inline
 The profiler marks each query "persisted hit" (the server knew it) or "persisted miss" (it asked for its text); a miss
 counts both requests in the duration. `MockGraphqlServer` asks for the text of every persisted query, so that the tests
 record the queries in full.
+
+## Operation names
+
+The queries are anonymous by default (`query { ... }`): the logs and the monitoring of the API cannot tell which part of
+the application sent them. With `operation_names: true`, at the root or for one manager, each query is named after the
+short name of its entity and the method sending it:
+
+```graphql
+query Task_findBy($done: Boolean) {
+  tasks(filter: { done: { eq: $done } }) { items { id title } }
+}
+```
+
+| Sent by                                                  | Name                                      |
+|----------------------------------------------------------|-------------------------------------------|
+| `find()`, `findOneBy()`, `findAll()`, `findBy()`         | `Task_find`, `Task_findOneBy`...          |
+| `count()`, `sum()`, `avg()`, `min()`, `max()`            | `Task_count`, `Task_sum`...               |
+| the query builder                                        | `Task_query`                              |
+| the lazy loads                                           | `Task_lazyLoad`                           |
+| `flush()`                                                | `mutation flush { ... }`                  |
+
+The names cost nothing: they come from the method called, not from the call stack. A query of the query builder can be
+named after what it is for with `name()`, whatever the option (see
+[the query builder](query-builder.md#inspecting-the-generated-query)):
+
+```php
+$tasks = $repository->createQueryBuilder()->name('dashboard_open_tasks')->getQuery()->getResult();
+```
+
+Naming the queries changes their text: the keys of the [result cache](caching.md#result-cache) and the hashes of the
+[persisted queries](#persisted-queries) change with it, and a test comparing the text of a query sees the name. The
+option is off in 5.x for that reason.
 

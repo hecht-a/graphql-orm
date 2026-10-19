@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `operation_names: true`, at the root or for a manager, names each query after its entity and the method sending it
+  (`query Task_findBy { ... }`, `mutation flush { ... }`), for the logs and the monitoring of the API; off by default,
+  as it changes the text of the queries. `GraphqlQueryBuilder::name()` names a query whatever the option.
+
 - The PHPStan extension tells that the mapped properties are written by the hydration and read by `flush()`: a
   `readonly` identifier needs no constructor.
 
