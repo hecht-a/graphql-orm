@@ -17,6 +17,7 @@ use GraphqlOrm\Tests\Fixtures\Dto\Priority;
 use GraphqlOrm\Tests\Fixtures\Embedded\Money;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
 use GraphqlOrm\Tests\Fixtures\Write\Author;
+use GraphqlOrm\Tests\Fixtures\Write\Category;
 use GraphqlOrm\Tests\Fixtures\Write\Comment;
 use GraphqlOrm\Tests\Fixtures\Write\Note;
 use PHPUnit\Framework\Attributes\Test;
@@ -210,6 +211,26 @@ final class FlushTest extends TestCase
         );
         self::assertSame(5, $author->id);
         self::assertSame(12, $note->id);
+    }
+
+    #[Test]
+    public function itRefusesNewEntitiesNeedingTheIdentifiersOfEachOther(): void
+    {
+        $manager = $this->manager(new FakeGraphqlClient());
+        $first = new Category();
+        $first->name = 'Category A';
+        $second = new Category();
+        $second->name = 'Category B';
+        $first->related = $second;
+        $second->related = $first;
+
+        $manager->persist($first);
+        $manager->persist($second);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('The new entities "GraphqlOrm\Tests\Fixtures\Write\Category" and those it relates to need the identifiers of each other: flush() one of them first.');
+
+        $manager->flush();
     }
 
     #[Test]
