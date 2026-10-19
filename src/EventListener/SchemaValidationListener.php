@@ -6,6 +6,7 @@ namespace GraphqlOrm\EventListener;
 
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Exception\SchemaValidationException;
+use GraphqlOrm\Schema\CachedIntrospection;
 use GraphqlOrm\Schema\SchemaIntrospector;
 use GraphqlOrm\Schema\SchemaValidationMode;
 use GraphqlOrm\Schema\SchemaValidator;
@@ -14,7 +15,6 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Contracts\Cache\CacheInterface;
-use Symfony\Contracts\Cache\ItemInterface;
 
 /**
  * @internal
@@ -122,16 +122,8 @@ final class SchemaValidationListener
             return $this->introspectAndValidate();
         }
 
-        $startedAt = hrtime(true);
-        $introspected = false;
         /** @var array{list<string>, string|null} $outcome */
-        $outcome = $this->cache->get(self::CACHE_KEY_PREFIX . $this->fingerprint(), function (ItemInterface $item) use (&$introspected): array {
-            $item->expiresAfter($this->ttl);
-            $introspected = true;
-
-            return $this->introspectAndValidate();
-        });
-        $this->collector?->introspectionCacheLookup(self::PROFILER_NAME, $introspected, (hrtime(true) - $startedAt) / 1e6);
+        $outcome = CachedIntrospection::get($this->cache, self::CACHE_KEY_PREFIX . $this->fingerprint(), $this->ttl, $this->collector, self::PROFILER_NAME, $this->introspectAndValidate(...));
 
         return $outcome;
     }

@@ -9,7 +9,6 @@ use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Exception\GraphqlOrmException;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\Cache\CacheInterface;
-use Symfony\Contracts\Cache\ItemInterface;
 
 /**
  * Knows the fields Data API Builder can count an entity on: its aggregations only take the numeric fields listed by
@@ -76,15 +75,7 @@ final readonly class CountableFieldResolver
      */
     public function countableFields(string $rootField): ?array
     {
-        $startedAt = hrtime(true);
-        $introspected = false;
-        $fields = $this->cache->get(self::CACHE_KEY, function (ItemInterface $item) use (&$introspected): ?array {
-            $item->expiresAfter($this->ttl);
-            $introspected = true;
-
-            return $this->introspect();
-        });
-        $this->collector?->introspectionCacheLookup(self::PROFILER_NAME, $introspected, (hrtime(true) - $startedAt) / 1e6);
+        $fields = CachedIntrospection::get($this->cache, self::CACHE_KEY, $this->ttl, $this->collector, self::PROFILER_NAME, $this->introspect(...));
 
         $countable = \is_array($fields) ? ($fields[$rootField] ?? null) : null;
 
