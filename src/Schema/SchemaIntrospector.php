@@ -111,30 +111,9 @@ final readonly class SchemaIntrospector
                 continue;
             }
 
-            $fields = [];
-
-            $rawFields = $type['fields'] ?? [];
-
-            if (\is_array($rawFields)) {
-                foreach ($rawFields as $field) {
-                    if (!\is_array($field)) {
-                        continue;
-                    }
-
-                    $fieldName = $field['name'] ?? null;
-
-                    if (!\is_string($fieldName)) {
-                        continue;
-                    }
-
-                    $rawType = $field['type'] ?? [];
-                    $fields[$fieldName] = $this->resolveFieldType(\is_array($rawType) ? $rawType : []);
-                }
-            }
-
             $map[$name] = [
                 'kind' => $kind,
-                'fields' => $fields,
+                'fields' => $this->fieldsOf($type),
             ];
         }
 
@@ -142,6 +121,30 @@ final readonly class SchemaIntrospector
             'queryType' => \is_string($queryType) ? $queryType : self::DEFAULT_QUERY_TYPE,
             'types' => $map,
         ];
+    }
+
+    /**
+     * @param array<mixed> $type a type of the introspection result
+     *
+     * @return array<string, array{kind: string, name: string|null, nullable: bool, list: bool}>
+     */
+    private function fieldsOf(array $type): array
+    {
+        $fields = [];
+        $rawFields = $type['fields'] ?? [];
+
+        foreach (\is_array($rawFields) ? $rawFields : [] as $field) {
+            $fieldName = \is_array($field) ? $field['name'] ?? null : null;
+
+            if (!\is_string($fieldName)) {
+                continue;
+            }
+
+            $rawType = $field['type'] ?? [];
+            $fields[$fieldName] = $this->resolveFieldType(\is_array($rawType) ? $rawType : []);
+        }
+
+        return $fields;
     }
 
     /**
