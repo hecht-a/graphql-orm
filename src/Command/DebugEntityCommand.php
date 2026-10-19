@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Command;
 
+use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use Symfony\Component\Console\Attribute\Argument;
@@ -53,37 +54,17 @@ final readonly class DebugEntityCommand
         }
 
         try {
-            $metadata = ($this->managers?->getManagerForClass($fqcn)->getMetadataFactory() ?? $this->metadataFactory)->getMetadata($fqcn);
+            $manager = $this->managers?->getManagerForClass($fqcn);
+            $metadata = ($manager?->getMetadataFactory() ?? $this->metadataFactory)->getMetadata($fqcn);
         } catch (\Throwable $e) {
             $io->error(\sprintf('Could not load metadata for "%s": %s', $fqcn, $e->getMessage()));
 
             return Command::FAILURE;
         }
 
+        [$scalarFields, $relationFields] = $this->describeFields($metadata);
+
         if ($format === 'json') {
-            $scalarFields = [];
-            $relationFields = [];
-
-            foreach ($metadata->fields as $field) {
-                if ($field->relation !== null) {
-                    $relationFields[] = [
-                        'property' => $field->property,
-                        'mappedFrom' => $field->mappedFrom,
-                        'targetEntity' => $field->relation,
-                        'isCollection' => $field->isCollection,
-                        'isIdentifier' => $field->isIdentifier,
-                    ];
-                } else {
-                    $type = $this->resolvePhpType($fqcn, $field->property);
-                    $scalarFields[] = [
-                        'property' => $field->property,
-                        'mappedFrom' => $field->mappedFrom,
-                        'type' => $type,
-                        'isIdentifier' => $field->isIdentifier,
-                    ];
-                }
-            }
-
             $output->writeln(json_encode([
                 'class' => $metadata->class,
                 'graphqlRoot' => $metadata->name,
@@ -96,12 +77,56 @@ final readonly class DebugEntityCommand
             return Command::SUCCESS;
         }
 
-        $io->title(\sprintf('GraphQL ORM — Entity "%s"', (new \ReflectionClass($fqcn))->getShortName()));
+        $this->renderTables($io, $metadata, $manager?->getName(), $scalarFields, $relationFields);
+
+        return Command::SUCCESS;
+    }
+
+    /**
+     * @return array{
+     *   list<array{property: string, mappedFrom: string, type: string, isIdentifier: bool}>,
+     *   list<array{property: string, mappedFrom: string, targetEntity: class-string, isCollection: bool, isIdentifier: bool}>
+     * } the scalar fields, then the relations
+     */
+    private function describeFields(GraphqlEntityMetadata $metadata): array
+    {
+        $scalarFields = [];
+        $relationFields = [];
+
+        foreach ($metadata->fields as $field) {
+            if ($field->relation !== null) {
+                $relationFields[] = [
+                    'property' => $field->property,
+                    'mappedFrom' => $field->mappedFrom,
+                    'targetEntity' => $field->relation,
+                    'isCollection' => $field->isCollection,
+                    'isIdentifier' => $field->isIdentifier,
+                ];
+            } else {
+                $scalarFields[] = [
+                    'property' => $field->property,
+                    'mappedFrom' => $field->mappedFrom,
+                    'type' => $this->resolvePhpType($metadata->class, $field->property),
+                    'isIdentifier' => $field->isIdentifier,
+                ];
+            }
+        }
+
+        return [$scalarFields, $relationFields];
+    }
+
+    /**
+     * @param list<array{property: string, mappedFrom: string, type: string, isIdentifier: bool}>                                   $scalarFields
+     * @param list<array{property: string, mappedFrom: string, targetEntity: class-string, isCollection: bool, isIdentifier: bool}> $relationFields
+     */
+    private function renderTables(SymfonyStyle $io, GraphqlEntityMetadata $metadata, ?string $manager, array $scalarFields, array $relationFields): void
+    {
+        $io->title(\sprintf('GraphQL ORM — Entity "%s"', (new \ReflectionClass($metadata->class))->getShortName()));
 
         $io->section('General');
         $io->definitionList(
             ['FQCN' => $metadata->class],
-            ['Manager' => $this->managers?->getManagerForClass($fqcn)->getName() ?? '(default)'],
+            ['Manager' => $manager ?? '(default)'],
             ['GraphQL root' => $metadata->name],
             ['Repository' => $metadata->repositoryClass ?? '(none)'],
             ['Identifier' => $metadata->identifier
@@ -109,46 +134,40 @@ final readonly class DebugEntityCommand
                 : '(none)'],
         );
 
-        $scalarRows = [];
-        $relationRows = [];
-
-        foreach ($metadata->fields as $field) {
-            $identifier = $field->isIdentifier ? ' ★' : '';
-
-            if ($field->relation !== null) {
-                $relationRows[] = [
-                    $field->property . $identifier,
-                    $field->mappedFrom,
-                    (new \ReflectionClass($field->relation))->getShortName(),
-                    $field->isCollection ? 'collection' : 'object',
-                ];
-            } else {
-                $type = $this->resolvePhpType($fqcn, $field->property);
-                $scalarRows[] = [
-                    $field->property . $identifier,
-                    $field->mappedFrom,
-                    $type,
-                ];
-            }
-        }
-
         $io->section('Scalar fields');
 
-        if ($scalarRows === []) {
+        if ($scalarFields === []) {
             $io->text('No scalar fields.');
         } else {
-            $io->table(['Property', 'mappedFrom', 'PHP type'], $scalarRows);
+            $io->table(['Property', 'mappedFrom', 'PHP type'], array_map(
+                static fn (array $field): array => [self::marked($field['property'], $field['isIdentifier']), $field['mappedFrom'], $field['type']],
+                $scalarFields,
+            ));
         }
 
         $io->section('Relations');
 
-        if ($relationRows === []) {
+        if ($relationFields === []) {
             $io->text('No relations.');
         } else {
-            $io->table(['Property', 'mappedFrom', 'Target entity', 'Type'], $relationRows);
+            $io->table(['Property', 'mappedFrom', 'Target entity', 'Type'], array_map(
+                static fn (array $field): array => [
+                    self::marked($field['property'], $field['isIdentifier']),
+                    $field['mappedFrom'],
+                    (new \ReflectionClass($field['targetEntity']))->getShortName(),
+                    $field['isCollection'] ? 'collection' : 'object',
+                ],
+                $relationFields,
+            ));
         }
+    }
 
-        return Command::SUCCESS;
+    /**
+     * The property, starred when it is the identifier.
+     */
+    private static function marked(string $property, bool $isIdentifier): string
+    {
+        return $property . ($isIdentifier ? ' ★' : '');
     }
 
     /**
