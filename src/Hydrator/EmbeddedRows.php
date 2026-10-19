@@ -16,6 +16,30 @@ use GraphqlOrm\Metadata\GraphqlFieldMetadata;
  */
 final class EmbeddedRows
 {
+    /** @var \WeakMap<GraphqlEntityMetadata, list<GraphqlFieldMetadata>>|null the embedded fields of each entity */
+    private static ?\WeakMap $embeddedFields = null;
+
+    /** @var array<class-string, \ReflectionClass<object>> */
+    private static array $classes = [];
+
+    /** @var array<class-string, list<string>> */
+    private static array $defaults = [];
+
+    /**
+     * The fields of an entity holding a value object, read once for each row.
+     *
+     * @return list<GraphqlFieldMetadata>
+     */
+    public static function embeddedFields(GraphqlEntityMetadata $metadata): array
+    {
+        self::$embeddedFields ??= new \WeakMap();
+
+        return self::$embeddedFields[$metadata] ??= array_values(array_filter(
+            $metadata->fields,
+            static fn (GraphqlFieldMetadata $field): bool => $field->embedded !== null,
+        ));
+    }
+
     /**
      * The row, the prefixed fields of each embedded value object nested under its key: `total_amount` becomes
      * `total.amount`, and null when all of them are null. A row nested already is left as it is.
@@ -26,7 +50,7 @@ final class EmbeddedRows
      */
     public static function nest(GraphqlEntityMetadata $metadata, array $row): array
     {
-        foreach ($metadata->fields as $field) {
+        foreach (self::embeddedFields($metadata) as $field) {
             $embedded = $field->embedded;
 
             if ($embedded === null || $embedded->prefix === null || \array_key_exists($field->mappedFrom, $row)) {
@@ -80,7 +104,7 @@ final class EmbeddedRows
      */
     public static function create(GraphqlEmbeddedMetadata $embedded, array $values, \Closure $cast): object
     {
-        $class = new \ReflectionClass($embedded->class);
+        $class = self::reflection($embedded->class);
         $arguments = [];
 
         foreach ($embedded->fields as $field) {
@@ -111,19 +135,33 @@ final class EmbeddedRows
      */
     private static function defaults(string $class): array
     {
-        $reflection = new \ReflectionClass($class);
+        if (isset(self::$defaults[$class])) {
+            return self::$defaults[$class];
+        }
+
+        $reflection = self::reflection($class);
         $constructor = $reflection->getConstructor();
 
         if ($constructor !== null) {
-            return array_values(array_map(
+            return self::$defaults[$class] = array_values(array_map(
                 static fn (\ReflectionParameter $parameter): string => $parameter->getName(),
                 array_filter($constructor->getParameters(), static fn (\ReflectionParameter $parameter): bool => $parameter->isDefaultValueAvailable()),
             ));
         }
 
-        return array_values(array_map(
+        return self::$defaults[$class] = array_values(array_map(
             static fn (\ReflectionProperty $property): string => $property->getName(),
             array_filter($reflection->getProperties(), static fn (\ReflectionProperty $property): bool => $property->hasDefaultValue()),
         ));
+    }
+
+    /**
+     * @param class-string $class
+     *
+     * @return \ReflectionClass<object>
+     */
+    private static function reflection(string $class): \ReflectionClass
+    {
+        return self::$classes[$class] ??= new \ReflectionClass($class);
     }
 }

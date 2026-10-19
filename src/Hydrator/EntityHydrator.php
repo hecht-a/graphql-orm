@@ -45,6 +45,12 @@ final class EntityHydrator
     private array $hookMethods = [];
 
     /**
+     * @var array<string, array<string, array{\ReflectionType|null, bool}>> by class and property: its type, read for each
+     *                                                                      value, and whether an ArrayCollection fits it
+     */
+    private array $types = [];
+
+    /**
      * @var \WeakMap<object, list<string>> the entities hydrated from a selection of their fields, with the properties
      *                                     the query did not select; they are kept out of the lazy loads
      */
@@ -124,7 +130,8 @@ final class EntityHydrator
         }
 
         if ($known !== null) {
-            $wasComplete = $this->areMappedFieldsInitialized($known, $metadata);
+            // Only read for the #[AfterHydrate] methods, called once the entity gets its last fields.
+            $wasComplete = $this->hookMethods($known::class, AfterHydrate::class) === [] || $this->areMappedFieldsInitialized($known, $metadata);
             $this->hydrateFields($known, $metadata, $data, $context, $depth);
 
             if ($this->holdsEveryField($metadata, $data)) {
@@ -298,7 +305,7 @@ final class EntityHydrator
 
             $property = $this->property($metadata->class, $field->property);
 
-            $value = $field->isCollection && \is_array($value) && self::acceptsArrayCollection($property)
+            $value = $field->isCollection && \is_array($value) && $this->type($property)[1]
                 ? new ArrayCollection(array_values($value))
                 : $this->normalizeValue($value, $property, $field, $context);
 
@@ -324,7 +331,7 @@ final class EntityHydrator
     {
         $data = EmbeddedRows::nest($metadata, $data);
 
-        foreach ($metadata->fields as $field) {
+        foreach (EmbeddedRows::embeddedFields($metadata) as $field) {
             if ($field->embedded === null) {
                 continue;
             }
@@ -632,10 +639,8 @@ final class EntityHydrator
     /**
      * Whether the property is typed with a collection of doctrine/collections, which an ArrayCollection satisfies.
      */
-    private static function acceptsArrayCollection(\ReflectionProperty $property): bool
+    private static function acceptsArrayCollection(?\ReflectionType $type): bool
     {
-        $type = $property->getType();
-
         if (!class_exists(ArrayCollection::class) || $type === null) {
             return false;
         }
@@ -658,6 +663,19 @@ final class EntityHydrator
             ? $context->typeConverters?->converterFor($field->converter, $field->valueClass)
             : null;
 
-        return $converter !== null ? $converter->toPhp($value) : ValueCaster::cast($value, $property->getType());
+        return $converter !== null ? $converter->toPhp($value) : ValueCaster::cast($value, $this->type($property)[0]);
+    }
+
+    /**
+     * @return array{\ReflectionType|null, bool} the type of the property, and whether an ArrayCollection fits it
+     */
+    private function type(\ReflectionProperty $property): array
+    {
+        if (!isset($this->types[$property->class][$property->name])) {
+            $type = $property->getType();
+            $this->types[$property->class][$property->name] = [$type, self::acceptsArrayCollection($type)];
+        }
+
+        return $this->types[$property->class][$property->name];
     }
 }
