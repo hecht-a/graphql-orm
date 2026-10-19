@@ -44,6 +44,9 @@ final class EntityHydrator
      */
     private array $hookMethods = [];
 
+    /** @var array<string, list<\ReflectionProperty>> the properties of the objects of each class, copied to its ghosts */
+    private array $instanceProperties = [];
+
     /**
      * @var array<string, array<string, array{\ReflectionType|null, bool}>> by class and property: its type, read for each
      *                                                                      value, and whether an ArrayCollection fits it
@@ -494,8 +497,13 @@ final class EntityHydrator
      */
     private function copyLoaded(object $loaded, object $ghost, GraphqlFieldMetadata $identifierField, bool $raw): void
     {
-        foreach ($this->classReflection($ghost::class)->getProperties() as $property) {
-            if ($property->isStatic() || $property->getName() === $identifierField->property || !$property->isInitialized($loaded)) {
+        $this->instanceProperties[$ghost::class] ??= array_values(array_filter(
+            $this->classReflection($ghost::class)->getProperties(),
+            static fn (\ReflectionProperty $property): bool => !$property->isStatic(),
+        ));
+
+        foreach ($this->instanceProperties[$ghost::class] as $property) {
+            if ($property->getName() === $identifierField->property || !$property->isInitialized($loaded)) {
                 continue;
             }
 
