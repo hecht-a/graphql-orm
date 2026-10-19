@@ -1,0 +1,372 @@
+{
+    "offsets": [
+        10.000000000005116,
+        30.000000000001137,
+        79.9999999999983,
+        84.99999999999375,
+        120.00000000000455,
+        129.99999999999545,
+        140.00000000000057
+    ],
+    "total": 109.0,
+    "waited": 93.99999999999545,
+    "span": 143.00000000000057,
+    "ticks": [
+        0.0,
+        50.0,
+        100.0
+    ],
+    "repeated": [
+        {
+            "shape": "query { task(id: ***) { id } }",
+            "count": 2,
+            "queries": [
+                1,
+                2
+            ],
+            "find_entity": "GraphqlOrm\\Tests\\Fixtures\\FakeEntity\\FakeTask",
+            "find_identifier": "id"
+        }
+    ],
+    "lazy_loads": [
+        {
+            "relation": "GraphqlOrm\\Tests\\Fixtures\\FakeEntity\\FakeTask::$label",
+            "count": 2,
+            "queries": [
+                3,
+                4
+            ],
+            "duration": 45.0,
+            "callers": [
+                "board.html.twig:7",
+                "board.html.twig:9"
+            ]
+        }
+    ],
+    "by_caller": [
+        {
+            "caller": "TaskController.php:18",
+            "count": 2,
+            "duration": 57.0,
+            "origins": [
+                "find"
+            ],
+            "entities": [
+                "GraphqlOrm\\Tests\\Fixtures\\FakeEntity\\FakeTask"
+            ],
+            "queries": [
+                1,
+                2
+            ]
+        },
+        {
+            "caller": "board.html.twig:9",
+            "count": 1,
+            "duration": 25.0,
+            "origins": [
+                "lazy"
+            ],
+            "entities": [
+                "GraphqlOrm\\Tests\\Fixtures\\FakeEntity\\FakeLabel"
+            ],
+            "queries": [
+                4
+            ]
+        },
+        {
+            "caller": "board.html.twig:7",
+            "count": 1,
+            "duration": 20.0,
+            "origins": [
+                "lazy"
+            ],
+            "entities": [
+                "GraphqlOrm\\Tests\\Fixtures\\FakeEntity\\FakeLabel"
+            ],
+            "queries": [
+                3
+            ]
+        },
+        {
+            "caller": "TaskController.php:30",
+            "count": 1,
+            "duration": 3.0,
+            "origins": [
+                "find"
+            ],
+            "entities": [
+                "GraphqlOrm\\Tests\\Fixtures\\Cache\\CachedTask"
+            ],
+            "queries": [
+                5
+            ]
+        },
+        {
+            "caller": "TaskController.php:40",
+            "count": 1,
+            "duration": 2.5,
+            "origins": [
+                "findBy"
+            ],
+            "entities": [
+                "GraphqlOrm\\Tests\\Fixtures\\FakeEntity\\FakeTask"
+            ],
+            "queries": [
+                7
+            ]
+        },
+        {
+            "caller": null,
+            "count": 1,
+            "duration": 1.5,
+            "origins": [
+                "introspection"
+            ],
+            "entities": [],
+            "queries": [
+                6
+            ]
+        }
+    ],
+    "cache_candidates": [
+        {
+            "class": "GraphqlOrm\\Tests\\Fixtures\\FakeEntity\\FakeTask",
+            "count": 2,
+            "queries": [
+                1,
+                2
+            ]
+        },
+        {
+            "class": "GraphqlOrm\\Tests\\Fixtures\\FakeEntity\\FakeLabel",
+            "count": 2,
+            "queries": [
+                3,
+                4
+            ]
+        }
+    ],
+    "distinct": 5,
+    "hydration": 3.5,
+    "errors": 1,
+    "export": {
+        "format": "graphql-orm-profile",
+        "version": 1,
+        "summary": {
+            "queries": 7,
+            "sent": 7,
+            "distinct": 5,
+            "waited_ms": 93.99999999999545,
+            "summed_ms": 109.0,
+            "hydration_ms": 3.5,
+            "errors": 1,
+            "slow": 1,
+            "entities_hydrated": 7,
+            "response_bytes": 721
+        },
+        "thresholds": {
+            "slow_query_ms": 40.0,
+            "max_queries": 5,
+            "max_query_time_ms": null,
+            "repeated_queries": 2
+        },
+        "queries": [
+            {
+                "number": 1,
+                "manager": "default",
+                "origin": "find",
+                "entity": "GraphqlOrm\\Tests\\Fixtures\\FakeEntity\\FakeTask",
+                "root_field": "task",
+                "graphql": "query { task(id: 1) { id } }",
+                "variables": [],
+                "values_masked": false,
+                "caller": "TaskController.php:18",
+                "started_ms": 10.000000000005116,
+                "duration_ms": 12.0,
+                "hydration_ms": 0.5,
+                "response_bytes": 100,
+                "entities_hydrated": 1,
+                "result_cache": null,
+                "slow": false,
+                "errors": [],
+                "sub_request": null,
+                "after_response": false
+            },
+            {
+                "number": 2,
+                "manager": "default",
+                "origin": "find",
+                "entity": "GraphqlOrm\\Tests\\Fixtures\\FakeEntity\\FakeTask",
+                "root_field": "task",
+                "graphql": "query { task(id: 2) { id } }",
+                "variables": [],
+                "values_masked": false,
+                "caller": "TaskController.php:18",
+                "started_ms": 30.000000000001137,
+                "duration_ms": 45.0,
+                "hydration_ms": 0.5,
+                "response_bytes": 101,
+                "entities_hydrated": 1,
+                "result_cache": null,
+                "slow": true,
+                "errors": [],
+                "sub_request": null,
+                "after_response": false
+            },
+            {
+                "number": 3,
+                "manager": "default",
+                "origin": "lazy",
+                "entity": "GraphqlOrm\\Tests\\Fixtures\\FakeEntity\\FakeLabel",
+                "root_field": "labels",
+                "graphql": "query { labels(id: 3) { id } }",
+                "variables": [],
+                "values_masked": false,
+                "caller": "board.html.twig:7",
+                "started_ms": 79.9999999999983,
+                "duration_ms": 20.0,
+                "hydration_ms": 0.5,
+                "response_bytes": 102,
+                "entities_hydrated": 1,
+                "result_cache": null,
+                "slow": false,
+                "errors": [],
+                "sub_request": null,
+                "after_response": false
+            },
+            {
+                "number": 4,
+                "manager": "default",
+                "origin": "lazy",
+                "entity": "GraphqlOrm\\Tests\\Fixtures\\FakeEntity\\FakeLabel",
+                "root_field": "labels",
+                "graphql": "query { labels(id: 4) { id } }",
+                "variables": [],
+                "values_masked": false,
+                "caller": "board.html.twig:9",
+                "started_ms": 84.99999999999375,
+                "duration_ms": 25.0,
+                "hydration_ms": 0.5,
+                "response_bytes": 103,
+                "entities_hydrated": 1,
+                "result_cache": null,
+                "slow": false,
+                "errors": [],
+                "sub_request": null,
+                "after_response": false
+            },
+            {
+                "number": 5,
+                "manager": "default",
+                "origin": "find",
+                "entity": "GraphqlOrm\\Tests\\Fixtures\\Cache\\CachedTask",
+                "root_field": "cachedTask",
+                "graphql": "query { cachedTask(id: 5) { id } }",
+                "variables": [],
+                "values_masked": false,
+                "caller": "TaskController.php:30",
+                "started_ms": 120.00000000000455,
+                "duration_ms": 3.0,
+                "hydration_ms": 0.5,
+                "response_bytes": 104,
+                "entities_hydrated": 1,
+                "result_cache": null,
+                "slow": false,
+                "errors": [],
+                "sub_request": null,
+                "after_response": false
+            },
+            {
+                "number": 6,
+                "manager": "default",
+                "origin": "introspection",
+                "entity": null,
+                "root_field": "__schema",
+                "graphql": "query { __schema { types { name } } }",
+                "variables": [],
+                "values_masked": false,
+                "caller": null,
+                "started_ms": 129.99999999999545,
+                "duration_ms": 1.5,
+                "hydration_ms": 0.5,
+                "response_bytes": 105,
+                "entities_hydrated": 1,
+                "result_cache": null,
+                "slow": false,
+                "errors": [],
+                "sub_request": null,
+                "after_response": false
+            },
+            {
+                "number": 7,
+                "manager": "default",
+                "origin": "findBy",
+                "entity": "GraphqlOrm\\Tests\\Fixtures\\FakeEntity\\FakeTask",
+                "root_field": "tasks",
+                "graphql": "query { tasks { id } }",
+                "variables": [],
+                "values_masked": false,
+                "caller": "TaskController.php:40",
+                "started_ms": 140.00000000000057,
+                "duration_ms": 2.5,
+                "hydration_ms": 0.5,
+                "response_bytes": 106,
+                "entities_hydrated": 1,
+                "result_cache": null,
+                "slow": false,
+                "errors": [
+                    {
+                        "message": "Failed"
+                    }
+                ],
+                "sub_request": null,
+                "after_response": false
+            }
+        ],
+        "findings": {
+            "lazy_loads": [
+                {
+                    "relation": "GraphqlOrm\\Tests\\Fixtures\\FakeEntity\\FakeTask::$label",
+                    "count": 2,
+                    "queries": [
+                        3,
+                        4
+                    ],
+                    "duration_ms": 45.0,
+                    "callers": [
+                        "board.html.twig:7",
+                        "board.html.twig:9"
+                    ]
+                }
+            ],
+            "repeated_queries": [
+                {
+                    "shape": "query { task(id: ***) { id } }",
+                    "count": 2,
+                    "queries": [
+                        1,
+                        2
+                    ]
+                }
+            ],
+            "cache_candidates": [
+                {
+                    "class": "GraphqlOrm\\Tests\\Fixtures\\FakeEntity\\FakeTask",
+                    "count": 2,
+                    "queries": [
+                        1,
+                        2
+                    ]
+                },
+                {
+                    "class": "GraphqlOrm\\Tests\\Fixtures\\FakeEntity\\FakeLabel",
+                    "count": 2,
+                    "queries": [
+                        3,
+                        4
+                    ]
+                }
+            ]
+        }
+    }
+}
