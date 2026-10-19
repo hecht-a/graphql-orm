@@ -13,9 +13,15 @@ use GraphqlOrm\Command\DebugEntityCommand;
 use GraphqlOrm\Command\MakeGraphqlEntityCommand;
 use GraphqlOrm\Command\SchemaValidateCommand;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
+use GraphqlOrm\DataCollector\ProfiledQuery;
+use GraphqlOrm\DataCollector\ProfileFindings;
+use GraphqlOrm\DataCollector\ProfileTimeline;
 use GraphqlOrm\DependencyInjection\Configuration;
 use GraphqlOrm\DependencyInjection\GraphqlOrmExtension;
 use GraphqlOrm\DependencyInjection\ManagerConfigs;
+use GraphqlOrm\DependencyInjection\Node\NullableFloatNode;
+use GraphqlOrm\DependencyInjection\Node\NullableIntegerNode;
+use GraphqlOrm\Dialect\CursorPageArguments;
 use GraphqlOrm\EventListener\SchemaValidationListener;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\GraphqlManager;
@@ -33,6 +39,7 @@ use GraphqlOrm\Query\GraphqlQueryCompiler;
 use GraphqlOrm\Query\GraphqlQueryStringBuilder;
 use GraphqlOrm\Registry\GraphqlManagerRegistry;
 use GraphqlOrm\Registry\ManagerRouter;
+use GraphqlOrm\Schema\CachedIntrospection;
 use GraphqlOrm\Schema\GraphqlSchema;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Schema\ScalarTypes;
@@ -99,6 +106,13 @@ final class PublicApiTest extends TestCase
             ManagerRouter::class,
             ManagerConfigs::class,
             CachePoolDescriber::class,
+            ProfileFindings::class,
+            ProfileTimeline::class,
+            ProfiledQuery::class,
+            CursorPageArguments::class,
+            CachedIntrospection::class,
+            NullableIntegerNode::class,
+            NullableFloatNode::class,
         ] as $class) {
             yield $class => [$class];
         }
