@@ -70,6 +70,16 @@ export default defineConfig({
                 ],
             },
             {
+                text: 'Cookbook',
+                items: [
+                    { text: 'From HttpClient to the bundle', link: '/cookbook/from-http-client' },
+                    { text: 'When to use it, and when not', link: '/cookbook/when-to-use' },
+                    { text: 'A paginated list', link: '/cookbook/paginated-list' },
+                    { text: 'A form creating an entity', link: '/cookbook/creation-form' },
+                    { text: 'Speeding up a slow page', link: '/cookbook/slow-page' },
+                ],
+            },
+            {
                 text: 'Project',
                 items: [
                     { text: 'Upgrading from 4.x', link: '/upgrading' },

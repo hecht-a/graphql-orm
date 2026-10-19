@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   without sending it; `--format=json` gives them as an object.
 - `GraphqlEntityRepository::createFindByQuery()` gives the query `findBy()` sends, not sent yet: to read its GraphQL,
   keep its response in the result cache or send it with others through `GraphqlQuery::concurrently()`.
+- A cookbook in the documentation: from HttpClient to the bundle, when to use it and when not, a paginated list, a form
+  creating an entity, and speeding up a slow page.
 
 ### Changed
 
