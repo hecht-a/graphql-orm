@@ -13,8 +13,8 @@ use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Tests\Integration\Entity\Task;
 use PhpBench\Attributes as Bench;
-use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\NullLogger;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 
 /**
  * What the bundle costs around one small query, the network left aside: building, compiling, tracing, hydrating.
@@ -38,7 +38,8 @@ final class QueryOverheadBench
     public function provideSetups(): iterable
     {
         yield 'bare' => ['instrumented' => false, 'known' => 0];
-        // As in production with Symfony: logger and event dispatcher, values masked; the collector is debug only.
+        // As in production with Symfony: logger and event dispatcher without listener, values masked; the collector is
+        // debug only.
         yield 'instrumented' => ['instrumented' => true, 'known' => 0];
         // Late in a long request or a message handler, the identity map already holding many entities.
         yield 'many known entities' => ['instrumented' => false, 'known' => 5000];
@@ -72,12 +73,7 @@ final class QueryOverheadBench
             new DataApiBuilderDialect(),
             logger: $setup['instrumented'] ? new NullLogger() : null,
             redactor: $setup['instrumented'] ? new QueryRedactor() : null,
-            eventDispatcher: $setup['instrumented'] ? new class implements EventDispatcherInterface {
-                public function dispatch(object $event): object
-                {
-                    return $event;
-                }
-            } : null,
+            eventDispatcher: $setup['instrumented'] ? new EventDispatcher() : null,
             identityMap: $identityMap,
         );
         $this->tasks = new GraphqlEntityRepository($manager, Task::class);
