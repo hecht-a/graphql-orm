@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Faster queries and hydration, measured with the benchmarks of `tests/Benchmark`: a query no longer copies the shared
+  identity map, so that its cost no longer grows with the entities known (5,000 known: 160 µs down to 25 µs); the
+  query is exported and masked for the query events only when they have listeners; the reflection of the hydrated and
+  tracked properties, of the value objects, of the DTOs and of the lazy ghosts is read once; a response is decoded
+  once. Hydrating 1,000 rows takes about 12% less time.
+
+### Fixed
+
+- The queries sent together with `GraphqlQuery::concurrently()` share their entities through the identity map: the
+  second no longer creates another instance of an entity the first hydrated.
+
 ## [5.10.2] — 2026-10-19
 
 ### Fixed
