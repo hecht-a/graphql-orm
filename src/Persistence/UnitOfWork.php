@@ -38,6 +38,9 @@ final class UnitOfWork
 
     private bool $flushing = false;
 
+    /** @var array<string, array<string, \ReflectionProperty>> by class and property, as each row reads them */
+    private array $properties = [];
+
     /**
      * @param \Closure(Lifecycle, object, int|string|null, list<string>): void $lifecycle told of each step of an entity
      *                                                                                    written, with its identifier when known
@@ -385,7 +388,7 @@ final class UnitOfWork
 
         if ($operation->kind === Operation::CREATE && $identifierField !== null && $this->currentValue($entity, $identifierField) === null) {
             $identifier = $row[$identifierField->mappedFrom] ?? null;
-            (new \ReflectionProperty($entity, $identifierField->property))->setValue($entity, $identifier);
+            $this->property($entity, $identifierField->property)->setValue($entity, $identifier);
         }
 
         $known = $this->originals[$entity] ?? [];
@@ -460,7 +463,8 @@ final class UnitOfWork
      */
     private function currentValue(object $entity, GraphqlFieldMetadata $field): mixed
     {
-        $value = $this->isInitialized($entity, $field) ? (new \ReflectionProperty($entity, $field->property))->getValue($entity) : null;
+        $property = $this->property($entity, $field->property);
+        $value = !$property->isLazy($entity) && $property->isInitialized($entity) ? $property->getValue($entity) : null;
 
         return $this->graphqlValue($field, $value);
     }
@@ -502,7 +506,7 @@ final class UnitOfWork
      */
     private function rawValue(object $object, string $property): mixed
     {
-        $reflection = new \ReflectionProperty($object, $property);
+        $reflection = $this->property($object, $property);
 
         // isInitialized() would load a lazy object, as reading a property it has not set.
         if ($reflection->isLazy($object) || !$reflection->isInitialized($object)) {
@@ -514,9 +518,14 @@ final class UnitOfWork
 
     private function isInitialized(object $entity, GraphqlFieldMetadata $field): bool
     {
-        $property = new \ReflectionProperty($entity, $field->property);
+        $property = $this->property($entity, $field->property);
 
         return !$property->isLazy($entity) && $property->isInitialized($entity);
+    }
+
+    private function property(object $object, string $name): \ReflectionProperty
+    {
+        return $this->properties[$object::class][$name] ??= new \ReflectionProperty($object, $name);
     }
 
     private function identifier(object $entity, GraphqlEntityMetadata $metadata): int|string
