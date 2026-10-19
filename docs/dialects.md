@@ -198,4 +198,6 @@ page information lies; without it, they are read on the root field, as Data API 
 The root arguments are computed once, when the query is built, and every page reuses them: the walker of a paginated
 dialect applies the cursor of the page being fetched (`QueryOptions::$cursor`) when it prints the root field, as
 `RelayGraphqlWalker` and `HasuraGraphqlWalker` do. A walker extending `AbstractGraphqlWalker` can also override
-`walkCollection()` to print the envelope of nested collections.
+`walkCollection()` to print the envelope of nested collections, `formatEnum()` to print a backed enum the schema
+declares as an enum literal rather than a string, and `omitsArgument()` to leave out the arguments an API refuses, as
+the null ones for Data API Builder.
