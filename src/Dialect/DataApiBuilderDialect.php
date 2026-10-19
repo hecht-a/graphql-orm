@@ -40,25 +40,11 @@ final class DataApiBuilderDialect implements GraphqlQueryDialect, CursorPaginati
 
     public function applyQueryOptions(array $arguments, QueryOptions $options): array
     {
-        if ($options->limit !== null) {
-            $arguments['first'] = $options->limit;
-        }
-
         if ($options->orderBy !== null) {
             $arguments['orderBy'] = $options->orderBy;
         }
 
-        if ($options->paginate) {
-            if ($options->limit) {
-                $arguments['first'] = $options->limit;
-            }
-
-            if ($options->cursor) {
-                $arguments['after'] = $options->cursor;
-            }
-        }
-
-        return $arguments;
+        return CursorPageArguments::apply($arguments, $options);
     }
 
     public function applyFilter(?FilterExpressionInterface $filter): array
