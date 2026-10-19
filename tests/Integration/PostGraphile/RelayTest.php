@@ -25,6 +25,11 @@ use Symfony\Component\Cache\Adapter\ArrayAdapter;
 #[Group('integration')]
 final class RelayTest extends IntegrationTestCase
 {
+    protected static function taskClass(): string
+    {
+        return RelayTask::class;
+    }
+
     protected static function endpointVariable(): string
     {
         return 'GRAPHQL_ORM_POSTGRAPHILE_ENDPOINT';

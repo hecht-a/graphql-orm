@@ -93,6 +93,9 @@ final class Configuration implements ConfigurationInterface
         $children->append($this->boolean('read_only', false, $defaults)
             ->info('Only read the API: persist(), remove() and flush() throw, and the entities read are not tracked for flush().'));
 
+        $children->append($this->boolean('operation_names', false, $defaults)
+            ->info('Name each query after its entity and the method sending it (query Task_findBy { ... }), for the logs of the API. Changes the text of the queries, so the keys of the result cache and the hashes of the persisted queries.'));
+
         $children->append($this->boolean('persisted_queries', false, $defaults)
             ->info('Send the queries as the SHA-256 hash of their text, as the automatic persisted queries of Apollo: the text is sent once the server asks for it.'));
 

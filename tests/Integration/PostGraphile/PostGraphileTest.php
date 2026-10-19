@@ -34,6 +34,11 @@ final class PostGraphileTest extends IntegrationTestCase
 {
     use WritesEntities;
 
+    protected static function taskClass(): string
+    {
+        return RelayTask::class;
+    }
+
     protected static function endpointVariable(): string
     {
         return 'GRAPHQL_ORM_POSTGRAPHILE_ENDPOINT';

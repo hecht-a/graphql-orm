@@ -21,6 +21,11 @@ use PHPUnit\Framework\Attributes\Test;
 #[Group('integration')]
 final class DefaultTest extends IntegrationTestCase
 {
+    protected static function taskClass(): string
+    {
+        return ListTask::class;
+    }
+
     protected static function endpointVariable(): string
     {
         return 'GRAPHQL_ORM_POSTGRAPHILE_ENDPOINT';

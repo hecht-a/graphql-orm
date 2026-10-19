@@ -272,6 +272,7 @@ final class GraphqlOrmExtension extends Extension
                 '$cache' => new Reference($id('cache')),
                 '$typeConverters' => new Reference(TypeConverterRegistry::class),
                 '$readOnly' => $config['read_only'],
+                '$operationNames' => $config['operation_names'],
             ])
             ->setArgument('$name', $name)
             ->setArgument('$router', new Reference(ManagerRouter::class))
@@ -455,6 +456,7 @@ final class GraphqlOrmExtension extends Extension
             'max_depth' => $config['max_depth'],
             'identity_map' => $config['identity_map'],
             'persisted_queries' => $config['persisted_queries'],
+            'operation_names' => $config['operation_names'],
             'read_only' => $config['read_only'],
             'lazy_loading' => $config['lazy_loading'],
             'variables' => $config['variables'],

@@ -110,7 +110,28 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         private TypeConverterRegistry $typeConverters = new TypeConverterRegistry(),
         // Neither writes nor tracks the entities read: no snapshot is taken for flush()
         private bool $readOnly = false,
+        // Names each query after its entity and the method sending it, e.g. Task_findBy
+        private bool $operationNames = false,
     ) {
+    }
+
+    /**
+     * The name of a query: the one given, or with operation_names the short name of the entity and the method sending
+     * it (Task_findBy, Task_lazyLoad), the method alone without entity (flush). Null for an anonymous query.
+     *
+     * @internal
+     *
+     * @param class-string|null $entityClass
+     */
+    public function operationName(?string $entityClass, string $method, ?string $name = null): ?string
+    {
+        if ($name !== null || !$this->operationNames) {
+            return $name;
+        }
+
+        $method = $this->loadingLazily ? 'lazyLoad' : $method;
+
+        return $entityClass !== null ? substr((string) strrchr('\\' . $entityClass, '\\'), 1) . '_' . $method : $method;
     }
 
     /**
@@ -391,7 +412,11 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
                 throw new LogicException(\sprintf('"%s" cannot write the entities: flush() needs a dialect implementing %s.', $dialect::class, MutationDialect::class));
             }
         } else {
-            $this->unitOfWork()->flush($dialect, fn (QueryNode $mutation): array => $this->execute($mutation, static fn (array $response): array => $response));
+            $this->unitOfWork()->flush($dialect, function (QueryNode $mutation): array {
+                $mutation->name = $this->operationName(null, 'flush');
+
+                return $this->execute($mutation, static fn (array $response): array => $response);
+            });
         }
 
         $this->eventDispatcher?->dispatch(new PostFlushEvent($this));

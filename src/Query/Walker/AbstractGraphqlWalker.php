@@ -54,7 +54,7 @@ abstract class AbstractGraphqlWalker implements VariableAwareWalkerInterface
             }
         }
 
-        return $this->operationHeader($query->operation) . " {\n" . $this->printer->get() . "\n}";
+        return $this->operationHeader($query->operation, $query->name) . " {\n" . $this->printer->get() . "\n}";
     }
 
     public function walkWithVariables(QueryNode $query, QueryOptions $options, array $argumentTypes): CompiledQuery
@@ -248,8 +248,10 @@ abstract class AbstractGraphqlWalker implements VariableAwareWalkerInterface
         return $name;
     }
 
-    private function operationHeader(string $operation): string
+    private function operationHeader(string $operation, ?string $name): string
     {
+        $operation .= $name !== null ? ' ' . $this->assertValidName($name) : '';
+
         if ($this->variableDefinitions === []) {
             return $operation;
         }

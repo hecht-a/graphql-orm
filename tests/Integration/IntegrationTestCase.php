@@ -19,6 +19,8 @@ use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Schema\GraphqlSchema;
 use GraphqlOrm\Schema\RootArgumentTypeResolver;
 use GraphqlOrm\Schema\SchemaIntrospector;
+use GraphqlOrm\Tests\Integration\Entity\Task;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\HttpClient;
 
@@ -63,9 +65,10 @@ abstract class IntegrationTestCase extends TestCase
         ?IdentityMap $identityMap = null,
         GraphqlCache $cache = new GraphqlCache(),
         TypeConverterRegistry $typeConverters = new TypeConverterRegistry(),
+        bool $operationNames = false,
     ): GraphqlEntityRepository {
         return new GraphqlEntityRepository(
-            $this->manager($collector, $argumentTypeResolver, $maxDepth, $lazyLoading, $namingStrategy, $identityMap, $cache, $typeConverters),
+            $this->manager($collector, $argumentTypeResolver, $maxDepth, $lazyLoading, $namingStrategy, $identityMap, $cache, $typeConverters, $operationNames),
             $entityClass,
         );
     }
@@ -82,6 +85,7 @@ abstract class IntegrationTestCase extends TestCase
         ?IdentityMap $identityMap = null,
         GraphqlCache $cache = new GraphqlCache(),
         TypeConverterRegistry $typeConverters = new TypeConverterRegistry(),
+        bool $operationNames = false,
     ): GraphqlManager {
         $metadataFactory = new GraphqlEntityMetadataFactory(namingStrategy: $namingStrategy);
 
@@ -97,7 +101,22 @@ abstract class IntegrationTestCase extends TestCase
             identityMap: $identityMap,
             cache: $cache,
             typeConverters: $typeConverters,
+            operationNames: $operationNames,
         );
+    }
+
+    #[Test]
+    public function itSendsNamedQueries(): void
+    {
+        self::assertNotEmpty($this->repository(static::taskClass(), operationNames: true)->findAll());
+    }
+
+    /**
+     * @return class-string the tasks as the API under test exposes them
+     */
+    protected static function taskClass(): string
+    {
+        return Task::class;
     }
 
     protected function schema(): GraphqlSchema

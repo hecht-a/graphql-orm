@@ -32,6 +32,7 @@ final class GraphqlQueryStringBuilder
     private ?FilterExpressionInterface $filter = null;
     /** @var array<string, mixed>|null */
     private ?array $with = null;
+    private ?string $name = null;
 
     public function __construct(
         private readonly GraphqlManager $manager,
@@ -103,9 +104,17 @@ final class GraphqlQueryStringBuilder
         return $this;
     }
 
+    public function name(?string $name): self
+    {
+        $this->name = $name;
+
+        return $this;
+    }
+
     public function build(): QueryNode
     {
         $query = new QueryNode();
+        $query->name = $this->name;
 
         $dialect = $this->manager->getDialect();
 

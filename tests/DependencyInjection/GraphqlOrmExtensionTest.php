@@ -506,6 +506,17 @@ final class GraphqlOrmExtensionTest extends TestCase
     }
 
     #[Test]
+    public function itNamesTheQueriesOfAManagerAskingForIt(): void
+    {
+        $container = $this->createContainer(debug: false, config: [
+            'managers' => ['main' => [], 'crm' => ['endpoint' => 'https://crm.example.com/graphql', 'operation_names' => true]],
+        ]);
+
+        self::assertTrue($container->getDefinition('graphql_orm.crm.manager')->getArgument('$operationNames'));
+        self::assertFalse($container->getDefinition('graphql_orm.main.manager')->getArgument('$operationNames'));
+    }
+
+    #[Test]
     public function itLetsKnpPaginatorPaginateTheQueryBuilders(): void
     {
         $container = $this->createContainer(debug: false);

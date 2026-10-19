@@ -28,6 +28,7 @@ final class GraphqlQueryBuilder
     /** @var array<string, mixed>|null the relations to load, as a tree of GraphQL names */
     private ?array $with = null;
     private ?DtoMetadata $dto = null;
+    private ?string $name = null;
 
     /**
      * @param class-string<T> $entityClass the entity queried; after hydrateAs(), T is the DTO
@@ -170,6 +171,25 @@ final class GraphqlQueryBuilder
     }
 
     /**
+     * Names the operation, e.g. `query dashboard_tasks { ... }`, to tell it apart in the logs of the server: whatever
+     * operation_names, which names the queries after their entity and method.
+     *
+     * @return GraphqlQueryBuilder<T>
+     *
+     * @throws InvalidArgumentException when the name is no GraphQL name
+     */
+    public function name(string $name): self
+    {
+        if (!GraphqlName::isValid($name)) {
+            throw new InvalidArgumentException(\sprintf('"%s" is not a valid GraphQL name: use letters, digits and underscores, not starting with a digit.', $name));
+        }
+
+        $this->name = $name;
+
+        return $this;
+    }
+
+    /**
      * @return GraphqlQueryBuilder<T>
      */
     public function limit(int $limit): self
@@ -264,6 +284,7 @@ final class GraphqlQueryBuilder
             ->filter($this->filter !== null ? new GraphqlNamedFilter($this->filter, $metadata, $this->manager->getMetadataFactory(), $this->manager->getTypeConverters()) : null)
             ->fields($fields, $manualSelect)
             ->with($this->with)
+            ->name($this->manager->operationName($this->entityClass, 'query', $this->name))
             ->build();
 
         $paths = [

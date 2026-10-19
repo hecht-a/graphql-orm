@@ -37,6 +37,9 @@ class GraphqlEntityRepository
     /** @var list<string> the same relations, as written: told to the profiler */
     private array $withPaths = [];
 
+    /** The method of the repository sending queries, naming them with operation_names */
+    private ?string $operation = null;
+
     /**
      * @param class-string<T> $entityClass
      */
@@ -100,7 +103,7 @@ class GraphqlEntityRepository
 
         $known = \is_int($id) || \is_string($id) ? $this->manager->findKnown($this->entityClass, $id) : null;
 
-        return $known ?? $this->findOneBy([$identifier->mappedFrom => $id]);
+        return $known ?? $this->named('find', fn (): ?object => $this->findOneBy([$identifier->mappedFrom => $id]));
     }
 
     /**
@@ -125,7 +128,7 @@ class GraphqlEntityRepository
      */
     public function findOneBy(array $criteria, ?array $orderBy = null): ?object
     {
-        return $this->findBy($criteria, $orderBy, 1)[0] ?? null;
+        return $this->named('findOneBy', fn (): ?object => $this->findBy($criteria, $orderBy, 1)[0] ?? null);
     }
 
     /**
@@ -183,6 +186,7 @@ class GraphqlEntityRepository
             ->arguments($this->manager->getDialect()->applyCriteria($this->criteria($metadata, $criteria)))
             ->options($options)
             ->with($this->with !== [] ? $this->with : null)
+            ->name($this->manager->operationName($this->entityClass, $this->operation ?? 'findBy'))
             ->build();
 
         $hints = (new UnmappedFieldHints($this->manager->getMetadataFactory()))->for($this->entityClass, [...array_keys($criteria), ...array_keys($orderBy ?? [])]);
@@ -209,7 +213,7 @@ class GraphqlEntityRepository
         $metadata = $this->manager->getMetadataFactory()->getMetadata($this->entityClass);
         $field = $dialect->countField($metadata->name, $dialect->applyCriteria($this->criteria($metadata, $criteria)), $this->numericIdentifier($metadata));
 
-        return $this->executeInline($field, fn (array $data): int => $dialect->readCount($data, $field->name), array_keys($criteria));
+        return $this->executeInline($field, fn (array $data): int => $dialect->readCount($data, $field->name), array_keys($criteria), 'count');
     }
 
     /**
@@ -232,7 +236,7 @@ class GraphqlEntityRepository
         $arguments = $filter !== null ? $dialect->applyFilter(new GraphqlNamedFilter($filter, $metadata, $metadataFactory, $this->manager->getTypeConverters())) : [];
         $field = $dialect->countField($metadata->name, $arguments, $this->numericIdentifier($metadata));
 
-        return $this->executeInline($field, fn (array $data): int => $dialect->readCount($data, $field->name), $filter !== null ? GraphqlNamedFilter::fieldNames($filter->toArray()) : []);
+        return $this->executeInline($field, fn (array $data): int => $dialect->readCount($data, $field->name), $filter !== null ? GraphqlNamedFilter::fieldNames($filter->toArray()) : [], 'count');
     }
 
     /**
@@ -353,6 +357,7 @@ class GraphqlEntityRepository
             $root,
             fn (array $data): int|float|string|null => $dialect->readAggregate($data, $root->name, $aggregate, $graphqlField),
             [$field, ...array_keys($criteria)],
+            $aggregate->value,
         );
     }
 
@@ -370,15 +375,17 @@ class GraphqlEntityRepository
      *
      * @template R
      *
-     * @param \Closure(array<mixed>): R $read  reads the result from the `data` of the response
-     * @param list<string>              $paths the field names sent, pointed out when the query fails
+     * @param \Closure(array<mixed>): R $read   reads the result from the `data` of the response
+     * @param list<string>              $paths  the field names sent, pointed out when the query fails
+     * @param string                    $method the method sending it, naming the operation
      *
      * @return R
      */
-    private function executeInline(FieldNode $field, \Closure $read, array $paths): mixed
+    private function executeInline(FieldNode $field, \Closure $read, array $paths, string $method): mixed
     {
         $query = new QueryNode();
         $query->fields[] = $field;
+        $query->name = $this->manager->operationName($this->entityClass, $method);
         $graphql = (new GraphqlQueryCompiler(new DefaultGraphqlWalker()))->compile($query, new QueryOptions());
 
         try {
@@ -398,6 +405,31 @@ class GraphqlEntityRepository
      */
     public function findAll(): array
     {
-        return $this->findBy([]);
+        return $this->named('findAll', fn (): array => $this->findBy([]));
+    }
+
+    /**
+     * Calls a method of the repository, the queries it sends being named after it with operation_names: find() calls
+     * findOneBy(), which calls findBy(), and the query is named after find().
+     *
+     * @template R
+     *
+     * @param \Closure(): R $call
+     *
+     * @return R
+     */
+    private function named(string $method, \Closure $call): mixed
+    {
+        if ($this->operation !== null) {
+            return $call();
+        }
+
+        $this->operation = $method;
+
+        try {
+            return $call();
+        } finally {
+            $this->operation = null;
+        }
     }
 }
