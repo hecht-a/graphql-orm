@@ -48,7 +48,7 @@ final readonly class EntityTable
 
         foreach ($metadata->fields as $field) {
             $property = new \ReflectionProperty($entity, $field->property);
-            $value = $property->isInitialized($entity) ? $property->getValue($entity) : null;
+            $value = $property->isInitialized($entity) ? $property->getRawValue($entity) : null;
             $row[$field->property] = $this->cell($field, $value, $json);
         }
 
@@ -93,7 +93,7 @@ final readonly class EntityTable
         // A lazy ghost has its identifier set without being loaded: reading it sends no query.
         $property = new \ReflectionProperty($entity, $identifier->property);
 
-        return $property->isInitialized($entity) ? $property->getValue($entity) : null;
+        return $property->isInitialized($entity) ? $property->getRawValue($entity) : null;
     }
 
     private function text(mixed $value): string

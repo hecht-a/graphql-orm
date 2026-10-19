@@ -120,7 +120,7 @@ final class EmbeddedRows
         $object = $class->newInstanceWithoutConstructor();
 
         foreach ($arguments as $property => $value) {
-            $class->getProperty($property)->setValue($object, $value);
+            $class->getProperty($property)->setRawValue($object, $value);
         }
 
         return $object;

@@ -134,6 +134,10 @@ final class GraphqlEntityMetadataFactory
         $isIdentifier = $property->getAttributes(Identifier::class) !== [];
         $name = $class . '::$' . $property->getName();
 
+        if ($property->isVirtual() && ($value !== null || $relation !== null || $embedded !== null)) {
+            throw new InvalidArgumentException(\sprintf('"%s" is a virtual property: its hooks hold no value of their own to hydrate or write. Map a property backed by a value, and compute this one from it.', $name));
+        }
+
         if ($isIdentifier && $value === null) {
             throw new InvalidArgumentException(\sprintf('"%s" has #[GraphqlOrm\Identifier] without #[GraphqlOrm\Field]: the identifier is a field holding a value, declare it with #[GraphqlOrm\Field].', $name));
         }

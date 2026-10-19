@@ -608,7 +608,7 @@ final readonly class GraphqlQuery
         $reflection = null;
 
         foreach ($entities as $entity) {
-            $value = ($reflection ??= new \ReflectionProperty($entity, $property))->getValue($entity);
+            $value = ($reflection ??= new \ReflectionProperty($entity, $property))->getRawValue($entity);
             // A value object is keyed by the value of the API its type converter gives.
             $value = $converters !== null ? $converters->toGraphql($field?->converter, $field?->valueClass, $value) : $value;
             $key = match (true) {

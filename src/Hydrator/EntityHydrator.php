@@ -207,9 +207,7 @@ final class EntityHydrator
                     ? EmbeddedRows::create($field->embedded, $value, fn (mixed $value, \ReflectionProperty $embeddedProperty, GraphqlFieldMetadata $embeddedField): mixed => $this->normalizeValue($value, $embeddedProperty, $embeddedField, $context))
                     : null;
 
-                $this->isUninitializedGhost($entity)
-                    ? $property->setRawValueWithoutLazyInitialization($entity, $value)
-                    : $property->setValue($entity, $value);
+                $this->write($entity, $property, $value);
 
                 continue;
             }
@@ -257,10 +255,23 @@ final class EntityHydrator
                 self::countCollection($context, $metadata->class . '::$' . $field->property, $value);
             }
 
-            $this->isUninitializedGhost($entity)
-                ? $property->setRawValueWithoutLazyInitialization($entity, $value)
-                : $property->setValue($entity, $value);
+            $this->write($entity, $property, $value);
         }
+    }
+
+    /**
+     * Restores the value the API has, as Doctrine does: the set hooks of the property are bypassed, and a readonly
+     * property keeps the value it was first given, e.g. the identifier of an entity another query returns again.
+     */
+    private function write(object $entity, \ReflectionProperty $property, mixed $value): void
+    {
+        $ghost = $this->isUninitializedGhost($entity);
+
+        if ($property->isReadOnly() && ($ghost ? !$property->isLazy($entity) : $property->isInitialized($entity))) {
+            return;
+        }
+
+        $ghost ? $property->setRawValueWithoutLazyInitialization($entity, $value) : $property->setRawValue($entity, $value);
     }
 
     /**
@@ -344,8 +355,8 @@ final class EntityHydrator
         $values = [];
 
         foreach ($reflection->getProperties() as $property) {
-            if (!$property->isStatic() && $property->isInitialized($entity)) {
-                $values[] = [$property, $property->getValue($entity)];
+            if (!$property->isStatic() && !$property->isVirtual() && $property->isInitialized($entity)) {
+                $values[] = [$property, $property->getRawValue($entity)];
             }
         }
 
@@ -412,7 +423,7 @@ final class EntityHydrator
             $loaded = [];
 
             foreach ($loader($class, array_keys($pending), $relation) as $entity) {
-                $key = $identifierProperty->getValue($entity);
+                $key = $identifierProperty->getRawValue($entity);
 
                 if (\is_int($key) || \is_string($key)) {
                     $loaded[(string) $key] = $entity;
@@ -440,7 +451,7 @@ final class EntityHydrator
     {
         $this->instanceProperties[$ghost::class] ??= array_values(array_filter(
             $this->classReflection($ghost::class)->getProperties(),
-            static fn (\ReflectionProperty $property): bool => !$property->isStatic(),
+            static fn (\ReflectionProperty $property): bool => !$property->isStatic() && !$property->isVirtual(),
         ));
 
         foreach ($this->instanceProperties[$ghost::class] as $property) {
@@ -449,8 +460,8 @@ final class EntityHydrator
             }
 
             $raw
-                ? $property->setRawValueWithoutLazyInitialization($ghost, $property->getValue($loaded))
-                : $property->setValue($ghost, $property->getValue($loaded));
+                ? $property->setRawValueWithoutLazyInitialization($ghost, $property->getRawValue($loaded))
+                : $property->setRawValue($ghost, $property->getRawValue($loaded));
         }
     }
 

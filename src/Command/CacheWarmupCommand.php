@@ -121,7 +121,7 @@ final readonly class CacheWarmupCommand
 
         foreach ($entities as $entity) {
             ++$hydrated;
-            $value = $identifier !== null ? (new \ReflectionProperty($entity, $identifier))->getValue($entity) : null;
+            $value = $identifier !== null ? (new \ReflectionProperty($entity, $identifier))->getRawValue($entity) : null;
 
             if ((\is_int($value) || \is_string($value)) && $manager->getCache()->containsEntity($class, $value)) {
                 ++$kept;

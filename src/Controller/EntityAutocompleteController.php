@@ -75,11 +75,11 @@ final class EntityAutocompleteController
 
         foreach (\is_array($result) ? $result : $result->items as $entity) {
             $results[] = [
-                'value' => self::text((new \ReflectionProperty($entity, $identifier->property))->getValue($entity)),
+                'value' => self::text((new \ReflectionProperty($entity, $identifier->property))->getRawValue($entity)),
                 'text' => self::text(match (true) {
                     $label !== null => (new \ReflectionProperty($entity, $metadata->property($label)))->getValue($entity),
                     $entity instanceof \Stringable => (string) $entity,
-                    default => (new \ReflectionProperty($entity, $identifier->property))->getValue($entity),
+                    default => (new \ReflectionProperty($entity, $identifier->property))->getRawValue($entity),
                 }),
             ];
         }

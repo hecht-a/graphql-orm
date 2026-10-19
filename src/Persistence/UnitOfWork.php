@@ -309,7 +309,7 @@ final class UnitOfWork
 
         if ($operation->kind === Operation::CREATE && $identifierField !== null && $this->currentValue($entity, $identifierField) === null) {
             $identifier = $row[$identifierField->mappedFrom] ?? null;
-            $this->property($entity, $identifierField->property)->setValue($entity, $identifier);
+            $this->property($entity, $identifierField->property)->setRawValue($entity, $identifier);
         }
 
         $known = $this->originals[$entity] ?? [];
@@ -385,7 +385,8 @@ final class UnitOfWork
     private function currentValue(object $entity, GraphqlFieldMetadata $field): mixed
     {
         $property = $this->property($entity, $field->property);
-        $value = !$property->isLazy($entity) && $property->isInitialized($entity) ? $property->getValue($entity) : null;
+        // The value the entity holds, as the API knows it: the get hooks of the property are bypassed.
+        $value = !$property->isLazy($entity) && $property->isInitialized($entity) ? $property->getRawValue($entity) : null;
 
         return $this->graphqlValue($field, $value);
     }
@@ -434,7 +435,7 @@ final class UnitOfWork
             return null;
         }
 
-        return $reflection->getValue($object);
+        return $reflection->getRawValue($object);
     }
 
     private function isInitialized(object $entity, GraphqlFieldMetadata $field): bool
