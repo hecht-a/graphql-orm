@@ -90,7 +90,7 @@ final readonly class QueryCommand
         $class = $this->entityClassLocator->resolve($entity);
 
         if ($class === null) {
-            $io->getErrorStyle()->error(\sprintf('Entity "%s" not found. Available entities: %s', $entity, implode(', ', $this->entityClassLocator->available())));
+            $io->getErrorStyle()->error($this->entityClassLocator->notFound($entity));
 
             return Command::FAILURE;
         }

@@ -74,4 +74,12 @@ final readonly class EntityClassLocator
 
         return $entities;
     }
+
+    /**
+     * The message telling an entity was not found, with those that could be meant.
+     */
+    public function notFound(string $entity): string
+    {
+        return \sprintf('Entity "%s" not found. Available entities: %s', $entity, implode(', ', $this->available()));
+    }
 }

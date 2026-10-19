@@ -47,7 +47,7 @@ final readonly class CachedEntities
     public function entity(string $entity, ?string $manager): array
     {
         $class = $this->entityClassLocator->resolve($entity)
-            ?? throw new \InvalidArgumentException(\sprintf('Entity "%s" not found. Available entities: %s', $entity, implode(', ', $this->entityClassLocator->available())));
+            ?? throw new \InvalidArgumentException($this->entityClassLocator->notFound($entity));
         $name = $this->managers->getManagerForClass($class)->getName();
 
         if ($manager !== null && $this->managers->getManager($manager)->getName() !== $name) {

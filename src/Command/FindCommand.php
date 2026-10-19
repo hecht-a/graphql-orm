@@ -60,7 +60,7 @@ final readonly class FindCommand
         $class = $this->entityClassLocator->resolve($entity);
 
         if ($class === null) {
-            $io->error(\sprintf('Entity "%s" not found. Available entities: %s', $entity, implode(', ', $this->entityClassLocator->available())));
+            $io->error($this->entityClassLocator->notFound($entity));
 
             return Command::FAILURE;
         }
