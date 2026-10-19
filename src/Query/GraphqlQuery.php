@@ -78,7 +78,7 @@ final readonly class GraphqlQuery
         $options->resultCacheLifetime = $lifetime;
         $options->resultCacheKey = $key;
 
-        return new self($this->graphql, $this->entityClass, $this->manager, $options, $this->unmappedFieldHints, $this->dto);
+        return $this->with($options);
     }
 
     /**
@@ -89,7 +89,17 @@ final readonly class GraphqlQuery
         $options = clone $this->options;
         $options->resultCache = false;
 
-        return new self($this->graphql, $this->entityClass, $this->manager, $options, $this->unmappedFieldHints, $this->dto);
+        return $this->with($options);
+    }
+
+    /**
+     * This query with other options, or another query sent for the same entities.
+     *
+     * @return self<T>
+     */
+    private function with(QueryOptions $options, QueryNode|string|null $graphql = null): self
+    {
+        return new self($graphql ?? $this->graphql, $this->entityClass, $this->manager, $options, $this->unmappedFieldHints, $this->dto);
     }
 
     /**
@@ -334,7 +344,7 @@ final readonly class GraphqlQuery
 
         $options = clone $this->options;
         $options->detached = true;
-        $page = (new self($this->graphql, $this->entityClass, $this->manager, $options, $this->unmappedFieldHints, $this->dto))->getResult();
+        $page = $this->with($options)->getResult();
 
         while ($page instanceof PaginatedResult) {
             // Not "yield from": each page would restart the keys at 0.
@@ -523,7 +533,7 @@ final readonly class GraphqlQuery
         $options->cursor = $cursor;
         $options->cursorStack = $cursorStack;
 
-        $page = (new self($this->graphql, $this->entityClass, $this->manager, $options, $this->unmappedFieldHints, $this->dto))->getResult();
+        $page = $this->with($options)->getResult();
 
         return $page instanceof PaginatedResult ? $page : null;
     }
@@ -637,6 +647,6 @@ final readonly class GraphqlQuery
             );
         }
 
-        return new self($query, $this->entityClass, $this->manager, $options, $this->unmappedFieldHints, $this->dto);
+        return $this->with($options, $query);
     }
 }
