@@ -129,12 +129,92 @@ abstract class AbstractGraphqlWalker implements VariableAwareWalkerInterface
         $this->printer->line('}');
     }
 
-    abstract protected function formatValue(mixed $value): string;
+    protected function formatValue(mixed $value): string
+    {
+        if ($value instanceof EnumLiteral) {
+            return $value->name;
+        }
+
+        if (\is_string($value)) {
+            return $this->formatString($value);
+        }
+
+        if (\is_int($value) || \is_float($value)) {
+            return $this->formatNumber($value);
+        }
+
+        if (\is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        if ($value === null) {
+            return 'null';
+        }
+
+        if (\is_array($value)) {
+            if (array_is_list($value)) {
+                $items = array_map(fn ($v) => $this->formatValue($v), $value);
+
+                return '[' . implode(', ', $items) . ']';
+            }
+
+            $fields = [];
+            foreach ($value as $key => $item) {
+                $fields[] = $this->assertValidName($key) . ': ' . $this->formatValue($item);
+            }
+
+            return '{ ' . implode(', ', $fields) . ' }';
+        }
+
+        if ($value instanceof \BackedEnum) {
+            return $this->formatEnum($value);
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $this->formatString($value->format(DATE_ATOM));
+        }
+
+        throw new InvalidArgumentException(\sprintf('Unsupported GraphQL argument type "%s".', get_debug_type($value)));
+    }
 
     /**
      * @param array<string, mixed> $arguments
      */
-    abstract protected function formatArguments(array $arguments): string;
+    protected function formatArguments(array $arguments): string
+    {
+        if ($arguments === []) {
+            return '';
+        }
+
+        $pairs = [];
+
+        foreach ($arguments as $key => $value) {
+            if ($this->omitsArgument($value)) {
+                continue;
+            }
+
+            $pairs[] = \sprintf('%s: %s', $this->assertValidName($key), $this->formatValue($value));
+        }
+
+        return '(' . implode(', ', $pairs) . ')';
+    }
+
+    /**
+     * A backed enum sent as an argument, as a string literal by default: a dialect whose schema declares the enum
+     * prints its value as an enum literal.
+     */
+    protected function formatEnum(\BackedEnum $value): string
+    {
+        return $this->formatString((string) $value->value);
+    }
+
+    /**
+     * Whether an argument is left out of the query, as a null some APIs refuse: none by default.
+     */
+    protected function omitsArgument(mixed $value): bool
+    {
+        return false;
+    }
 
     /**
      * GraphQL string escapes are a subset of JSON ones, so a JSON-encoded string is a valid GraphQL string literal.

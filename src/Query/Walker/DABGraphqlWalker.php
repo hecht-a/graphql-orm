@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\Query\Walker;
 
-use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Query\Ast\FieldNode;
 use GraphqlOrm\Query\Direction;
-use GraphqlOrm\Query\EnumLiteral;
 
 final class DABGraphqlWalker extends AbstractGraphqlWalker
 {
@@ -68,74 +66,19 @@ final class DABGraphqlWalker extends AbstractGraphqlWalker
         return $arguments;
     }
 
-    protected function formatValue(mixed $value): string
+    /**
+     * The order directions of Data API Builder are enum literals.
+     */
+    protected function formatEnum(\BackedEnum $value): string
     {
-        if ($value instanceof EnumLiteral) {
-            return $value->name;
-        }
-
-        if (\is_string($value)) {
-            return $this->formatString($value);
-        }
-
-        if (\is_int($value) || \is_float($value)) {
-            return $this->formatNumber($value);
-        }
-
-        if (\is_bool($value)) {
-            return $value ? 'true' : 'false';
-        }
-
-        if ($value === null) {
-            return 'null';
-        }
-
-        if (\is_array($value)) {
-            if (array_is_list($value)) {
-                $items = array_map(fn ($v) => $this->formatValue($v), $value);
-
-                return '[' . implode(', ', $items) . ']';
-            }
-
-            $fields = [];
-            foreach ($value as $key => $item) {
-                $fields[] = $this->assertValidName($key) . ': ' . $this->formatValue($item);
-            }
-
-            return '{ ' . implode(', ', $fields) . ' }';
-        }
-
-        if ($value instanceof \BackedEnum) {
-            return $value instanceof Direction
-                ? $value->value
-                : $this->formatString((string) $value->value);
-        }
-
-        if ($value instanceof \DateTimeInterface) {
-            return $this->formatString($value->format(DATE_ATOM));
-        }
-
-        throw new InvalidArgumentException(\sprintf('Unsupported GraphQL argument type "%s".', get_debug_type($value)));
+        return $value instanceof Direction ? $value->value : parent::formatEnum($value);
     }
 
     /**
-     * @param array<string, mixed> $arguments
+     * Data API Builder refuses a null argument.
      */
-    protected function formatArguments(array $arguments): string
+    protected function omitsArgument(mixed $value): bool
     {
-        if ($arguments === []) {
-            return '';
-        }
-
-        $pairs = [];
-
-        foreach ($arguments as $key => $value) {
-            if ($value === null) {
-                continue;
-            }
-            $pairs[] = \sprintf('%s: %s', $this->assertValidName($key), $this->formatValue($value));
-        }
-
-        return '(' . implode(', ', $pairs) . ')';
+        return $value === null;
     }
 }

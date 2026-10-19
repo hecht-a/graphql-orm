@@ -23,12 +23,8 @@ final class HasuraGraphqlWalker extends DefaultGraphqlWalker
         ));
     }
 
-    protected function formatValue(mixed $value): string
+    protected function formatEnum(\BackedEnum $value): string
     {
-        if ($value instanceof HasuraOrderDirection) {
-            return $value->value;
-        }
-
-        return parent::formatValue($value);
+        return $value instanceof HasuraOrderDirection ? $value->value : parent::formatEnum($value);
     }
 }
