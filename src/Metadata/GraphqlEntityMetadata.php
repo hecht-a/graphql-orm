@@ -29,6 +29,24 @@ final readonly class GraphqlEntityMetadata
     }
 
     /**
+     * The field telling the entities apart: the identifier, or else the first field marked as one.
+     */
+    public function uniqueField(): ?GraphqlFieldMetadata
+    {
+        if ($this->identifier !== null) {
+            return $this->identifier;
+        }
+
+        foreach ($this->fields as $field) {
+            if ($field->isIdentifier) {
+                return $field;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * The field named after its GraphQL name or, failing that, its PHP property: a property having the GraphQL name of
      * another field designates that field.
      */

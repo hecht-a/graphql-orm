@@ -27,6 +27,7 @@ use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\Execution\QueryOrigin;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
+use GraphqlOrm\Hydrator\SecondLevelCacheRows;
 use GraphqlOrm\Logging\QueryRedactor;
 use GraphqlOrm\Mapping\AttributedMethods;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
@@ -110,6 +111,7 @@ final class PublicApiTest extends TestCase
             CachePoolDescriber::class,
             QueryOrigin::class,
             AttributedMethods::class,
+            SecondLevelCacheRows::class,
             ProfileFindings::class,
             ProfileTimeline::class,
             ProfiledQuery::class,

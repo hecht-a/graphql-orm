@@ -113,7 +113,7 @@ final class EntityHydrator
         );
         $data = self::embeddedNested($metadata, $data);
 
-        $identifier = $this->findUniqueField($metadata);
+        $identifier = $metadata->uniqueField();
         $idField = $identifier?->mappedFrom;
         $uniqueField = $idField !== null ? ($data[$idField] ?? null) : null;
 
@@ -179,69 +179,14 @@ final class EntityHydrator
     {
         $context->unitOfWork?->hydrated($entity, $metadata, $data);
 
-        foreach ($metadata->fields as $field) {
-            if (!\array_key_exists($field->mappedFrom, $data)) {
-                return $entity;
-            }
+        if (!$this->holdsEveryField($metadata, $data)) {
+            return $entity;
         }
 
         $context->completeEntities[] = $entity;
-        $this->keepInCache($metadata, $data, $context);
+        SecondLevelCacheRows::keep($this->metadataFactory, $metadata, $data, $context);
 
         return $entity;
-    }
-
-    /**
-     * Keeps the row of an entity marked #[GraphqlOrm\Cache] in the second-level cache, its relations reduced to their
-     * identifier: they are loaded on first access when it is read back. Not kept when a related entity has no
-     * identifier.
-     *
-     * @param array<string|int, mixed> $data
-     */
-    private function keepInCache(GraphqlEntityMetadata $metadata, array $data, GraphqlExecutionContext $context): void
-    {
-        $identifier = $this->findUniqueField($metadata);
-        $value = $identifier !== null ? ($data[$identifier->mappedFrom] ?? null) : null;
-
-        if ($context->entityCache === null || (!\is_int($value) && !\is_string($value)) || !$context->entityCache->caches($metadata->class)) {
-            return;
-        }
-
-        $kept = $metadata->class . '#' . $value;
-
-        if (isset($context->keptInCache[$kept])) {
-            return;
-        }
-
-        $row = [];
-
-        foreach ($metadata->fields as $field) {
-            $fieldValue = $data[$field->mappedFrom];
-
-            if ($field->relation === null || !\is_array($fieldValue)) {
-                $row[$field->mappedFrom] = $fieldValue;
-
-                continue;
-            }
-
-            $targetIdentifier = $this->findUniqueField($this->metadataFactory->getMetadata($field->relation))?->mappedFrom;
-
-            if ($targetIdentifier === null) {
-                return;
-            }
-
-            $reduce = static fn (mixed $related): ?array => \is_array($related) && \array_key_exists($targetIdentifier, $related) ? [$targetIdentifier => $related[$targetIdentifier]] : null;
-            $reduced = $field->isCollection ? array_map($reduce, $context->dialect->extractCollection($fieldValue)) : $reduce($fieldValue);
-
-            if ($reduced === null || \in_array(null, $field->isCollection ? $reduced : [], true)) {
-                return;
-            }
-
-            $row[$field->mappedFrom] = $reduced;
-        }
-
-        $context->entityCache->putEntityRow($metadata->class, $value, $row);
-        $context->keptInCache[$kept] = true;
     }
 
     /**
@@ -525,10 +470,8 @@ final class EntityHydrator
     {
         $this->hydrateFields($ghost, $metadata, $data, $context, $depth);
 
-        foreach ($metadata->fields as $field) {
-            if (!\array_key_exists($field->mappedFrom, $data)) {
-                return $ghost;
-            }
+        if (!$this->holdsEveryField($metadata, $data)) {
+            return $ghost;
         }
 
         $this->classReflection($ghost::class)->markLazyObjectAsInitialized($ghost);
@@ -605,21 +548,6 @@ final class EntityHydrator
         }
 
         return true;
-    }
-
-    private function findUniqueField(GraphqlEntityMetadata $metadata): ?GraphqlFieldMetadata
-    {
-        if ($metadata->identifier !== null) {
-            return $metadata->identifier;
-        }
-
-        foreach ($metadata->fields as $field) {
-            if ($field->isIdentifier) {
-                return $field;
-            }
-        }
-
-        return null;
     }
 
     /**
