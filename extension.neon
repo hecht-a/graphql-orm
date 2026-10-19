@@ -25,3 +25,6 @@ services:
     -
         class: GraphqlOrm\PHPStan\QueryBuilderFieldNamesRule
         tags: [phpstan.rules.rule]
+    -
+        class: GraphqlOrm\PHPStan\MappedPropertiesExtension
+        tags: [phpstan.properties.readWriteExtension]

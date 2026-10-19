@@ -11,3 +11,8 @@ parameters:
 		- tests/PHPStan/data/*
 
 	tmpDir: cache
+services:
+	# The extension the bundle gives the applications for their mapped properties, applied to its own fixtures
+	-
+		class: GraphqlOrm\PHPStan\MappedPropertiesExtension
+		tags: [phpstan.properties.readWriteExtension]
