@@ -15,8 +15,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   tracked properties, of the value objects, of the DTOs and of the lazy ghosts is read once; a response is decoded
   once. Hydrating 1,000 rows takes about 12% less time.
 
+### Added
+
+- The walkers extending `AbstractGraphqlWalker` format the arguments as `DefaultGraphqlWalker` did: a dialect overrides
+  `formatEnum()` to print a backed enum as an enum literal, and `omitsArgument()` to leave out the arguments its API
+  refuses.
+
 ### Fixed
 
+- Data API Builder fetches the page after any cursor, `"0"` included, rather than the first page again.
+- A count or an aggregate missing from a response, or not a number, says so and names it, rather than
+  `expected array, got "array"`: `InvalidGraphqlResponseException::expectedNumber()`.
 - The queries sent together with `GraphqlQuery::concurrently()` share their entities through the identity map: the
   second no longer creates another instance of an entity the first hydrated.
 
