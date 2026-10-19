@@ -282,7 +282,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         $shared = $this->identityMap !== null && !$this->loadingLazily;
 
         if ($shared) {
-            $context->identityMap = $this->identityMap->entities();
+            $context->sharedIdentityMap = $this->identityMap;
         }
 
         $context->lazyLoader = $this->loadCachedEntityRelationLazily(...);
@@ -321,7 +321,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
      */
     public function reference(string $class, int|string $identifier, ?string $relation = null): object
     {
-        $known = $this->identityMap?->entities()[$class][$identifier] ?? null;
+        $known = $this->identityMap?->get($class, $identifier);
 
         if ($known instanceof $class) {
             return $known;
@@ -329,7 +329,12 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
 
         $context = $this->referenceContext();
         $entity = $this->hydrator->reference($this->metadataFactory->getMetadata($class), $identifier, $context, $relation);
-        $this->identityMap?->merge($context->identityMap, []);
+
+        if ($this->identityMap !== null) {
+            // The context is kept for the next references: they find this one in the shared identity map.
+            $this->identityMap->merge($context->identityMap, []);
+            $context->identityMap = [];
+        }
         \assert($entity instanceof $class);
 
         return $entity;
@@ -475,7 +480,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
 
         $context = new GraphqlExecutionContext(dialect: $this->dialect);
         $context->lazyLoader = $this->loadLazily(...);
-        $context->identityMap = $this->identityMap?->entities() ?? [];
+        $context->sharedIdentityMap = $this->identityMap;
         $context->observer = $this->collector;
         $context->unitOfWork = $this->readOnly ? null : $this->unitOfWork();
         $context->typeConverters = $this->typeConverters;
@@ -514,7 +519,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         $shared = $this->identityMap !== null && !$options->detached && !$this->loadingLazily;
 
         if ($shared) {
-            $context->identityMap = $this->identityMap->entities();
+            $context->sharedIdentityMap = $this->identityMap;
         }
 
         // Always set: a relation mapped with GraphqlOrm\Fetch::Lazy is a lazy ghost even without lazy_loading.

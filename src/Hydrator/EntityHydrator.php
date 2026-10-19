@@ -122,7 +122,7 @@ final class EntityHydrator
             $uniqueField = null;
         }
 
-        $known = $uniqueField !== null ? ($context->identityMap[$metadata->class][$uniqueField] ?? null) : null;
+        $known = $uniqueField !== null ? $context->knownEntity($metadata->class, $uniqueField) : null;
 
         // An entity met again, e.g. first as a nested relation reduced to its identifier, gets the fields of this row.
         if ($known !== null && $this->isUninitializedGhost($known)) {
@@ -457,7 +457,7 @@ final class EntityHydrator
         return $this->classReflection($class)->newLazyGhost(function (object $ghost) use ($class, $identifierField, $identifier, $context, $relation): void {
             $pending = [$identifier => $ghost];
 
-            foreach ($context->identityMap[$class] ?? [] as $key => $entity) {
+            foreach ($context->knownEntitiesOf($class) as $key => $entity) {
                 if ($entity !== $ghost && $this->isUninitializedGhost($entity) && !isset($this->partial[$entity])) {
                     $pending[$key] = $entity;
                 }

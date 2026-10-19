@@ -10,6 +10,7 @@ use GraphqlOrm\Execution\IdentityMap;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
+use GraphqlOrm\Query\GraphqlQuery;
 use GraphqlOrm\Repository\GraphqlEntityRepository;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
 use GraphqlOrm\Tests\Integration\Entity\Task;
@@ -29,6 +30,18 @@ final class SharedIdentityMapTest extends TestCase
         $tasks = $this->tasks(new FakeGraphqlClient(self::response([self::TASK_A]), self::response([self::TASK_A])), new IdentityMap());
 
         self::assertSame($tasks->findAll()[0], $tasks->findBy(['done' => false])[0]);
+    }
+
+    #[Test]
+    public function itGivesTheSameInstanceToQueriesSentTogether(): void
+    {
+        $tasks = $this->tasks(new FakeGraphqlClient(self::response([self::TASK_A]), self::response([self::TASK_A])), new IdentityMap());
+
+        [$all, $notDone] = GraphqlQuery::concurrently($tasks->createQueryBuilder()->getQuery(), $tasks->createQueryBuilder()->getQuery());
+
+        self::assertIsArray($all);
+        self::assertIsArray($notDone);
+        self::assertSame($all[0], $notDone[0]);
     }
 
     #[Test]

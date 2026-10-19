@@ -50,6 +50,22 @@ final class IdentityMap implements ResetInterface
     }
 
     /**
+     * The entity known with this identifier, whether in full, in part or as a lazy ghost.
+     */
+    public function get(string $class, int|string $identifier): ?object
+    {
+        return $this->entities[$class][$identifier] ?? null;
+    }
+
+    /**
+     * @return array<int|string, object> the entities known of this class, by identifier
+     */
+    public function entitiesOf(string $class): array
+    {
+        return $this->entities[$class] ?? [];
+    }
+
+    /**
      * The entity known in full with this identifier, if any.
      *
      * @template T of object

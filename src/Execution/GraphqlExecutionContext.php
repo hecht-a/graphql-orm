@@ -79,12 +79,42 @@ final class GraphqlExecutionContext
     public array $completeEntities = [];
 
     /**
-     * @param array<string, array<int|string, object>> $identityMap
+     * The identity map of the manager, read for the entities this query does not know yet: it is not copied for each
+     * query, as it may hold many entities late in a request.
+     *
+     * @internal set by GraphqlManager
+     */
+    public ?IdentityMap $sharedIdentityMap = null;
+
+    /**
+     * @param array<string, array<int|string, object>> $identityMap the entities hydrated by this query, merged into the
+     *                                                              shared identity map once it succeeds
      */
     public function __construct(
         public readonly GraphqlQueryTrace $trace = new GraphqlQueryTrace(),
         public array $identityMap = [],
         public readonly GraphqlQueryDialect $dialect = new DefaultDialect(),
     ) {
+    }
+
+    /**
+     * The entity of this identifier hydrated by this query, or known to the shared identity map.
+     *
+     * @internal read by EntityHydrator
+     */
+    public function knownEntity(string $class, int|string $identifier): ?object
+    {
+        return $this->identityMap[$class][$identifier] ?? $this->sharedIdentityMap?->get($class, $identifier);
+    }
+
+    /**
+     * @internal read by EntityHydrator
+     *
+     * @return array<int|string, object> the entities of this class hydrated by this query or known to the shared
+     *                                   identity map, by identifier
+     */
+    public function knownEntitiesOf(string $class): array
+    {
+        return ($this->identityMap[$class] ?? []) + ($this->sharedIdentityMap?->entitiesOf($class) ?? []);
     }
 }
