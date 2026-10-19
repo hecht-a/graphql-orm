@@ -8,7 +8,7 @@ use GraphqlOrm\Mapping\Entity;
 use GraphqlOrm\Mapping\Field;
 use GraphqlOrm\Mapping\Identifier;
 use GraphqlOrm\Mapping\Relation;
-use GraphqlOrm\Tests\Fixtures\Repository\FakeRepository;
+use GraphqlOrm\Tests\Fixtures\FakeRepository\FakeRepository;
 
 #[Entity(name: 'tasks', repositoryClass: FakeRepository::class)]
 class Task

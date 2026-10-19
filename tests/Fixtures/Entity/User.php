@@ -7,7 +7,7 @@ namespace GraphqlOrm\Tests\Fixtures\Entity;
 use GraphqlOrm\Mapping\Entity;
 use GraphqlOrm\Mapping\Field;
 use GraphqlOrm\Mapping\Identifier;
-use GraphqlOrm\Tests\Fixtures\Repository\FakeRepository;
+use GraphqlOrm\Tests\Fixtures\FakeRepository\FakeRepository;
 
 #[Entity(name: 'users', repositoryClass: FakeRepository::class)]
 class User
