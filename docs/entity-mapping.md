@@ -205,6 +205,41 @@ scalars of the `int`, `float`, `string`, `bool` and `DateTimeImmutable` properti
 Date fields are automatically cast from ISO 8601 strings or Unix timestamps (in milliseconds); a value that is no date
 throws a `CastException`.
 
+## Properties of PHP 8.4
+
+The bundle restores the state the API has, as Doctrine does, whatever the declaration of the property:
+
+```php
+#[GraphqlOrm\Entity(name: 'notes')]
+class Note
+{
+    #[GraphqlOrm\Field]
+    #[GraphqlOrm\Identifier]
+    public readonly int $id;            // set once, by the first query returning the note
+
+    #[GraphqlOrm\Field]
+    public private(set) string $title;  // changed by a method of the entity, written by flush()
+
+    #[GraphqlOrm\Field]
+    public string $code {
+        get => strtoupper($this->code); // the application reads "ABC", the API keeps "abc"
+    }
+}
+```
+
+- **Readonly properties** are set by the first query returning the entity; another query returning it later leaves
+  them as they are. A readonly property set by the application is never updated by `flush()`, which cannot change it.
+- **Asymmetric visibility** (`private(set)`, `protected(set)`) is no obstacle: the hydration and `flush()` read and
+  write the properties through reflection.
+- **Hooks** are bypassed: the hydration writes the value of the API without the `set` hook, and `flush()` sends the
+  value the property holds, not the one its `get` hook returns. The hooks serve the application, the API sees the
+  stored values.
+- **Virtual properties**, whose hooks hold no value of their own, cannot be mapped: an `InvalidArgumentException` asks
+  to map the property they are computed from instead.
+
+PHPStan reports a readonly property without constructor as uninitialized: the [extension of the bundle](phpstan.md)
+tells it that the mapped properties are written by the hydration.
+
 ## Type converters
 
 A type converter turns a scalar of the API into a value object, `Money`, `Email`, `Siret`, and back. It implements

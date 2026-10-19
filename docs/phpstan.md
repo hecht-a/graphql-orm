@@ -59,6 +59,13 @@ parameters:
         reportUnmappedFields: false
 ```
 
+## Mapped properties
+
+The extension also tells PHPStan that the properties mapped with `#[GraphqlOrm\Field]`, `#[GraphqlOrm\Relation]` or
+`#[GraphqlOrm\Embedded]` are written by the hydration and read by `flush()`, as phpstan-doctrine does for the columns of
+an entity: a `readonly` identifier needs no constructor, and a mapped property only the API writes is not reported as
+never written.
+
 ## Naming strategy
 
 The rules read the entities as the bundle does. When the bundle names the fields with a

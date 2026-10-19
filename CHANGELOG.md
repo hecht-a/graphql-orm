@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- The PHPStan extension tells that the mapped properties are written by the hydration and read by `flush()`: a
+  `readonly` identifier needs no constructor.
+
+### Changed
+
+- The hydration and `flush()` bypass the hooks of the properties, as Doctrine does: the `set` hooks no longer run when
+  an entity is hydrated, and `flush()` sends the value a property holds rather than the one its `get` hook returns.
+  A virtual property, holding no value of its own, can no longer be mapped: an `InvalidArgumentException` says so.
+
+### Fixed
+
+- A `readonly` property is no longer written again when another query returns the entity: an entity with a readonly
+  identifier threw `Cannot modify readonly property` once met by a second query.
+
 ## [5.12.0] — 2026-10-19
 
 ### Added
