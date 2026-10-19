@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `phpstan/phpdoc-parser` 2.3.1 or later is required, rather than 2.2: the tests of the PHPStan extension of the bundle
+  failed with 2.2 and 2.3.0, whose nodes cannot be read back from the cache of PHPStan.
 - The hydration and `flush()` bypass the hooks of the properties, as Doctrine does: the `set` hooks no longer run when
   an entity is hydrated, and `flush()` sends the value a property holds rather than the one its `get` hook returns.
   A virtual property, holding no value of its own, can no longer be mapped: an `InvalidArgumentException` says so.
