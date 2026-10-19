@@ -45,6 +45,7 @@ use Psr\Container\ContainerInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface as SymfonyEventDispatcherInterface;
 use Symfony\Contracts\Service\ResetInterface;
 
 /**
@@ -534,7 +535,10 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
             $compiledQuery = $this->compile($graphql, $options);
             $compiled = $compiledQuery->graphql;
             $variables = [...$variables, ...$compiledQuery->variables];
-            $context->trace->ast = AstExporter::export($graphql);
+            // Read by the profiler and the listeners of the query events only.
+            if ($this->collector !== null || $this->hasListeners(QueryStartedEvent::class, QueryExecutedEvent::class, QueryFailedEvent::class)) {
+                $context->trace->ast = AstExporter::export($graphql);
+            }
         } else {
             $compiled = $graphql;
         }
@@ -561,7 +565,9 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
             $context->trace->duringSerialization = $this->collector !== null && self::whileSerializing();
         }
 
-        $this->eventDispatcher?->dispatch(new QueryStartedEvent($this->redact(clone $context->trace)));
+        if ($this->hasListeners(QueryStartedEvent::class)) {
+            $this->eventDispatcher?->dispatch(new QueryStartedEvent($this->redact(clone $context->trace)));
+        }
 
         try {
             $response = $options->resultCache
@@ -743,6 +749,29 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         $file = (new \ReflectionClass($class))->getFileName();
 
         return \is_string($file) && str_starts_with($file, __DIR__ . \DIRECTORY_SEPARATOR);
+    }
+
+    /**
+     * Whether an event of these classes would reach a listener: a dispatcher other than Symfony's cannot tell, it is
+     * then assumed to have some.
+     */
+    private function hasListeners(string ...$events): bool
+    {
+        if ($this->eventDispatcher === null) {
+            return false;
+        }
+
+        if (!$this->eventDispatcher instanceof SymfonyEventDispatcherInterface) {
+            return true;
+        }
+
+        foreach ($events as $event) {
+            if ($this->eventDispatcher->hasListeners($event)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

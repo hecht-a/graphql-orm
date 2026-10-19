@@ -22,6 +22,8 @@ use GraphqlOrm\Tests\Fixtures\FakeEventDispatcher;
 use GraphqlOrm\Tests\Fixtures\FakeGraphqlClient;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -65,6 +67,27 @@ final class QueryEventsTest extends TestCase
     }
 
     #[Test]
+    public function itGivesTheQueryAstToTheListenersOfASymfonyDispatcher(): void
+    {
+        $dispatcher = new EventDispatcher();
+        $events = [];
+        $dispatcher->addListener(QueryStartedEvent::class, static function (QueryStartedEvent $event) use (&$events): void {
+            $events[] = $event;
+        });
+        $dispatcher->addListener(QueryExecutedEvent::class, static function (QueryExecutedEvent $event) use (&$events): void {
+            $events[] = $event;
+        });
+
+        $this->repository(new FakeGraphqlClient(['data' => ['tasks' => []]]), $dispatcher)->findBy(['title' => self::TITLE]);
+
+        self::assertCount(2, $events);
+
+        foreach ($events as $event) {
+            self::assertNotNull($event->trace->ast);
+        }
+    }
+
+    #[Test]
     public function itDispatchesAFailedEventWhenTheRequestFails(): void
     {
         $client = new GraphqlClient(new MockHttpClient(new MockResponse('', ['http_code' => 500])), 'https://graphql.example.com/graphql');
@@ -99,7 +122,7 @@ final class QueryEventsTest extends TestCase
     /**
      * @return GraphqlEntityRepository<FakeTask>
      */
-    private function repository(GraphqlClientInterface $client): GraphqlEntityRepository
+    private function repository(GraphqlClientInterface $client, ?EventDispatcherInterface $dispatcher = null): GraphqlEntityRepository
     {
         $metadataFactory = new GraphqlEntityMetadataFactory();
         $manager = new GraphqlManager(
@@ -109,7 +132,7 @@ final class QueryEventsTest extends TestCase
             null,
             2,
             redactor: new QueryRedactor(),
-            eventDispatcher: $this->dispatcher,
+            eventDispatcher: $dispatcher ?? $this->dispatcher,
         );
 
         return new GraphqlEntityRepository($manager, FakeTask::class);
