@@ -135,20 +135,29 @@ final readonly class GraphqlClient implements ConcurrentGraphqlClientInterface
 
         $context->trace->responseSize = \strlen($content);
 
+        // Decoded once, whatever reads it: the body may be large.
+        try {
+            $body = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
+            $invalidJson = null;
+        } catch (\JsonException $e) {
+            $body = null;
+            $invalidJson = $e;
+        }
+
         // Answered with a 200 by Apollo, with a 400 by other servers.
-        if ($persisted && null !== $failure = PersistedQueries::failureOf($this->body($content))) {
+        if ($persisted && null !== $failure = PersistedQueries::failureOf(\is_array($body) ? $body : null)) {
             return $failure;
         }
 
         if ($statusCode >= self::FIRST_HTTP_ERROR_STATUS) {
             // Servers such as Data API Builder and PostGraphile answer an invalid query with a 400 holding its errors.
-            $errors = $this->errorsOf($content);
+            $errors = self::errorsOf($body);
             $context->trace->errors = $errors !== [] ? $errors : null;
 
             throw GraphqlRequestException::httpError($this->endpoint, $statusCode, $errors);
         }
 
-        return $this->decode($content, $context);
+        return $this->decode($body, $invalidJson, $context);
     }
 
     private function stopTimer(string $eventName, int|float $startedAt, GraphqlExecutionContext $context): void
@@ -170,34 +179,12 @@ final readonly class GraphqlClient implements ConcurrentGraphqlClientInterface
     }
 
     /**
-     * The decoded body of a response, null when it is no JSON object (an HTML error page, for instance).
-     *
-     * @return array<mixed>|null
-     */
-    private function body(string $content): ?array
-    {
-        try {
-            $body = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
-            return null;
-        }
-
-        return \is_array($body) ? $body : null;
-    }
-
-    /**
      * The GraphQL errors of an HTTP error body, or none when it holds none (an HTML error page, for instance).
      *
      * @return list<mixed>
      */
-    private function errorsOf(string $content): array
+    private static function errorsOf(mixed $body): array
     {
-        try {
-            $body = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
-            return [];
-        }
-
         $errors = \is_array($body) ? $body['errors'] ?? null : null;
 
         return \is_array($errors) && array_is_list($errors) ? $errors : [];
@@ -206,12 +193,10 @@ final readonly class GraphqlClient implements ConcurrentGraphqlClientInterface
     /**
      * @return array<string, mixed>
      */
-    private function decode(string $content, GraphqlExecutionContext $context): array
+    private function decode(mixed $result, ?\JsonException $invalidJson, GraphqlExecutionContext $context): array
     {
-        try {
-            $result = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
-        } catch (\JsonException $e) {
-            throw GraphqlRequestException::invalidJson($this->endpoint, $e);
+        if ($invalidJson !== null) {
+            throw GraphqlRequestException::invalidJson($this->endpoint, $invalidJson);
         }
 
         if (!\is_array($result)) {
