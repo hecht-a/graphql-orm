@@ -42,6 +42,31 @@ final class ProfilerReplayController
      */
     public function __invoke(Request $request, string $token, int $number): JsonResponse
     {
+        $query = $this->replayableQuery($request, $token, $number);
+        $manager = $this->managers->getManager(\is_string($query['manager'] ?? null) ? $query['manager'] : null);
+        $variables = \is_array($query['variables'] ?? null) ? array_filter($query['variables'], \is_string(...), \ARRAY_FILTER_USE_KEY) : [];
+        $startedAt = hrtime(true);
+
+        try {
+            $response = $manager->execute($query['graphql'], static fn (array $response): array => $response, variables: $variables);
+        } catch (\Throwable $exception) {
+            return new JsonResponse(['error' => $exception->getMessage()], Response::HTTP_BAD_GATEWAY);
+        }
+
+        return new JsonResponse(['response' => $response, 'duration' => (hrtime(true) - $startedAt) / 1e6]);
+    }
+
+    /**
+     * The query of the profile, once checked it may be sent again: while developing, from the profiler, detailed by the
+     * profile with its values, and no mutation.
+     *
+     * @return array{graphql: string, ...<string, mixed>}
+     *
+     * @throws NotFoundHttpException   outside the debug mode, or for a query the profile does not detail
+     * @throws BadRequestHttpException for a query the profile cannot send again
+     */
+    private function replayableQuery(Request $request, string $token, int $number): array
+    {
         if (!$this->debug || $this->profiler === null) {
             throw new NotFoundHttpException('The queries of a profile are replayed while developing only.');
         }
@@ -67,16 +92,6 @@ final class ProfilerReplayController
             throw new BadRequestHttpException('A mutation is not replayed: it would change the data again.');
         }
 
-        $manager = $this->managers->getManager(\is_string($query['manager'] ?? null) ? $query['manager'] : null);
-        $variables = \is_array($query['variables'] ?? null) ? array_filter($query['variables'], \is_string(...), \ARRAY_FILTER_USE_KEY) : [];
-        $startedAt = hrtime(true);
-
-        try {
-            $response = $manager->execute($query['graphql'], static fn (array $response): array => $response, variables: $variables);
-        } catch (\Throwable $exception) {
-            return new JsonResponse(['error' => $exception->getMessage()], Response::HTTP_BAD_GATEWAY);
-        }
-
-        return new JsonResponse(['response' => $response, 'duration' => (hrtime(true) - $startedAt) / 1e6]);
+        return $query;
     }
 }
