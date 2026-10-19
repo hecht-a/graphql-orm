@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GraphqlOrm\Tests\Benchmark;
 
 use GraphqlOrm\Dialect\DataApiBuilderDialect;
+use GraphqlOrm\Execution\IdentityMap;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Logging\QueryRedactor;
@@ -32,21 +33,36 @@ final class QueryOverheadBench
     private GraphqlEntityRepository $tasks;
 
     /**
-     * @return iterable<string, array{instrumented: bool}>
+     * @return iterable<string, array{instrumented: bool, known: int}>
      */
     public function provideSetups(): iterable
     {
-        yield 'bare' => ['instrumented' => false];
+        yield 'bare' => ['instrumented' => false, 'known' => 0];
         // As in production with Symfony: logger and event dispatcher, values masked; the collector is debug only.
-        yield 'instrumented' => ['instrumented' => true];
+        yield 'instrumented' => ['instrumented' => true, 'known' => 0];
+        // Late in a long request or a message handler, the identity map already holding many entities.
+        yield 'many known entities' => ['instrumented' => false, 'known' => 5000];
     }
 
     /**
-     * @param array{instrumented: bool} $setup
+     * @param array{instrumented: bool, known: int} $setup
      */
     public function setUp(array $setup): void
     {
         $metadataFactory = new GraphqlEntityMetadataFactory();
+        $identityMap = null;
+
+        if ($setup['known'] > 0) {
+            $identityMap = new IdentityMap();
+            $known = [];
+
+            for ($id = 1000; $id < 1000 + $setup['known']; ++$id) {
+                $known[$id] = new Task();
+            }
+
+            $identityMap->merge([Task::class => $known], []);
+        }
+
         $manager = new GraphqlManager(
             $metadataFactory,
             new StaticGraphqlClient(self::RESPONSE),
@@ -62,6 +78,7 @@ final class QueryOverheadBench
                     return $event;
                 }
             } : null,
+            identityMap: $identityMap,
         );
         $this->tasks = new GraphqlEntityRepository($manager, Task::class);
     }
