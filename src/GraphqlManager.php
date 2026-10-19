@@ -7,7 +7,6 @@ namespace GraphqlOrm;
 use GraphqlOrm\Cache\GraphqlCache;
 use GraphqlOrm\Client\ConcurrentGraphqlClientInterface;
 use GraphqlOrm\Client\GraphqlClientInterface;
-use GraphqlOrm\Controller\EntityAutocompleteController;
 use GraphqlOrm\Converter\TypeConverterRegistry;
 use GraphqlOrm\DataCollector\GraphqlOrmDataCollector;
 use GraphqlOrm\Dialect\BatchLoadingDialect;
@@ -24,8 +23,10 @@ use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\Execution\IdentityMap;
+use GraphqlOrm\Execution\QueryOrigin;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Logging\QueryRedactor;
+use GraphqlOrm\Mapping\AttributedMethods;
 use GraphqlOrm\Metadata\DtoMetadataFactory;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Persistence\Lifecycle;
@@ -59,19 +60,6 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
      */
     private const LAZY_LOADING_BATCH_SIZE = 100;
 
-    /** Frames read to find the origin of a query: deep enough for a custom repository method calling the bundle. */
-    private const ORIGIN_STACK_DEPTH = 40;
-
-    private const LAZY_ORIGIN = 'lazy';
-
-    /** The search of an autocomplete field, rather than the __invoke() of its controller. */
-    private const AUTOCOMPLETE_ORIGIN = 'autocomplete';
-
-    /** Frames read to find the serializer behind a lazy load: a normalizer reading a property is deep in the stack. */
-    private const SERIALIZER_STACK_DEPTH = 80;
-
-    private const SERIALIZER_NAMESPACE = 'Symfony\\Component\\Serializer\\';
-
     private const FIND_ORIGIN = 'find';
 
     /** The bytes of a response kept for the profiler. */
@@ -99,9 +87,6 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
     private ?UnitOfWork $unitOfWork = null;
 
     private ?DtoMetadataFactory $dtoMetadataFactory = null;
-
-    /** @var array<class-string, array<string, list<\ReflectionMethod>>> the lifecycle callbacks of the entities, by step */
-    private array $lifecycleCallbacks = [];
 
     public function __construct(
         private GraphqlEntityMetadataFactory $metadataFactory,
@@ -225,7 +210,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         $entity = $this->identityMap?->find($class, $identifier);
 
         if ($entity !== null) {
-            $this->collector?->addIdentityMapHit($class, $identifier, self::callSite());
+            $this->collector?->addIdentityMapHit($class, $identifier, QueryOrigin::callSite());
 
             return $entity;
         }
@@ -448,25 +433,11 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
             }
         }
 
-        foreach ($this->lifecycleCallbacks[$entity::class][$step->name] ??= self::callbacks($entity::class, $step->attribute()) as $callback) {
+        foreach (AttributedMethods::of($entity::class, $step->attribute()) as $callback) {
             $callback->invoke($entity);
         }
 
         $this->eventDispatcher?->dispatch($step->event($entity, $this, $changedProperties));
-    }
-
-    /**
-     * @param class-string $class
-     * @param class-string $attribute
-     *
-     * @return list<\ReflectionMethod>
-     */
-    private static function callbacks(string $class, string $attribute): array
-    {
-        return array_values(array_filter(
-            (new \ReflectionClass($class))->getMethods(\ReflectionMethod::IS_PUBLIC),
-            static fn (\ReflectionMethod $method): bool => $method->getAttributes($attribute) !== [],
-        ));
     }
 
     /**
@@ -551,7 +522,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         if ($this->collector !== null) {
             $context->trace->manager = $this->name;
             $context->trace->slowQueryThreshold = $this->slowQueryThreshold;
-            [$context->trace->origin, $context->trace->entityClass] = $this->origin();
+            [$context->trace->origin, $context->trace->entityClass] = QueryOrigin::of($this->loadingLazily);
 
             // Lets the profiler suggest one findBy() for the entities found one by one in a loop.
             if ($context->trace->origin === self::FIND_ORIGIN && $context->trace->entityClass !== null) {
@@ -562,7 +533,7 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         if ($this->loadingLazily) {
             $context->trace->lazyRelation = $this->lazyRelation;
             $context->trace->fromCachedEntity = $this->loadingFromCachedEntity;
-            $context->trace->duringSerialization = $this->collector !== null && self::whileSerializing();
+            $context->trace->duringSerialization = $this->collector !== null && QueryOrigin::whileSerializing();
         }
 
         if ($this->hasListeners(QueryStartedEvent::class)) {
@@ -656,72 +627,6 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
     }
 
     /**
-     * The method of the bundle the application called to send the query, the outermost one in the call stack (e.g.
-     * findBy, getResult, or a method of a custom repository), and the class of the entities it reads.
-     *
-     * @return array{string|null, class-string|null}
-     */
-    private function origin(): array
-    {
-        $origin = null;
-        $entityClass = null;
-
-        foreach (debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, self::ORIGIN_STACK_DEPTH) as $frame) {
-            $object = $frame['object'] ?? null;
-            $class = $frame['class'] ?? null;
-
-            $entityClass ??= match (true) {
-                $object instanceof GraphqlEntityRepository => $object->getClassName(),
-                $object instanceof GraphqlQuery => $object->getEntityClass(),
-                default => null,
-            };
-
-            if ($class === null) {
-                // A function, such as array_map(), between two methods of the bundle.
-                continue;
-            }
-
-            if (!$object instanceof GraphqlEntityRepository && !self::isBundleClass($class)) {
-                break;
-            }
-
-            $origin = $object instanceof EntityAutocompleteController ? self::AUTOCOMPLETE_ORIGIN : $frame['function'];
-        }
-
-        return [$this->loadingLazily ? self::LAZY_ORIGIN : $origin, $entityClass];
-    }
-
-    /**
-     * Whether the serializer is on the way to the query, e.g. the ObjectNormalizer reading a relation not loaded yet.
-     */
-    private static function whileSerializing(): bool
-    {
-        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, self::SERIALIZER_STACK_DEPTH) as $frame) {
-            if (str_starts_with($frame['class'] ?? '', self::SERIALIZER_NAMESPACE)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * The file and line of the application calling the bundle, e.g. src/Controller/TaskController.php:51.
-     */
-    private static function callSite(): ?string
-    {
-        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, self::ORIGIN_STACK_DEPTH) as $frame) {
-            $file = $frame['file'] ?? null;
-
-            if (\is_string($file) && !str_starts_with($file, __DIR__ . \DIRECTORY_SEPARATOR) && !str_contains($file, \DIRECTORY_SEPARATOR . 'vendor' . \DIRECTORY_SEPARATOR)) {
-                return $file . (isset($frame['line']) ? ':' . $frame['line'] : '');
-            }
-        }
-
-        return null;
-    }
-
-    /**
      * The beginning of a response as indented JSON, its values masked as those of the queries.
      *
      * @param array<string, mixed> $response
@@ -735,20 +640,6 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         $json = \is_string($json) ? $json : '';
 
         return \strlen($json) > self::RESPONSE_PREVIEW_BYTES ? mb_strcut($json, 0, self::RESPONSE_PREVIEW_BYTES) . "\n…" : $json;
-    }
-
-    /**
-     * Whether the class is declared by the bundle, rather than by the application or another package.
-     */
-    private static function isBundleClass(string $class): bool
-    {
-        if (!class_exists($class) && !interface_exists($class) && !trait_exists($class)) {
-            return false;
-        }
-
-        $file = (new \ReflectionClass($class))->getFileName();
-
-        return \is_string($file) && str_starts_with($file, __DIR__ . \DIRECTORY_SEPARATOR);
     }
 
     /**

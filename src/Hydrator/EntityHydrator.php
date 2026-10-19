@@ -12,6 +12,7 @@ use GraphqlOrm\Exception\InvalidGraphqlResponseException;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\Exception\PartialEntityException;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
+use GraphqlOrm\Mapping\AttributedMethods;
 use GraphqlOrm\Mapping\Fetch;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
@@ -38,11 +39,6 @@ final class EntityHydrator
      * @var array<string, \ReflectionClass<object>>
      */
     private array $classes = [];
-
-    /**
-     * @var array<string, array<class-string, \ReflectionMethod[]>>
-     */
-    private array $hookMethods = [];
 
     /** @var array<string, list<\ReflectionProperty>> the properties of the objects of each class, copied to its ghosts */
     private array $instanceProperties = [];
@@ -134,7 +130,7 @@ final class EntityHydrator
 
         if ($known !== null) {
             // Only read for the #[AfterHydrate] methods, called once the entity gets its last fields.
-            $wasComplete = $this->hookMethods($known::class, AfterHydrate::class) === [] || $this->areMappedFieldsInitialized($known, $metadata);
+            $wasComplete = AttributedMethods::of($known::class, AfterHydrate::class) === [] || $this->areMappedFieldsInitialized($known, $metadata);
             $this->hydrateFields($known, $metadata, $data, $context, $depth);
 
             if ($this->holdsEveryField($metadata, $data)) {
@@ -562,14 +558,14 @@ final class EntityHydrator
      */
     private function callBeforeHydrateMethods(object $entity, array $data): void
     {
-        foreach ($this->hookMethods($entity::class, BeforeHydrate::class) as $method) {
+        foreach (AttributedMethods::of($entity::class, BeforeHydrate::class) as $method) {
             $method->invoke($entity, $data);
         }
     }
 
     private function callAfterHydrateMethods(object $entity, GraphqlEntityMetadata $metadata): void
     {
-        $methods = $this->hookMethods($entity::class, AfterHydrate::class);
+        $methods = AttributedMethods::of($entity::class, AfterHydrate::class);
 
         if ($methods === [] || !$this->areMappedFieldsInitialized($entity, $metadata)) {
             return;
@@ -578,24 +574,6 @@ final class EntityHydrator
         foreach ($methods as $method) {
             $method->invoke($entity);
         }
-    }
-
-    /**
-     * @param class-string $class
-     * @param class-string $attribute
-     *
-     * @return \ReflectionMethod[]
-     */
-    private function hookMethods(string $class, string $attribute): array
-    {
-        if (!isset($this->hookMethods[$class][$attribute])) {
-            $this->hookMethods[$class][$attribute] = array_values(array_filter(
-                (new \ReflectionClass($class))->getMethods(\ReflectionMethod::IS_PUBLIC),
-                fn (\ReflectionMethod $method) => $method->getAttributes($attribute) !== [],
-            ));
-        }
-
-        return $this->hookMethods[$class][$attribute];
     }
 
     /**

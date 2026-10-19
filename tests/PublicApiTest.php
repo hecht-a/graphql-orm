@@ -24,9 +24,11 @@ use GraphqlOrm\DependencyInjection\Node\NullableIntegerNode;
 use GraphqlOrm\Dialect\CursorPageArguments;
 use GraphqlOrm\EventListener\SchemaValidationListener;
 use GraphqlOrm\Execution\GraphqlExecutionContext;
+use GraphqlOrm\Execution\QueryOrigin;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Logging\QueryRedactor;
+use GraphqlOrm\Mapping\AttributedMethods;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
@@ -106,6 +108,8 @@ final class PublicApiTest extends TestCase
             ManagerRouter::class,
             ManagerConfigs::class,
             CachePoolDescriber::class,
+            QueryOrigin::class,
+            AttributedMethods::class,
             ProfileFindings::class,
             ProfileTimeline::class,
             ProfiledQuery::class,
