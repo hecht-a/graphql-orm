@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   identity map, so that its cost no longer grows with the entities known (5,000 known: 160 µs down to 25 µs); the
   query is exported and masked for the query events only when they have listeners; the reflection of the hydrated and
   tracked properties, of the value objects, of the DTOs and of the lazy ghosts is read once; a response is decoded
-  once. Hydrating 1,000 rows takes about 12% less time.
+  once. Hydrating 1,000 rows takes about 10% less time.
 
 ### Added
 
