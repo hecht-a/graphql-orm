@@ -39,6 +39,21 @@ final class RepositoryFindMethodsTest extends TestCase
     }
 
     #[Test]
+    public function itGivesTheQueryOfFindByWithoutSendingIt(): void
+    {
+        $client = new FakeGraphqlClient(self::DAB_TASKS);
+
+        $query = $this->repository($client, new DataApiBuilderDialect())->createFindByQuery(['title' => 'A'], ['title' => Direction::Desc], 5);
+
+        self::assertSame(0, $client->callCount);
+        self::assertStringContainsString('tasks(filter: { title: { eq: "A" } }, orderBy: { title: DESC }, first: 5)', (string) preg_replace('/\s+/', ' ', $query->getGraphQL()));
+        $tasks = $query->getResult();
+        self::assertIsArray($tasks);
+        self::assertCount(2, $tasks);
+        self::assertSame(1, $client->callCount);
+    }
+
+    #[Test]
     public function itKeepsCriteriaAsRootArgumentsWithTheDefaultDialect(): void
     {
         $client = new FakeGraphqlClient(['data' => ['tasks' => [['id' => 1, 'title' => 'A']]]]);

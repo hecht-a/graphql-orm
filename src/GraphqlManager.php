@@ -783,7 +783,12 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
         return $this->compiler;
     }
 
-    private function compile(QueryNode $query, QueryOptions $options): CompiledQuery
+    /**
+     * The query as sent: its values as variables when the types of the arguments are known.
+     *
+     * @internal
+     */
+    public function compile(QueryNode $query, QueryOptions $options): CompiledQuery
     {
         // The types of the arguments of the mutations are not introspected: their values are inline.
         $rootField = \count($query->fields) === 1 && $query->operation === 'query' ? $query->fields[0]->name : null;

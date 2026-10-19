@@ -140,6 +140,26 @@ class GraphqlEntityRepository
      */
     public function findBy(array $criteria, ?array $orderBy = null, ?int $limit = null, ?string $indexBy = null): array
     {
+        /** @var T[] $result */
+        $result = $this->createFindByQuery($criteria, $orderBy, $limit, $indexBy)->getResult();
+
+        return $result;
+    }
+
+    /**
+     * The query findBy() sends, not sent yet: to read its GraphQL, keep its response in the result cache, or send it
+     * with others through GraphqlQuery::concurrently().
+     *
+     * @param array<string, mixed>          $criteria GraphQL field name or PHP property => expected value
+     * @param array<string, Direction>|null $orderBy  GraphQL field name or PHP property => direction
+     * @param string|null                   $indexBy  GraphQL field name or PHP property keying the result
+     *
+     * @return GraphqlQuery<T>
+     *
+     * @throws InvalidArgumentException when an ordering is not a Direction, or when the entity maps no indexBy field
+     */
+    public function createFindByQuery(array $criteria, ?array $orderBy = null, ?int $limit = null, ?string $indexBy = null): GraphqlQuery
+    {
         foreach ($orderBy ?? [] as $field => $direction) {
             // Callers without static analysis may still pass 'ASC' or 'DESC' strings.
             // @phpstan-ignore instanceof.alwaysTrue
@@ -167,10 +187,7 @@ class GraphqlEntityRepository
 
         $hints = (new UnmappedFieldHints($this->manager->getMetadataFactory()))->for($this->entityClass, [...array_keys($criteria), ...array_keys($orderBy ?? [])]);
 
-        /** @var T[] $result */
-        $result = (new GraphqlQuery($query, $this->entityClass, $this->manager, $options, $hints))->getResult();
-
-        return $result;
+        return new GraphqlQuery($query, $this->entityClass, $this->manager, $options, $hints);
     }
 
     /**

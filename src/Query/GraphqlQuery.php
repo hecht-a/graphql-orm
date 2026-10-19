@@ -51,6 +51,17 @@ final readonly class GraphqlQuery
         return $this->entityClass;
     }
 
+    /**
+     * The query as sent, its values as variables when the types of the arguments are known: getGraphQL() writes them
+     * in the query.
+     *
+     * @internal read by graphqlorm:find --dry-run
+     */
+    public function getCompiledQuery(): CompiledQuery
+    {
+        return $this->graphql instanceof QueryNode ? $this->manager->compile($this->graphql, $this->options) : new CompiledQuery($this->graphql);
+    }
+
     public function getGraphQL(): string
     {
         if ($this->graphql instanceof QueryNode) {

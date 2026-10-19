@@ -91,6 +91,42 @@ final class FindCommandTest extends TestCase
         self::assertStringContainsString('did you mean "title"?', $display);
     }
 
+    #[Test]
+    public function itShowsTheQueryWithoutSendingIt(): void
+    {
+        $server = new MockGraphqlServer();
+        $tester = $this->tester($server);
+
+        $status = $tester->execute(['entity' => 'Task', '--criteria' => ['done=false'], '--limit' => '5', '--dry-run' => true]);
+
+        $display = $tester->getDisplay();
+        self::assertSame(Command::SUCCESS, $status, $display);
+        self::assertSame([], $server->requests());
+        self::assertMatchesRegularExpression('/Manager\s+default/', $display);
+        self::assertMatchesRegularExpression('/Dialect\s+GraphqlOrm\\\\Dialect\\\\DataApiBuilderDialect/', $display);
+        self::assertStringContainsString('done: { eq: false }', (string) preg_replace('/\s+/', ' ', $display));
+        self::assertStringContainsString('first: 5', $display);
+    }
+
+    #[Test]
+    public function itShowsTheQueryAsJsonWithoutSendingIt(): void
+    {
+        $server = new MockGraphqlServer();
+        $tester = $this->tester($server);
+
+        $tester->execute(['entity' => 'Task', '--criteria' => ['id=3'], '--dry-run' => true, '--format' => 'json']);
+
+        $shown = json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertIsArray($shown);
+        self::assertSame(['manager', 'dialect', 'graphql', 'variables'], array_keys($shown));
+        self::assertSame('default', $shown['manager']);
+        self::assertSame(DataApiBuilderDialect::class, $shown['dialect']);
+        self::assertIsString($shown['graphql']);
+        self::assertStringContainsString('id: { eq: 3 }', (string) preg_replace('/\s+/', ' ', $shown['graphql']));
+        self::assertSame([], $shown['variables']);
+        self::assertSame([], $server->requests());
+    }
+
     private function tester(MockGraphqlServer $server): CommandTester
     {
         $metadataFactory = new GraphqlEntityMetadataFactory();
