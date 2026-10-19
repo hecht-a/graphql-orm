@@ -126,9 +126,40 @@ php bin/console graphqlorm:find Task --criteria done=false --order-by dueDate=de
 | `--order-by`       | `field=asc` or `field=desc`, repeatable                                               |
 | `--limit`          | maximum number of entities, 20 by default                                             |
 | `--format`, `-f`   | `table` (default) or `json`                                                           |
+| `--dry-run`        | show the query and its variables as they would be sent, without sending it            |
 
 Fields are GraphQL names or PHP properties. A relation is shown by its identifier, a collection by its size (its
 identifiers in JSON). The errors of the server are shown, with the unmapped fields pointed out.
+
+`--dry-run` shows what would be sent instead: the manager and the dialect, the query with the envelope of the dialect,
+and its variables when the values are sent as [variables](configuration.md#variables). Typing them may introspect the
+schema, a query the cache keeps; the query of the entities is not sent. With `--format=json`, the same as an object
+(`manager`, `dialect`, `graphql`, `variables`), to paste in a GraphQL client.
+
+```bash
+php bin/console graphqlorm:find Task --criteria done=false --order-by dueDate=desc --limit 5 --dry-run
+```
+
+```
+ --------- ------------------------------------------
+  Manager   default
+  Dialect   GraphqlOrm\Dialect\DataApiBuilderDialect
+ --------- ------------------------------------------
+
+GraphQL
+-------
+
+query {
+  tasks(filter: { done: { eq: false } }, orderBy: { due_date: DESC }, first: 5) {
+    items {
+      id
+      title
+      done
+      due_date
+    }
+  }
+}
+```
 
 ## Send a raw query
 

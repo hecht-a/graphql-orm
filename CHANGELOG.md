@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `graphqlorm:find --dry-run` shows the query as it would be sent, with its variables, the manager and the dialect,
+  without sending it; `--format=json` gives them as an object.
+- `GraphqlEntityRepository::createFindByQuery()` gives the query `findBy()` sends, not sent yet: to read its GraphQL,
+  keep its response in the result cache or send it with others through `GraphqlQuery::concurrently()`.
+
 ### Changed
 
 - 4.x and the versions before it are no longer maintained: they get no release, fixes included. Their documentation

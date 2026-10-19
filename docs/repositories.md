@@ -78,6 +78,11 @@ $class = $repository->getClassName(); // Task::class
 // A copy loading these relations in place of max_depth (see query-builder.md#loading-relations)
 $tasks = $repository->with('assignee')->findBy(['status' => 'active']);
 
+// The query findBy() sends, not sent yet: to read its GraphQL, cache its response or send it with others
+$query = $repository->createFindByQuery(['status' => 'active'], ['createdAt' => Direction::Desc], 10);
+$graphql = $query->getGraphQL();
+$tasks = $query->enableResultCache(lifetime: 300)->getResult();
+
 // Custom query via Query Builder
 $qb = $repository->createQueryBuilder();
 $tasks = $qb
