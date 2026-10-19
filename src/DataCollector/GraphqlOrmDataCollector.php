@@ -30,11 +30,6 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
      */
     public const REPEATED_QUERY_THRESHOLD = 3;
 
-    private const LAZY_ORIGIN = 'lazy';
-
-    /** The origins reading one entity of a class by its identifier: what the second-level cache serves. */
-    private const ENTITY_ORIGINS = ['find', 'lazy'];
-
     /** The entities of the second-level cache detailed by a profile, which a page reading thousands would bloat. */
     private const MAX_CACHE_ENTRIES = 500;
 
@@ -43,9 +38,6 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
      * variables, AST nor response, which a page sending thousands of queries would bloat the profile with.
      */
     private const MAX_DETAILED_QUERIES = 500;
-
-    /** The graduations the timeline is divided in, roughly. */
-    private const TIMELINE_TICKS = 4;
 
     /** The adapter of CachePoolDescriber keeping its values in the memory of the process. */
     private const ARRAY_ADAPTER = 'Array';
@@ -888,152 +880,47 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
 
     public function getTotalDuration(): float
     {
-        $total = 0.0;
-
-        foreach ($this->getQueries() as $query) {
-            $duration = $query['duration'] ?? 0;
-            $total += \is_int($duration) || \is_float($duration) ? $duration : 0;
-        }
-
-        return $total;
+        return $this->timeline()->totalDuration();
     }
 
     /**
-     * The milliseconds the request waited for the API: the queries sent together (GraphqlQuery::concurrently(), the
-     * concurrent lazy loads) counted once, unlike getTotalDuration(). Their sum when the start of a query is unknown.
+     * The milliseconds the request waited for the API: the queries sent together counted once, unlike
+     * getTotalDuration().
      */
     public function getWaitedDuration(): float
     {
-        $queries = $this->getQueries();
-        $intervals = [];
-
-        foreach ($this->getQueryOffsets() as $index => $offset) {
-            $duration = $queries[$index]['duration'] ?? 0;
-
-            if (!\is_float($queries[$index]['started_at'] ?? null)) {
-                return $this->getTotalDuration();
-            }
-
-            $intervals[] = [$offset, $offset + (\is_int($duration) || \is_float($duration) ? $duration : 0)];
-        }
-
-        usort($intervals, static fn (array $a, array $b): int => $a[0] <=> $b[0]);
-        $waited = 0.0;
-        $end = null;
-
-        foreach ($intervals as [$start, $stop]) {
-            if ($end === null || $start > $end) {
-                $waited += $stop - $start;
-                $end = $stop;
-            } elseif ($stop > $end) {
-                $waited += $stop - $end;
-                $end = $stop;
-            }
-        }
-
-        return $waited;
+        return $this->timeline()->waitedDuration();
     }
 
     /**
-     * The shapes of queries sent at least profiler.repeated_queries times, with the numbers of these queries (from 1).
-     * When they are all a find() of the same entity, its class and identifier property tell the findBy() replacing
-     * them.
-     *
      * @return list<array{shape: string, count: int, queries: list<int>, find_entity: string|null, find_identifier: string|null}>
      */
     public function getRepeatedQueries(): array
     {
-        $queriesByShape = [];
-
-        foreach ($this->getQueries() as $index => $query) {
-            $shape = $query['shape'] ?? null;
-
-            // The lazy loads are grouped by relation instead: see getLazyLoadsByRelation().
-            if (\is_string($shape) && ($query['origin'] ?? null) !== self::LAZY_ORIGIN) {
-                $queriesByShape[$shape][] = $index + 1;
-            }
-        }
-
-        $repeated = [];
-
-        foreach ($queriesByShape as $shape => $queries) {
-            if (\count($queries) >= $this->getRepeatedQueryThreshold()) {
-                [$entity, $identifier] = $this->foundOneByOne($queries);
-                $repeated[] = ['shape' => (string) $shape, 'count' => \count($queries), 'queries' => $queries, 'find_entity' => $entity, 'find_identifier' => $identifier];
-            }
-        }
-
-        return $repeated;
+        return $this->findings()->repeatedQueries();
     }
 
     /**
-     * When each query started, in milliseconds since the request started, or since the first query when unknown.
-     *
-     * @return list<float>
+     * @return list<float> when each query started, in milliseconds since the request started
      */
     public function getQueryOffsets(): array
     {
-        $startedAts = array_map(fn (array $query): ?float => \is_float($query['started_at'] ?? null) ? $query['started_at'] : null, $this->getQueries());
-        $known = array_filter($startedAts, fn (?float $startedAt): bool => $startedAt !== null);
-        $origin = $this->data['request_started_at'] ?? ($known !== [] ? min($known) : null);
-
-        return array_values(array_map(
-            fn (?float $startedAt): float => $startedAt !== null && \is_float($origin) ? max(0.0, ($startedAt - $origin) * 1000) : 0.0,
-            $startedAts,
-        ));
+        return $this->timeline()->offsets();
     }
 
-    /**
-     * @return float the milliseconds from the start of the timeline to the end of the last query, its hydration included
-     */
     public function getTimelineSpan(): float
     {
-        $span = 0.0;
-        $queries = $this->getQueries();
-
-        foreach ($this->getQueryOffsets() as $index => $offset) {
-            $duration = $queries[$index]['duration'] ?? 0;
-            $hydration = $queries[$index]['hydration_duration'] ?? 0;
-            $span = max($span, $offset + (\is_int($duration) || \is_float($duration) ? $duration : 0) + (\is_int($hydration) || \is_float($hydration) ? $hydration : 0));
-        }
-
-        return $span;
+        return $this->timeline()->span();
     }
 
     /**
-     * The graduations of the timeline, in milliseconds: about four, a step of 1, 2, 2.5 or 5 times a power of ten.
-     *
      * @return list<float>
      */
     public function getTimelineTicks(): array
     {
-        $span = $this->getTimelineSpan();
-
-        if ($span <= 0) {
-            return [0.0];
-        }
-
-        $rough = $span / self::TIMELINE_TICKS;
-        $power = 10 ** floor(log10($rough));
-        $step = $power * match (true) {
-            $rough / $power <= 1 => 1,
-            $rough / $power <= 2 => 2,
-            $rough / $power <= 2.5 => 2.5,
-            $rough / $power <= 5 => 5,
-            default => 10,
-        };
-        $ticks = [];
-
-        for ($tick = 0.0; $tick <= $span; $tick += $step) {
-            $ticks[] = round($tick, 6);
-        }
-
-        return $ticks;
+        return $this->timeline()->ticks();
     }
 
-    /**
-     * @return float the milliseconds spent hydrating the responses, apart from the network
-     */
     /**
      * The queries of different shapes, their values aside, as the "different statements" of Doctrine.
      */
@@ -1086,6 +973,9 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
         return \count(array_filter($this->getQueries(), static fn (array $query) => ($query['result_cache'] ?? null) === 'hit'));
     }
 
+    /**
+     * @return float the milliseconds spent hydrating the responses, apart from the network
+     */
     public function getHydrationDuration(): float
     {
         return array_sum(array_map(fn (array $query): float => \is_float($query['hydration_duration'] ?? null) ? $query['hydration_duration'] : 0.0, $this->getQueries()));
@@ -1105,102 +995,19 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     }
 
     /**
-     * The entity class and identifier property when these queries are all a find() of the same entity.
-     *
-     * @param list<int> $numbers the numbers of the queries (from 1)
-     *
-     * @return array{string|null, string|null}
-     */
-    private function foundOneByOne(array $numbers): array
-    {
-        $found = [];
-
-        foreach ($numbers as $number) {
-            $query = $this->getQueries()[$number - 1] ?? [];
-            $entity = $query['entity_class'] ?? null;
-            $identifier = $query['identifier_property'] ?? null;
-
-            if (($query['origin'] ?? null) !== 'find' || !\is_string($entity) || !\is_string($identifier)) {
-                return [null, null];
-            }
-
-            $found[$entity . '::$' . $identifier] = [$entity, $identifier];
-        }
-
-        return \count($found) === 1 ? array_values($found)[0] : [null, null];
-    }
-
-    /**
-     * The relations loaded on first access at least profiler.repeated_queries times, one query each: the N+1 problem of
-     * lazy loading. With the numbers of their queries (from 1), their total duration and the lines reading them.
-     *
      * @return list<array{relation: string, count: int, queries: list<int>, duration: float, callers: list<string>}>
      */
     public function getLazyLoadsByRelation(): array
     {
-        $byRelation = [];
-
-        foreach ($this->getQueries() as $index => $query) {
-            $relation = $query['lazy_relation'] ?? null;
-
-            if (($query['origin'] ?? null) !== self::LAZY_ORIGIN || !\is_string($relation)) {
-                continue;
-            }
-
-            $duration = $query['duration'] ?? 0;
-            $caller = $query['caller'] ?? null;
-            $group = $byRelation[$relation] ?? ['relation' => $relation, 'count' => 0, 'queries' => [], 'duration' => 0.0, 'callers' => []];
-            ++$group['count'];
-            $group['queries'][] = $index + 1;
-            $group['duration'] += \is_int($duration) || \is_float($duration) ? $duration : 0;
-
-            if (\is_array($caller) && \is_string($caller['file'] ?? null)) {
-                $line = $caller['file'] . (\is_int($caller['line'] ?? null) ? ':' . $caller['line'] : '');
-                $group['callers'] = array_values(array_unique([...$group['callers'], $line]));
-            }
-
-            $byRelation[$relation] = $group;
-        }
-
-        return array_values(array_filter($byRelation, fn (array $group): bool => $group['count'] >= $this->getRepeatedQueryThreshold()));
+        return $this->findings()->lazyLoadsByRelation();
     }
 
     /**
-     * The queries grouped by the line sending them (null for those of the bundle itself, such as introspection), the
-     * costliest first: the number of queries, their duration, their origins and entities, and their numbers (from 1).
-     *
      * @return list<array{caller: string|null, count: int, duration: float, origins: list<string>, entities: list<string>, queries: list<int>}>
      */
     public function getQueriesByCaller(): array
     {
-        $byCaller = [];
-
-        foreach ($this->getQueries() as $index => $query) {
-            $caller = $query['caller'] ?? null;
-            $key = \is_array($caller) && \is_string($caller['file'] ?? null)
-                ? $caller['file'] . (\is_int($caller['line'] ?? null) ? ':' . $caller['line'] : '')
-                : null;
-            $group = $byCaller[$key ?? ''] ?? ['caller' => $key, 'count' => 0, 'duration' => 0.0, 'origins' => [], 'entities' => [], 'queries' => []];
-            $duration = $query['duration'] ?? 0;
-            ++$group['count'];
-            $group['duration'] += \is_int($duration) || \is_float($duration) ? $duration : 0;
-
-            if (\is_string($query['origin'] ?? null) && !\in_array($query['origin'], $group['origins'], true)) {
-                $group['origins'][] = $query['origin'];
-            }
-
-            if (\is_string($query['entity_class'] ?? null) && !\in_array($query['entity_class'], $group['entities'], true)) {
-                $group['entities'][] = $query['entity_class'];
-            }
-
-            $group['queries'][] = $index + 1;
-            $byCaller[$key ?? ''] = $group;
-        }
-
-        $groups = array_values($byCaller);
-        usort($groups, static fn (array $a, array $b): int => [$b['duration'], $b['count']] <=> [$a['duration'], $a['count']]);
-
-        return $groups;
+        return $this->findings()->queriesByCaller();
     }
 
     /**
@@ -1223,7 +1030,6 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
         $queries = [];
 
         foreach (\array_slice($this->getQueries(), 0, self::MAX_DETAILED_QUERIES) as $index => $query) {
-            $caller = $query['caller'] ?? null;
             $queries[] = [
                 'number' => $index + 1,
                 'manager' => $query['manager'] ?? null,
@@ -1233,9 +1039,7 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
                 'graphql' => $query['graphql'] ?? null,
                 'variables' => $query['variables'] ?? [],
                 'values_masked' => $query['redacted'] ?? true,
-                'caller' => \is_array($caller) && \is_string($caller['file'] ?? null)
-                    ? $caller['file'] . (\is_int($caller['line'] ?? null) ? ':' . $caller['line'] : '')
-                    : null,
+                'caller' => ProfiledQuery::caller($query),
                 'started_ms' => $offsets[$index] ?? 0.0,
                 'duration_ms' => $query['duration'] ?? 0,
                 'hydration_ms' => $query['hydration_duration'] ?? 0.0,
@@ -1286,29 +1090,11 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     }
 
     /**
-     * The entities not marked #[GraphqlOrm\Cache] found by identifier or loaded on first access at least
-     * profiler.repeated_queries times: the second-level cache would read them without a query, if they rarely change.
-     *
      * @return list<array{class: string, count: int, queries: list<int>}>
      */
     public function getCacheCandidates(): array
     {
-        $byClass = [];
-
-        foreach ($this->getQueries() as $index => $query) {
-            $class = $query['entity_class'] ?? null;
-
-            if (!\in_array($query['origin'] ?? null, self::ENTITY_ORIGINS, true) || !\is_string($class) || !class_exists($class)
-                || (new \ReflectionClass($class))->getAttributes(Cache::class) !== []) {
-                continue;
-            }
-
-            $byClass[$class] ??= ['class' => $class, 'count' => 0, 'queries' => []];
-            ++$byClass[$class]['count'];
-            $byClass[$class]['queries'][] = $index + 1;
-        }
-
-        return array_values(array_filter($byClass, fn (array $candidate): bool => $candidate['count'] >= $this->getRepeatedQueryThreshold()));
+        return $this->findings()->cacheCandidates();
     }
 
     public function getErrorCount(): int
@@ -1327,5 +1113,17 @@ final class GraphqlOrmDataCollector extends DataCollector implements HydrationOb
     public function getName(): string
     {
         return 'graphql_orm';
+    }
+
+    private function timeline(): ProfileTimeline
+    {
+        $startedAt = $this->data['request_started_at'] ?? null;
+
+        return new ProfileTimeline($this->getQueries(), \is_float($startedAt) ? $startedAt : null);
+    }
+
+    private function findings(): ProfileFindings
+    {
+        return new ProfileFindings($this->getQueries(), $this->getRepeatedQueryThreshold());
     }
 }
