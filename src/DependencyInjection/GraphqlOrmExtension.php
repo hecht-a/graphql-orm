@@ -151,9 +151,18 @@ final class GraphqlOrmExtension extends Extension
             return;
         }
 
+        $this->configureProfiler($container, $managers, $profiler, $cachePools, $environment);
+    }
+
+    /**
+     * @param array{max_queries: int|null, max_query_time: float|int|null, repeated_queries: int} $profiler
+     * @param array<mixed>                                                                        $cachePools the pools of every manager
+     */
+    private function configureProfiler(ContainerBuilder $container, ManagerConfigs $managers, array $profiler, array $cachePools, ?string $environment): void
+    {
         $container->register(CachePoolDescriber::class, CachePoolDescriber::class)->setArguments([$cachePools]);
         $container->getDefinition(GraphqlOrmDataCollector::class)
-            ->setArgument('$slowQueryThreshold', self::slowQueryThreshold($default))
+            ->setArgument('$slowQueryThreshold', self::slowQueryThreshold($managers->managers[$managers->defaultManager]))
             ->setArgument('$configuration', $this->profiledConfiguration($managers, $environment))
             ->setArgument('$cachePools', new Reference(CachePoolDescriber::class))
             ->setArgument('$maxQueries', $profiler['max_queries'])
@@ -171,10 +180,41 @@ final class GraphqlOrmExtension extends Extension
     private function registerManager(ContainerBuilder $container, string $name, array $config, bool $debug, ?string $environment): array
     {
         $id = static fn (string $service): string => 'graphql_orm.' . $name . '.' . $service;
-        $collector = new Reference(GraphqlOrmDataCollector::class, ContainerInterface::NULL_ON_INVALID_REFERENCE);
-        $logger = new Reference(self::LOGGER, ContainerInterface::NULL_ON_INVALID_REFERENCE);
         $entityClasses = $this->entityClasses($container, $config);
 
+        $this->registerMetadata($container, $id, $config, $debug, $entityClasses);
+        $this->registerClient($container, $id('client'), $config);
+        $this->registerDialect($container, $id, $config);
+
+        $cache = $container->register($id('cache'), GraphqlCache::class)
+            ->setArgument('$collector', self::collector())
+            ->addTag('kernel.reset', ['method' => 'reset']);
+        $this->configureCache($cache, $config['result_cache']['pool'], $config['second_level_cache']);
+
+        $this->registerManagerService($container, $id, $name, $config);
+        $this->registerSchemaValidation($container, $id, $config, $entityClasses, $environment);
+
+        foreach (self::NAMED_ALIASES as $type => [$service, $suffix]) {
+            $container->registerAliasForArgument($id($service), $type, $name . $suffix);
+        }
+
+        foreach (['entity', 'repository'] as $kind) {
+            $container->setParameter($id('mapping.' . $kind . '.dir'), $config['mapping'][$kind]['dir']);
+            $container->setParameter($id('mapping.' . $kind . '.namespace'), $config['mapping'][$kind]['namespace']);
+        }
+
+        return $entityClasses;
+    }
+
+    /**
+     * The metadata of the entities, kept in a cache pool outside debug, and its hydrator.
+     *
+     * @param \Closure(string): string $id
+     * @param ManagerOptions           $config
+     * @param class-string[]           $entityClasses
+     */
+    private function registerMetadata(ContainerBuilder $container, \Closure $id, array $config, bool $debug, array $entityClasses): void
+    {
         $metadataFactory = $container->register($id('metadata_factory'), GraphqlEntityMetadataFactory::class)
             ->setArgument('$namingStrategy', new Reference($config['naming_strategy']));
 
@@ -187,10 +227,14 @@ final class GraphqlOrmExtension extends Extension
 
         $container->register($id('hydrator'), EntityHydrator::class)
             ->setArgument('$metadataFactory', new Reference($id('metadata_factory')));
+    }
 
-        $this->registerClient($container, $id('client'), $config);
-
-        $variablesPool = new Reference($config['variables']['cache_pool']);
+    /**
+     * @param \Closure(string): string $id
+     * @param ManagerOptions           $config
+     */
+    private function registerDialect(ContainerBuilder $container, \Closure $id, array $config): void
+    {
         $dialect = $container->register($id('dialect'), $config['dialect'])
             ->setAutowired(true)
             ->setAutoconfigured(true);
@@ -198,24 +242,28 @@ final class GraphqlOrmExtension extends Extension
         // Data API Builder counts on a numeric field: the schema gives one when the identifier is no number.
         if (is_a($config['dialect'], DataApiBuilderDialect::class, true)) {
             $container->register($id('countable_fields'), CountableFieldResolver::class)
-                ->setArguments([new Reference($id('client')), $variablesPool, $config['variables']['ttl'], $logger, $collector]);
+                ->setArguments([new Reference($id('client')), new Reference($config['variables']['cache_pool']), $config['variables']['ttl'], self::logger(), self::collector()]);
             $dialect->setArgument('$countableFields', new Reference($id('countable_fields')));
         }
+    }
 
-        $cache = $container->register($id('cache'), GraphqlCache::class)
-            ->setArgument('$collector', $collector)
-            ->addTag('kernel.reset', ['method' => 'reset']);
-        $this->configureCache($cache, $config['result_cache']['pool'], $config['second_level_cache']);
-
+    /**
+     * The manager, with the resolver of the types of its arguments and its identity map when enabled.
+     *
+     * @param \Closure(string): string $id
+     * @param ManagerOptions           $config
+     */
+    private function registerManagerService(ContainerBuilder $container, \Closure $id, string $name, array $config): void
+    {
         $manager = $container->register($id('manager'), GraphqlManager::class)
             ->setArguments([
                 '$metadataFactory' => new Reference($id('metadata_factory')),
                 '$client' => new Reference($id('client')),
                 '$hydrator' => new Reference($id('hydrator')),
-                '$collector' => $collector,
+                '$collector' => self::collector(),
                 '$maxDepth' => $config['max_depth'],
                 '$dialect' => new Reference($id('dialect')),
-                '$logger' => $logger,
+                '$logger' => self::logger(),
                 '$redactor' => $config['redact_query_values'] ? new Reference(QueryRedactor::class) : null,
                 '$eventDispatcher' => new Reference('event_dispatcher', ContainerInterface::NULL_ON_INVALID_REFERENCE),
                 '$lazyLoading' => $config['lazy_loading'],
@@ -231,7 +279,7 @@ final class GraphqlOrmExtension extends Extension
 
         if ($config['variables']['enabled']) {
             $container->register($id('argument_types'), RootArgumentTypeResolver::class)
-                ->setArguments([new Reference($id('client')), $variablesPool, $config['variables']['ttl'], $logger, $collector]);
+                ->setArguments([new Reference($id('client')), new Reference($config['variables']['cache_pool']), $config['variables']['ttl'], self::logger(), self::collector()]);
             $manager->setArgument('$argumentTypeResolver', new Reference($id('argument_types')));
         }
 
@@ -239,19 +287,19 @@ final class GraphqlOrmExtension extends Extension
             $container->register($id('identity_map'), IdentityMap::class)->addTag('kernel.reset', ['method' => 'reset']);
             $manager->setArgument('$identityMap', new Reference($id('identity_map')));
         }
+    }
 
-        $this->registerSchemaValidation($container, $id, $config, $entityClasses, $environment);
+    /**
+     * The collector of the profiler, absent outside debug.
+     */
+    private static function collector(): Reference
+    {
+        return new Reference(GraphqlOrmDataCollector::class, ContainerInterface::NULL_ON_INVALID_REFERENCE);
+    }
 
-        foreach (self::NAMED_ALIASES as $type => [$service, $suffix]) {
-            $container->registerAliasForArgument($id($service), $type, $name . $suffix);
-        }
-
-        $container->setParameter($id('mapping.entity.dir'), $config['mapping']['entity']['dir']);
-        $container->setParameter($id('mapping.entity.namespace'), $config['mapping']['entity']['namespace']);
-        $container->setParameter($id('mapping.repository.dir'), $config['mapping']['repository']['dir']);
-        $container->setParameter($id('mapping.repository.namespace'), $config['mapping']['repository']['namespace']);
-
-        return $entityClasses;
+    private static function logger(): Reference
+    {
+        return new Reference(self::LOGGER, ContainerInterface::NULL_ON_INVALID_REFERENCE);
     }
 
     /**
@@ -296,10 +344,8 @@ final class GraphqlOrmExtension extends Extension
      */
     private function registerSchemaValidation(ContainerBuilder $container, \Closure $id, array $config, array $entityClasses, ?string $environment): void
     {
-        $collector = new Reference(GraphqlOrmDataCollector::class, ContainerInterface::NULL_ON_INVALID_REFERENCE);
-
         $container->register($id('schema_introspector'), SchemaIntrospector::class)
-            ->setArguments([new Reference($id('client')), $collector]);
+            ->setArguments([new Reference($id('client')), self::collector()]);
         $container->register($id('schema_validator'), SchemaValidator::class)
             ->setArguments([new Reference($id('metadata_factory')), new Reference(TypeConverterRegistry::class)]);
 
@@ -314,8 +360,8 @@ final class GraphqlOrmExtension extends Extension
                 '$validator' => new Reference($id('schema_validator')),
                 '$mode' => new Reference($id('schema_validation_mode')),
                 '$entityClasses' => $entityClasses,
-                '$logger' => new Reference(self::LOGGER, ContainerInterface::NULL_ON_INVALID_REFERENCE),
-                '$collector' => $collector,
+                '$logger' => self::logger(),
+                '$collector' => self::collector(),
                 '$cache' => new Reference($config['variables']['cache_pool']),
                 '$ttl' => $config['variables']['ttl'],
             ])
