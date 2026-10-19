@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- The numeric options whose null turns them off accept null once written: `profiler.max_queries`,
+  `profiler.max_query_time`, `slow_query_threshold` (at the root or for a manager, which then reports no slow query
+  whatever the root) and the `lifetime` of a second-level cache region. They threw an `InvalidTypeException` at boot.
+
 ## [5.10.1] — 2026-10-18
 
 ### Fixed

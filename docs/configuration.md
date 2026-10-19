@@ -58,7 +58,7 @@ graphql_orm:
 | `identity_map`                    | `true`                   | Share the entities between the queries of a request (see [shared identity map](#shared-identity-map)) |
 | `read_only`                       | `false`                  | Only read the API: `persist()`, `remove()` and `flush()` throw, and the entities read are not tracked (see [read-only](writing.md#read-only)) |
 | `persisted_queries`               | `false`                  | Send the queries as the hash of their text, as Apollo automatic persisted queries (see [persisted queries](#persisted-queries)) |
-| `slow_query_threshold`            | `null`                   | Milliseconds from which a query is logged as a warning and highlighted in the profiler (see [slow queries](logging.md#slow-queries)) |
+| `slow_query_threshold`            | `null`                   | Milliseconds from which a query is logged as a warning and highlighted in the profiler; `null` reports none, also for a manager whose root sets one (see [slow queries](logging.md#slow-queries)) |
 | `redact_query_values`             | `true`                   | Mask query values in logs and profiler (see [logging.md](logging.md#masked-values)) |
 | `http_client`                     | `null`                   | HTTP client service id; defaults to the autowired `HttpClientInterface` |
 | `dialect`                         | `DefaultDialect`         | GraphQL dialect to use                  |
