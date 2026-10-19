@@ -102,6 +102,6 @@ final class RelayDialect implements GraphqlQueryDialect, CursorPaginationDialect
     {
         $count = \is_array($data[$countRoot] ?? null) ? ($data[$countRoot]['totalCount'] ?? null) : null;
 
-        return \is_int($count) ? $count : throw InvalidGraphqlResponseException::expectedArray($data[$countRoot] ?? null);
+        return \is_int($count) ? $count : throw InvalidGraphqlResponseException::expectedNumber($count, \sprintf('the count of "%s"', $countRoot));
     }
 }

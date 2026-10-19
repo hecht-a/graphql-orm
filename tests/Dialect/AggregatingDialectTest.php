@@ -87,6 +87,7 @@ final class AggregatingDialectTest extends TestCase
     public function itRejectsAResponseWithoutAggregate(): void
     {
         $this->expectException(InvalidGraphqlResponseException::class);
+        $this->expectExceptionMessage('Invalid GraphQL response: expected a number for the sum of "id", got "array".');
 
         (new HasuraDialect())->readAggregate(['tasks_aggregate' => ['aggregate' => ['sum' => ['id' => ['nested']]]]], 'tasks_aggregate', Aggregate::Sum, 'id');
     }

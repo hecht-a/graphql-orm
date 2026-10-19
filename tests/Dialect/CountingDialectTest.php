@@ -120,7 +120,18 @@ final class CountingDialectTest extends TestCase
     public function itRejectsAResponseWithoutCount(): void
     {
         $this->expectException(InvalidGraphqlResponseException::class);
+        $this->expectExceptionMessage('Invalid GraphQL response: expected a number for the count of "tasks", got "null".');
+
         (new RelayDialect())->readCount(['tasks' => ['totalCount' => null]], 'tasks');
+    }
+
+    #[Test]
+    public function itRejectsAHasuraCountThatIsNoNumber(): void
+    {
+        $this->expectException(InvalidGraphqlResponseException::class);
+        $this->expectExceptionMessage('Invalid GraphQL response: expected a number for the count of "tasks_aggregate", got "string".');
+
+        (new HasuraDialect())->readCount(['tasks_aggregate' => ['aggregate' => ['count' => 'three']]], 'tasks_aggregate');
     }
 
     private function dataApiBuilder(FakeGraphqlClient $client): DataApiBuilderDialect

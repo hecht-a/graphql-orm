@@ -218,7 +218,7 @@ final class HasuraDialect implements GraphqlQueryDialect, BatchLoadingDialect, O
         $aggregate = \is_array($data[$countRoot] ?? null) ? ($data[$countRoot]['aggregate'] ?? null) : null;
         $count = \is_array($aggregate) ? ($aggregate['count'] ?? null) : null;
 
-        return \is_int($count) ? $count : throw InvalidGraphqlResponseException::expectedArray($data[$countRoot] ?? null);
+        return \is_int($count) ? $count : throw InvalidGraphqlResponseException::expectedNumber($count, \sprintf('the count of "%s"', $countRoot));
     }
 
     /**
@@ -242,7 +242,7 @@ final class HasuraDialect implements GraphqlQueryDialect, BatchLoadingDialect, O
         $values = \is_array($result) ? ($result[$aggregate->value] ?? null) : null;
         $value = \is_array($values) ? ($values[$field] ?? null) : throw InvalidGraphqlResponseException::expectedArray($result);
 
-        return $value === null || \is_scalar($value) && !\is_bool($value) ? $value : throw InvalidGraphqlResponseException::expectedArray($values);
+        return $value === null || \is_scalar($value) && !\is_bool($value) ? $value : throw InvalidGraphqlResponseException::expectedNumber($value, \sprintf('the %s of "%s"', $aggregate->value, $field));
     }
 
     /**

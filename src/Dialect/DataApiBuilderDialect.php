@@ -128,7 +128,7 @@ final class DataApiBuilderDialect implements GraphqlQueryDialect, CursorPaginati
 
         foreach ($groups as $group) {
             $groupCount = \is_array($group) && \is_array($group['aggregations'] ?? null) ? ($group['aggregations']['count'] ?? null) : null;
-            $count += \is_int($groupCount) ? $groupCount : throw InvalidGraphqlResponseException::expectedArray($group);
+            $count += \is_int($groupCount) ? $groupCount : throw InvalidGraphqlResponseException::expectedNumber($groupCount, \sprintf('the count of "%s"', $countRoot));
         }
 
         return $count;
@@ -161,7 +161,7 @@ final class DataApiBuilderDialect implements GraphqlQueryDialect, CursorPaginati
         $group = $groups[0] ?? null;
         $value = \is_array($group) && \is_array($group['aggregations'] ?? null) ? ($group['aggregations'][$aggregate->value] ?? null) : null;
 
-        return $value === null || \is_scalar($value) && !\is_bool($value) ? $value : throw InvalidGraphqlResponseException::expectedArray($group);
+        return $value === null || \is_scalar($value) && !\is_bool($value) ? $value : throw InvalidGraphqlResponseException::expectedNumber($value, \sprintf('the %s of "%s"', $aggregate->value, $field));
     }
 
     /**

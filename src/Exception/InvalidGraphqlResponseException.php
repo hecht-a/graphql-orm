@@ -13,4 +13,12 @@ final class InvalidGraphqlResponseException extends \UnexpectedValueException im
             get_debug_type($value)
         ));
     }
+
+    /**
+     * @param string $what what the number is, e.g. `the count of "tasks"`
+     */
+    public static function expectedNumber(mixed $value, string $what): self
+    {
+        return new self(\sprintf('Invalid GraphQL response: expected a number for %s, got "%s".', $what, get_debug_type($value)));
+    }
 }
