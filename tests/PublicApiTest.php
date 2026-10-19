@@ -34,6 +34,7 @@ use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Metadata\GraphqlFieldMetadata;
 use GraphqlOrm\Metadata\MetadataCacheWarmer;
+use GraphqlOrm\Persistence\WritePlan;
 use GraphqlOrm\PHPStan\EntityClassResolver;
 use GraphqlOrm\PHPStan\FieldNameChecker;
 use GraphqlOrm\PHPStan\QueryBuilderFieldNamesRule;
@@ -112,6 +113,7 @@ final class PublicApiTest extends TestCase
             QueryOrigin::class,
             AttributedMethods::class,
             SecondLevelCacheRows::class,
+            WritePlan::class,
             ProfileFindings::class,
             ProfileTimeline::class,
             ProfiledQuery::class,
