@@ -50,15 +50,7 @@ final class RelayDialect implements GraphqlQueryDialect, CursorPaginationDialect
             throw new LogicException(\sprintf('Ordering is not standardized by Relay and not supported by "%s": configure a dialect matching your GraphQL API (see docs/dialects.md).', self::class));
         }
 
-        if ($options->limit !== null) {
-            $arguments['first'] = $options->limit;
-        }
-
-        if ($options->paginate && $options->cursor !== null) {
-            $arguments['after'] = $options->cursor;
-        }
-
-        return $arguments;
+        return CursorPageArguments::apply($arguments, $options);
     }
 
     public function applyFilter(?FilterExpressionInterface $filter): array

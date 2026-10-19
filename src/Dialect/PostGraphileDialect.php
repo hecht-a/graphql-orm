@@ -50,15 +50,7 @@ final class PostGraphileDialect implements GraphqlQueryDialect, CursorPagination
             );
         }
 
-        if ($options->limit !== null) {
-            $arguments['first'] = $options->limit;
-        }
-
-        if ($options->paginate && $options->cursor !== null) {
-            $arguments['after'] = $options->cursor;
-        }
-
-        return $arguments;
+        return CursorPageArguments::apply($arguments, $options);
     }
 
     /**
