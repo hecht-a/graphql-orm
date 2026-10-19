@@ -1,5 +1,7 @@
 # Upgrading from 4.x to 5.0
 
+4.x and the versions before it are no longer maintained since 5.11.0: they get no release, fixes included.
+
 5.0 removes what 4.9 deprecated and changes four default values. The way is the same as for Symfony:
 
 1. Upgrade to the last 4.x (`composer require hecht-a/graphql-orm:^4.10`) and run the application and its tests.

@@ -37,7 +37,7 @@ jobs:
       - name: build the site
         run: npx vitepress build
         working-directory: docs
-      # The documentation of 4.x, from its branch, served under /4.x/
+      # The documentation of 4.x, no longer maintained, kept online from its branch under /4.x/
       - name: checkout 4.x
         uses: actions/checkout@v5
         with:

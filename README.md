@@ -76,6 +76,13 @@ The documentation is published at **https://hecht-a.github.io/graphql-orm/**, an
 - [Testing](docs/testing.md) — `MockGraphqlServer`, a GraphQL server for the tests of your application
 - [Upgrading from 4.x](docs/upgrading.md)
 
+## Supported versions
+
+| Version         | Status                                                                                 |
+|-----------------|----------------------------------------------------------------------------------------|
+| 5.x             | Maintained: new features and fixes                                                     |
+| 4.x and earlier | No longer maintained since 5.11.0: no release, fix included; see [upgrading](docs/upgrading.md) |
+
 ## License
 
 MIT, see [LICENSE](LICENSE).
