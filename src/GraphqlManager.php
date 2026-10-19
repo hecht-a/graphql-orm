@@ -26,6 +26,7 @@ use GraphqlOrm\Execution\GraphqlExecutionContext;
 use GraphqlOrm\Execution\IdentityMap;
 use GraphqlOrm\Hydrator\EntityHydrator;
 use GraphqlOrm\Logging\QueryRedactor;
+use GraphqlOrm\Metadata\DtoMetadataFactory;
 use GraphqlOrm\Metadata\GraphqlEntityMetadataFactory;
 use GraphqlOrm\Persistence\Lifecycle;
 use GraphqlOrm\Persistence\UnitOfWork;
@@ -95,6 +96,8 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
     private array $genericRepositories = [];
 
     private ?UnitOfWork $unitOfWork = null;
+
+    private ?DtoMetadataFactory $dtoMetadataFactory = null;
 
     /** @var array<class-string, array<string, list<\ReflectionMethod>>> the lifecycle callbacks of the entities, by step */
     private array $lifecycleCallbacks = [];
@@ -815,6 +818,16 @@ final class GraphqlManager implements GraphqlManagerInterface, ResetInterface
     public function getMetadataFactory(): GraphqlEntityMetadataFactory
     {
         return $this->metadataFactory;
+    }
+
+    /**
+     * The mapping of the DTOs of hydrateAs(), read once for each DTO.
+     *
+     * @internal
+     */
+    public function getDtoMetadataFactory(): DtoMetadataFactory
+    {
+        return $this->dtoMetadataFactory ??= new DtoMetadataFactory($this->metadataFactory);
     }
 
     public function getHydrator(): EntityHydrator

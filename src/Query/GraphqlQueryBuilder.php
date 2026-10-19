@@ -10,7 +10,6 @@ use GraphqlOrm\Exception\InvalidArgumentException;
 use GraphqlOrm\Exception\LogicException;
 use GraphqlOrm\GraphqlManager;
 use GraphqlOrm\Metadata\DtoMetadata;
-use GraphqlOrm\Metadata\DtoMetadataFactory;
 use GraphqlOrm\Metadata\GraphqlEntityMetadata;
 use GraphqlOrm\Query\Expr\ExpressionBuilder;
 use GraphqlOrm\Query\Expr\FilterExpressionInterface;
@@ -126,7 +125,7 @@ final class GraphqlQueryBuilder
      */
     public function hydrateAs(string $class): self
     {
-        $this->dto = (new DtoMetadataFactory($this->manager->getMetadataFactory()))->getMetadata($class, $this->entityClass);
+        $this->dto = $this->manager->getDtoMetadataFactory()->getMetadata($class, $this->entityClass);
 
         // The results are now instances of the DTO.
         return $this;
