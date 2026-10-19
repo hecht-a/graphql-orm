@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace GraphqlOrm\DependencyInjection;
 
+use GraphqlOrm\DependencyInjection\Node\NullableFloatNodeDefinition;
+use GraphqlOrm\DependencyInjection\Node\NullableIntegerNodeDefinition;
 use GraphqlOrm\Dialect\DefaultDialect;
 use GraphqlOrm\Metadata\Naming\DefaultNamingStrategy;
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
@@ -35,10 +37,10 @@ final class Configuration implements ConfigurationInterface
             ->addDefaultsIfNotSet()
             ->info('The alerts of the profiler, for every request whatever the manager.')
             ->children();
-        $profiler->integerNode('max_queries')->defaultValue(50)->min(1)
-            ->info('Queries of a request beyond which the toolbar turns yellow, as Doctrine; null reports none.');
-        $profiler->floatNode('max_query_time')->defaultNull()->min(0)
-            ->info('Milliseconds of a request waiting for GraphQL beyond which the toolbar turns yellow; null reports none.');
+        $profiler->append((new NullableIntegerNodeDefinition('max_queries'))->defaultValue(50)->min(1)
+            ->info('Queries of a request beyond which the toolbar turns yellow, as Doctrine; null reports none.'));
+        $profiler->append((new NullableFloatNodeDefinition('max_query_time'))->defaultNull()->min(0)
+            ->info('Milliseconds of a request waiting for GraphQL beyond which the toolbar turns yellow; null reports none.'));
         $profiler->integerNode('repeated_queries')->defaultValue(3)->min(2)
             ->info('Times from which queries of a same shape, the lazy loads of a relation and the reads of an entity are reported (N+1, second-level cache).');
 
@@ -97,9 +99,10 @@ final class Configuration implements ConfigurationInterface
         $children->append($this->boolean('identity_map', true, $defaults)
             ->info('Share the entities between the queries of a request: an entity is one instance, and find() serves one known in full without a query. Reset between requests and messages.'));
 
-        $slow = $children->floatNode('slow_query_threshold')->min(0)
+        $slow = (new NullableFloatNodeDefinition('slow_query_threshold'))->min(0)
             ->info('Duration in milliseconds from which a query is logged as a warning and highlighted in the profiler; null reports none.');
         $this->default($slow, null, $defaults);
+        $children->append($slow);
 
         $this->scalar($children, 'naming_strategy', DefaultNamingStrategy::class, $defaults)
             ->info('Id of a service implementing NamingStrategy, naming the fields whose #[GraphqlOrm\Field] or #[GraphqlOrm\Relation] has no "mappedFrom" from their property: DefaultNamingStrategy keeps the property name, SnakeCaseNamingStrategy turns dueDate into due_date.');
@@ -124,7 +127,7 @@ final class Configuration implements ConfigurationInterface
             ->arrayPrototype()
             ->children()
             ->scalarNode('pool')->defaultNull()->info('The pool of second_level_cache when null.')->end()
-            ->integerNode('lifetime')->defaultNull()->min(1)->info('The default_lifetime of second_level_cache when null.')->end()
+            ->append((new NullableIntegerNodeDefinition('lifetime'))->defaultNull()->min(1)->info('The default_lifetime of second_level_cache when null.'))
             ->end()
             ->end()
             ->end();

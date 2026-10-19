@@ -48,6 +48,7 @@ use GraphqlOrm\ValueResolver\GraphqlEntityValueResolver;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -166,6 +167,46 @@ final class GraphqlOrmExtensionTest extends TestCase
         self::assertSame(50, $collector->getArgument('$maxQueries'));
         self::assertNull($collector->getArgument('$maxQueryTime'));
         self::assertSame(3, $collector->getArgument('$repeatedQueryThreshold'));
+    }
+
+    #[Test]
+    public function itReportsNoProfilerAlertWhoseThresholdIsNull(): void
+    {
+        $container = $this->createContainer(debug: true, config: ['profiler' => ['max_queries' => null, 'max_query_time' => null]]);
+        $collector = $container->getDefinition(GraphqlOrmDataCollector::class);
+
+        self::assertNull($collector->getArgument('$maxQueries'));
+        self::assertNull($collector->getArgument('$maxQueryTime'));
+    }
+
+    #[Test]
+    public function itRejectsAProfilerThresholdBelowItsMinimum(): void
+    {
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessage('graphql_orm.profiler.max_queries');
+
+        $this->createContainer(debug: true, config: ['profiler' => ['max_queries' => 0]]);
+    }
+
+    #[Test]
+    public function itRejectsAThresholdThatIsNotANumber(): void
+    {
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessage('graphql_orm.slow_query_threshold');
+
+        $this->createContainer(debug: true, config: ['slow_query_threshold' => 'slow']);
+    }
+
+    #[Test]
+    public function itLetsAManagerReportNoSlowQueryWhateverTheRoot(): void
+    {
+        $container = $this->createContainer(debug: false, config: [
+            'slow_query_threshold' => 500,
+            'managers' => ['main' => [], 'crm' => ['endpoint' => 'https://crm.example.com/graphql', 'slow_query_threshold' => null]],
+        ]);
+
+        self::assertNull($container->getDefinition('graphql_orm.crm.manager')->getArgument('$slowQueryThreshold'));
+        self::assertSame(500.0, $container->getDefinition('graphql_orm.main.manager')->getArgument('$slowQueryThreshold'));
     }
 
     #[Test]
@@ -673,6 +714,23 @@ final class GraphqlOrmExtensionTest extends TestCase
             'reference_data' => ['pool' => $container->get('cache.redis'), 'lifetime' => 86400],
             'short' => ['pool' => $container->get('cache.apcu'), 'lifetime' => 60],
         ], $this->cacheProperty($container, 'regions'));
+    }
+
+    #[Test]
+    public function itKeepsTheEntitiesOfARegionWithoutLifetimeForTheDefaultOne(): void
+    {
+        $container = $this->createContainer(debug: false, config: ['second_level_cache' => [
+            'enabled' => true,
+            'default_lifetime' => 600,
+            'regions' => ['reference_data' => ['pool' => null, 'lifetime' => null]],
+        ]]);
+
+        $container->compile();
+
+        self::assertSame(
+            ['reference_data' => ['pool' => $container->get('cache.app'), 'lifetime' => 600]],
+            $this->cacheProperty($container, 'regions'),
+        );
     }
 
     #[Test]
